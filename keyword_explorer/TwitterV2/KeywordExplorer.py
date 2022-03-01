@@ -92,7 +92,7 @@ class KeywordExplorer(tk.Tk):
         self.response_text_field = TextField(lf, row, 'Response', text_width, height=10, label_width=label_width)
         row = self.response_text_field.get_next_row()
         self.regex_field = DataField(lf, row, 'Parse regex', text_width, label_width=label_width)
-        self.regex_field.set_text(r"\n[0-9]+\)|\n[0-9]+")
+        self.regex_field.set_text(r"\n[0-9]+\)|\n[0-9]+|[0-9]+\)")
         row = self.regex_field.get_next_row()
         buttons = Buttons(lf, row, "Actions", label_width=label_width)
         buttons.add_button("New prompt", self.new_prompt_callback)
