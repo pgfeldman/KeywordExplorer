@@ -5,6 +5,26 @@ import wikipedia
 import difflib as dl
 from typing import Dict, List
 
+class ViewData:
+    project:str
+    article:str
+    granularity:str
+    timestamp:datetime
+    views:int
+
+    def __init__(self, d:Dict):
+        self.project = d['project']
+        self.article = d['article']
+        self.granularity = d['granularity']
+        self.views = d['views']
+        ds = d['timestamp']
+        self.timestamp = datetime.strptime(ds, "%Y%m%d00")
+
+    def to_string(self) -> str:
+        ds = self.timestamp.strftime("%B %d, %Y (%H:%M:%S)")
+        return "project: {}, article: {}, views: {}, timestamp: {} ".format(self.project, self.article, self.views, ds)
+
+
 def remove_accents(input_str:str) -> str:
     nfkd_form = unicodedata.normalize('NFKD', input_str)
     only_ascii = u"".join([c for c in nfkd_form if not unicodedata.combining(c)])
@@ -30,25 +50,37 @@ def get_closest_wiki_page(source_term:str, threshold:float = 0.8, debug:bool=Tru
         source_term = closest_list[0]
     return remove_accents(source_term)
 
-def get_wiki_pageviews(page_title:str) -> int:
-    headers = {"User-Agent": "phil@philfeldman.com", "Api-User-Agent":"phil@philfeldman.com"}
-    yesterday = datetime.today() - timedelta(days=1)
-    last_week = yesterday - timedelta(days=7)
-    yester_s = yesterday.strftime("%Y%m%d")
-    lastw_s = last_week.strftime("%Y%m%d")
-    s = "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/{}/daily/{}/{}".format(
-        page_title, lastw_s, yester_s)
+def get_pageview_list(page_title:str, start_time:datetime, end_time:datetime, granularity:str = "daily", agent_str:str = "phil@philfeldman.com") -> [List, int]:
+    view_list = []
+    headers = {"User-Agent": agent_str, "Api-User-Agent":agent_str}
+    start_time_str = start_time.strftime("%Y%m%d")
+    end_time_str = end_time.strftime("%Y%m%d")
+    s = "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/{}/{}/{}/{}".format(
+        page_title, granularity, start_time_str, end_time_str)
     print(s)
     r = requests.get(s, headers=headers)
     # print(r)
-    views = 0
+    total_views = 0
     if r.status_code == 200:
         for item in r.json()['items']:
-            views += item['views']
+            vd = ViewData(item)
+            view_list.append(vd)
+            total_views += item['views']
             # print("\t{}".format(item))
-        print("Weekly views for the page '{}', ending on {} = {:,}".format(page_title, yesterday.strftime("%m/%d/%Y"), views))
     else:
         print("Error getting data about '{}' from Wikipedia (Error {}). Views = 0".format(page_title, r.status_code))
+
+    return (view_list, total_views)
+
+def get_wiki_pageviews(page_title:str) -> int:
+    yesterday = datetime.today() - timedelta(days=1)
+    last_week = yesterday - timedelta(days=7)
+    view_list, views = get_pageview_list(page_title=page_title, start_time=last_week, end_time=yesterday)
+
+    vd:ViewData
+    for vd in view_list:
+        print(vd.to_string())
+    print("Weekly views for the page '{}', ending on {} = {:,}".format(page_title, yesterday.strftime("%m/%d/%Y"), views))
     return views
 
 def evaluate(node_name:str, debug:bool = True) -> [str, int]:
