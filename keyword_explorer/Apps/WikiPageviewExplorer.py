@@ -69,12 +69,12 @@ class WikiPageviewExplorer(tk.Tk):
     def build_topic_search(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
         self.topic_text_field = TextField(lf, row, "Topic", text_width, height=5, label_width=label_width)
-        self.topic_text_field.set_text("simpson characters")
+        self.topic_text_field.set_text("simpson characters\npinky and the brain")
         row = self.topic_text_field.get_next_row()
         self.response_text_field = TextField(lf, row, 'Response', text_width, height=10, label_width=label_width)
         row = self.response_text_field.get_next_row()
         buttons = Buttons(lf, row, "Actions", label_width=label_width)
-        buttons.add_button("Search", self.implement_me)
+        buttons.add_button("Search", self.search_wiki_callback)
         buttons.add_button("Copy Selected", self.implement_me)
         row = buttons.get_next_row()
 
@@ -100,6 +100,16 @@ class WikiPageviewExplorer(tk.Tk):
         self.sample_list.set_callback(self.set_time_sample_callback)
         self.set_time_sample_callback()
         row = self.sample_list.get_next_row()
+
+    def search_wiki_callback(self):
+        key_list = self.topic_text_field.get_list("\n")
+        result_list = []
+        for keyword in key_list:
+            page_list = ws.get_closet_wiki_page_list(keyword)
+            result = "{}: {}".format(keyword, ", ".join(page_list))
+            result_list.append(result)
+        result = "\n\n".join(result_list)
+        self.response_text_field.set_text(result)
 
     def set_time_sample_callback(self, event:tk.Event = None):
         sample_str = self.sample_list.get_selected()
