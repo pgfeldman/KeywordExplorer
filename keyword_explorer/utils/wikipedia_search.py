@@ -30,14 +30,19 @@ def remove_accents(input_str:str) -> str:
     only_ascii = u"".join([c for c in nfkd_form if not unicodedata.combining(c)])
     return only_ascii
 
-def get_closest_wiki_page(source_term:str, threshold:float = 0.8, debug:bool=True) -> str:
+def get_closet_wiki_page_list(source_term:str) -> List:
+    closest_list = []
     source_term = remove_accents(source_term)
     page_list = wikipedia.search(source_term, suggestion=False)
     if len(page_list) == 0:
-        return source_term
+        return closest_list
     closest_list = dl.get_close_matches(source_term, page_list)
+    return closest_list
+
+def get_closest_wiki_page(source_term:str, threshold:float = 0.8, debug:bool=True) -> str:
+    closest_list = get_closet_wiki_page_list(source_term)
+
     if debug:
-        print("source_term = {}, page_list = [{}]".format(source_term, ", ".join(page_list)))
         print("source_term = {}, closest_list = [{}]".format(source_term, ", ".join(closest_list)))
     if len(closest_list) == 0:
         return source_term
@@ -91,7 +96,7 @@ def evaluate(node_name:str, debug:bool = True) -> [str, int]:
 
 def main():
     print("wikimedia_scratch")
-    l = ["Virtue_ethics", "Virtue Ethics"]
+    l = ["Virtue_ethics", "simpson characters"]
     for key in l:
         node_name, weight = evaluate(key)
         print("{} = {}\n".format(node_name, weight))

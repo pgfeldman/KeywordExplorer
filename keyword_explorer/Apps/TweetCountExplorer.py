@@ -5,6 +5,8 @@ from tkinter import filedialog
 import inspect
 import re
 import getpass
+import webbrowser
+import urllib
 from datetime import datetime, timedelta
 import pandas as pd
 from typing import List, Any, Union, Dict
@@ -84,6 +86,7 @@ class TweetCountExplorer(tk.Tk):
         buttons.add_button("Test Keyword", self.test_keyword_callback)
         buttons.add_button("Plot", self.plot_counts_callback)
         buttons.add_button("Save", self.save_callback)
+        buttons.add_button("Launch Twitter", self.launch_twitter_callback)
         row = buttons.get_next_row()
 
     def build_twitter_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
@@ -94,10 +97,18 @@ class TweetCountExplorer(tk.Tk):
         self.set_time_sample_callback()
         row = self.sample_list.get_next_row()
 
+    def launch_twitter_callback(self):
+        # single word
+        key_list = self.keyword_text_field.get_list("\n")
+        start_dt = self.start_date_field.get_date()
+        end_dt = self.end_date_field.get_date()
+        self.tvc.launch_twitter(key_list, start_dt, end_dt)
+        # webbrowser.open('https://twitter.com/search?q=chinavirus%20until%3A2020-02-01%20since%3A2019-12-01&src=typed_query')
+        # webbrowser.open('https://twitter.com/search?q=%22china%20virus%22%20until%3A2020-02-01%20since%3A2019-12-01&src=typed_query')
+
     def set_time_sample_callback(self, event:tk.Event = None):
         sample_str = self.sample_list.get_selected()
         self.sample_list.set_label("Sample\n({})".format(sample_str))
-
 
     def test_keyword_callback(self):
         key_list = self.keyword_text_field.get_list("\n")

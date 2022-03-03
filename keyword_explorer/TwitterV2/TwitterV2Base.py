@@ -1,7 +1,10 @@
 import requests
 import os
 import json
-from typing import Dict
+import urllib.parse
+import webbrowser
+from datetime import datetime
+from typing import List, Dict
 
 class TwitterV2Base:
     bearer_token:str
@@ -25,6 +28,17 @@ class TwitterV2Base:
         if query[0] != '"' and len(query.split()) > 1:
             query = '\"{}\"'.format(query)
         return query
+
+    def launch_twitter(self, key_list:List, start_dt:datetime, end_dt:datetime):
+        since = start_dt.strftime("%Y-%m-%d")
+        until = end_dt.strftime("%Y-%m-%d")
+        for keyword in key_list:
+            keyword = self.prep_query(keyword)
+            print(keyword)
+            query = urllib.parse.quote("{}".format(keyword))
+            url_str = "https://twitter.com/search?q={}%20until%3A{}%20since%3A{}&src=typed_query".format(query, until, since)
+            webbrowser.open(url_str)
+            print(url_str)
 
     def connect_to_endpoint(self, url) -> json:
         response = requests.request("GET", url, auth=self.bearer_oauth)
