@@ -128,6 +128,7 @@ class KeywordExplorer(tk.Tk):
         buttons.add_button("Test Keyword", self.test_keyword_callback)
         buttons.add_button("Plot", self.plot_counts_callback)
         buttons.add_button("Save", self.save_callback)
+        buttons.add_button("Launch Twitter", self.launch_twitter_callback)
         row = buttons.get_next_row()
 
     def build_twitter_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
@@ -226,6 +227,12 @@ class KeywordExplorer(tk.Tk):
                 df1.to_excel(writer, sheet_name='Experiment')
                 df2.to_excel(writer, sheet_name='Results')
                 writer.save()
+
+    def launch_twitter_callback(self):
+        key_list = self.keyword_text_field.get_list("\n")
+        start_dt = self.start_date_field.get_date()
+        end_dt = self.end_date_field.get_date()
+        self.tvc.launch_twitter(key_list, start_dt, end_dt)
 
     def get_description_df(self, probe:str, response:str) -> pd.DataFrame:
         now = datetime.now()

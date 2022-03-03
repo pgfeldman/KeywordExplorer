@@ -34,11 +34,11 @@ class TwitterV2Base:
         until = end_dt.strftime("%Y-%m-%d")
         for keyword in key_list:
             keyword = self.prep_query(keyword)
-            print(keyword)
+            #print(keyword)
             query = urllib.parse.quote("{}".format(keyword))
             url_str = "https://twitter.com/search?q={}%20until%3A{}%20since%3A{}&src=typed_query".format(query, until, since)
             webbrowser.open(url_str)
-            print(url_str)
+            #print(url_str)
 
     def connect_to_endpoint(self, url) -> json:
         response = requests.request("GET", url, auth=self.bearer_oauth)

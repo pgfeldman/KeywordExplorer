@@ -107,8 +107,8 @@ class WikiPageviewExplorer(tk.Tk):
         for keyword in key_list:
             page_list = ws.get_closet_wiki_page_list(keyword)
             result = "{}: {}".format(keyword, ", ".join(page_list))
-            result_list.append(result)
-        result = "\n\n".join(result_list)
+            result_list.extend(page_list)
+        result = "\n".join(result_list)
         self.response_text_field.set_text(result)
 
     def set_time_sample_callback(self, event:tk.Event = None):
