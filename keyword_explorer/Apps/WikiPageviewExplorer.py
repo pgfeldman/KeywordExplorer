@@ -5,6 +5,8 @@ from tkinter import filedialog
 import inspect
 import re
 import getpass
+import urllib.parse
+import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import pandas as pd
 import keyword_explorer.utils.wikipedia_search as ws
@@ -28,16 +30,21 @@ class WikiPageviewExplorer(tk.Tk):
     end_date_field:DateEntryField
     experiment_field:DataField
     sample_list:ListField
+    multi_count_list:List
+    totals_dict:dict
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         print("WikiPageviewExplorer")
         self.dp = ConsoleDprint()
 
-        self.title("Keyword WikiPageviewExplorer (v 2.17.22)")
+        self.title("WikiPageviewExplorer (v 3.3.22)")
         self.geometry("850x650")
         self.resizable(width=True, height=False)
         self.build_view()
+
+        self.multi_count_list = []
+        self.totals_dict = {}
 
     def build_view(self):
         print("build_view")
@@ -75,7 +82,7 @@ class WikiPageviewExplorer(tk.Tk):
         row = self.response_text_field.get_next_row()
         buttons = Buttons(lf, row, "Actions", label_width=label_width)
         buttons.add_button("Search", self.search_wiki_callback)
-        buttons.add_button("Copy Selected", self.implement_me)
+        buttons.add_button("Copy Selected", self.copy_selected_callback)
         row = buttons.get_next_row()
 
     def build_page_views(self, lf:tk.LabelFrame, text_width:int, label_width:int):
@@ -87,29 +94,68 @@ class WikiPageviewExplorer(tk.Tk):
         self.end_date_field = DateEntryField(lf, row, 'End Date', text_width, label_width=label_width)
         row = self.end_date_field.get_next_row()
         buttons = Buttons(lf, row, "Actions", label_width=label_width)
-        buttons.add_button("Clear", self.implement_me)
-        buttons.add_button("Test Pages", self.implement_me)
-        buttons.add_button("Plot", self.implement_me)
+        buttons.add_button("Test Pages", self.test_pages_callback)
+        buttons.add_button("Plot", self.plot_callback)
         buttons.add_button("Save", self.implement_me)
         row = buttons.get_next_row()
 
     def build_page_view_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
         self.sample_list = ListField(lf, row, "Sample", width=text_width, label_width=label_width, static_list=True)
-        self.sample_list.set_text(text='daily, weekly, monthly')
+        self.sample_list.set_text(text='daily, monthly')
         self.sample_list.set_callback(self.set_time_sample_callback)
         self.set_time_sample_callback()
         row = self.sample_list.get_next_row()
+
+    def copy_selected_callback(self):
+        s = self.response_text_field.get_selected()
+        self.wiki_pages_text_field.set_text(s)
 
     def search_wiki_callback(self):
         key_list = self.topic_text_field.get_list("\n")
         result_list = []
         for keyword in key_list:
             page_list = ws.get_closet_wiki_page_list(keyword)
-            result = "{}: {}".format(keyword, ", ".join(page_list))
             result_list.extend(page_list)
         result = "\n".join(result_list)
         self.response_text_field.set_text(result)
+
+    def test_pages_callback(self):
+        granularity = self.sample_list.get_selected()
+        start_dt = self.start_date_field.get_date()
+        end_dt = self.end_date_field.get_date()
+        topic_list = self.wiki_pages_text_field.get_list("\n")
+        topic:str
+        self.multi_count_list = []
+        self.totals_dict = {}
+        for topic in topic_list:
+            query = topic.replace(" ", "_")
+            query = query.replace("&", "%26")
+            view_list, totals = ws.get_pageview_list(query, start_dt, end_dt, granularity)
+            print("{} = {}".format(query, totals))
+            self.totals_dict[topic] = totals
+            view_list = sorted(view_list, key=lambda x: x.timestamp)
+            self.multi_count_list.append(view_list)
+        self.plot_callback()
+
+    def plot_callback(self):
+        if len(self.multi_count_list) == 0:
+            message.showwarning("Plot Error", "You need something to plot first!")
+            return
+
+        plt.title("\n".join("{}: {:,}".format(k, v) for k, v in self.totals_dict.items()), loc='left')
+        for count_list in self.multi_count_list:
+            y_vals = []
+            dates = []
+            vd:ws.ViewData
+            for vd in count_list:
+                y_vals.append(vd.views)
+                dates.append(vd.timestamp)
+            plt.plot(dates, y_vals)
+        plt.yscale("log")
+        plt.gca().legend(self.totals_dict.keys())
+        plt.gcf().autofmt_xdate()
+        plt.show()
 
     def set_time_sample_callback(self, event:tk.Event = None):
         sample_str = self.sample_list.get_selected()

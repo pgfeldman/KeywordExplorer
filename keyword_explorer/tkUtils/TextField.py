@@ -104,6 +104,11 @@ class TextField:
         to_return = [x for x in to_return if x] # filter out the blanks
         return to_return
 
+    def get_selected(self) -> str:
+        s = self.tk_text.selection_get()
+        #print("selected {}\n".format(s))
+        return s
+
     def on_text_select(self, event:tk.Event):
         try:
             if self.select_callback != None:
