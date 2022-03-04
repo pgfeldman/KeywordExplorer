@@ -5,7 +5,7 @@ from tkinter import filedialog
 import inspect
 import re
 import getpass
-import urllib.parse
+import webbrowser
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import pandas as pd
@@ -96,7 +96,8 @@ class WikiPageviewExplorer(tk.Tk):
         buttons = Buttons(lf, row, "Actions", label_width=label_width)
         buttons.add_button("Test Pages", self.test_pages_callback)
         buttons.add_button("Plot", self.plot_callback)
-        buttons.add_button("Save", self.implement_me)
+        buttons.add_button("Save", self.save_callback)
+        buttons.add_button("Show Pages", self.show_pages_callback)
         row = buttons.get_next_row()
 
     def build_page_view_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
@@ -115,7 +116,7 @@ class WikiPageviewExplorer(tk.Tk):
         key_list = self.topic_text_field.get_list("\n")
         result_list = []
         for keyword in key_list:
-            page_list = ws.get_closet_wiki_page_list(keyword)
+            page_list = ws.get_closet_wiki_page_list(keyword, n=7, cutoff=0.4)
             result_list.extend(page_list)
         result = "\n".join(result_list)
         self.response_text_field.set_text(result)
@@ -143,7 +144,7 @@ class WikiPageviewExplorer(tk.Tk):
             message.showwarning("Plot Error", "You need something to plot first!")
             return
 
-        plt.title("\n".join("{}: {:,}".format(k, v) for k, v in self.totals_dict.items()), loc='left')
+        #plt.title("\n".join("{}: {:,}".format(k, v) for k, v in self.totals_dict.items()), loc='left')
         for count_list in self.multi_count_list:
             y_vals = []
             dates = []
@@ -153,9 +154,38 @@ class WikiPageviewExplorer(tk.Tk):
                 dates.append(vd.timestamp)
             plt.plot(dates, y_vals)
         plt.yscale("log")
-        plt.gca().legend(self.totals_dict.keys())
+        #plt.gca().legend(self.totals_dict.keys())
+        plt.gca().legend(["{}: {:,}".format(k, v) for k, v in self.totals_dict.items()])
         plt.gcf().autofmt_xdate()
         plt.show()
+
+    def save_callback(self):
+        filename = filedialog.asksaveasfilename(filetypes=(("Excel files", "*.xlsx"),("All Files", "*.*")), title="Save Excel File")
+        if filename:
+            print("saving to {}".format(filename))
+            l = []
+
+            for i in range(len(self.multi_count_list)):
+                count_list = self.multi_count_list[i]
+                vd:ws.ViewData
+                vd = count_list[0]
+                d = {"page":vd.article}
+                l.append(d)
+                for vd in count_list:
+                    start_time_str = vd.timestamp.strftime('%Y-%m-%d')
+                    d[start_time_str] = vd.views
+            df = pd.DataFrame(l)
+            with pd.ExcelWriter(filename) as writer:
+                df.to_excel(writer, sheet_name='Page Views')
+                writer.save()
+
+    def show_pages_callback(self):
+        topic_list = self.wiki_pages_text_field.get_list("\n")
+        for topic in topic_list:
+            query = topic.replace(" ", "_")
+            query = query.replace("&", "%26")
+            url_str = "https://en.wikipedia.org/wiki/{}".format(query)
+            webbrowser.open(url_str)
 
     def set_time_sample_callback(self, event:tk.Event = None):
         sample_str = self.sample_list.get_selected()

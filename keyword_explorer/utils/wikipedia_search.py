@@ -30,13 +30,13 @@ def remove_accents(input_str:str) -> str:
     only_ascii = u"".join([c for c in nfkd_form if not unicodedata.combining(c)])
     return only_ascii
 
-def get_closet_wiki_page_list(source_term:str) -> List:
+def get_closet_wiki_page_list(source_term:str, n=3, cutoff=0.6) -> List:
     closest_list = []
     source_term = remove_accents(source_term)
     page_list = wikipedia.search(source_term, suggestion=False)
     if len(page_list) == 0:
         return closest_list
-    closest_list = dl.get_close_matches(source_term, page_list)
+    closest_list = dl.get_close_matches(source_term, page_list, n, cutoff)
     return closest_list
 
 def get_closest_wiki_page(source_term:str, threshold:float = 0.8, debug:bool=True) -> str:
