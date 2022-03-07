@@ -104,8 +104,16 @@ class TextField:
         to_return = [x for x in to_return if x] # filter out the blanks
         return to_return
 
-    def get_selected(self) -> str:
-        s = self.tk_text.selection_get()
+    def get_selected(self, get_everything:bool = True) -> str:
+        # if nothing is selected, the we'll grab everything. We take advantage of the exception that is thrown when
+        # you try to get the index of a selection that is not there
+        s = ""
+        try:
+            start = self.tk_text.count('1.0', tk.SEL_FIRST)
+            s = self.tk_text.selection_get()
+        except tk.TclError:
+            if get_everything:
+                s = self.get_text()
         #print("selected {}\n".format(s))
         return s
 
