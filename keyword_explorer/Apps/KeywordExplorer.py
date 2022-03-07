@@ -7,6 +7,7 @@ import re
 import getpass
 from datetime import datetime, timedelta
 import pandas as pd
+import openai
 from typing import List, Any, Union, Dict
 
 from keyword_explorer.OpenAI.OpenAIComms import OpenAIComms
@@ -19,6 +20,7 @@ from keyword_explorer.tkUtils.ConsoleDprint import ConsoleDprint
 from keyword_explorer.tkUtils.DateEntryField import DateEntryField
 from keyword_explorer.tkUtils.DataField import DataField
 from keyword_explorer.tkUtils.ListField import ListField
+from keyword_explorer.utils.SharedObjects import SharedObjects
 
 class KeywordExplorer(tk.Tk):
     main_console:tk.Text
@@ -35,16 +37,18 @@ class KeywordExplorer(tk.Tk):
     token_list:ListField
     engine_list:ListField
     sample_list:ListField
+    so:SharedObjects
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         print("KeywordExplorer")
+        self.so = SharedObjects()
         self.dp = ConsoleDprint()
         self.oai = OpenAIComms()
         self.tvc = TwitterV2Counts()
 
         self.title("Keyword Explorer (v 2.17.22)")
-        self.geometry("850x650")
+        self.geometry("850x670")
         self.resizable(width=True, height=False)
         self.build_view()
 
@@ -83,6 +87,17 @@ class KeywordExplorer(tk.Tk):
         self.dp.dprint("build_view()")
         self.end_date_field.set_date()
         self.start_date_field.set_date(d = (datetime.utcnow() - timedelta(days=10)))
+        self.build_menus()
+
+    def build_menus(self):
+        print("building menus")
+        self.option_add('*tearOff', tk.FALSE)
+        menubar = tk.Menu(self)
+        self['menu'] = menubar
+        menu_file = tk.Menu(menubar)
+        menubar.add_cascade(menu=menu_file, label='File')
+        menu_file.add_command(label='Load IDs', command=self.load_ids_callback)
+        menu_file.add_command(label='Exit', command=self.terminate)
 
     def build_gpt(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
@@ -138,6 +153,15 @@ class KeywordExplorer(tk.Tk):
         self.sample_list.set_callback(self.set_time_sample_callback)
         self.set_time_sample_callback()
         row = self.sample_list.get_next_row()
+
+    def load_ids_callback(self):
+        result = filedialog.askopenfile(filetypes=(("JSON files", "*.json"),("All Files", "*.*")), title="Load json ID file")
+        if result:
+            self.so.load_from_file(result.name)
+            self.tvc.bearer_token = self.so.get_object('BEARER_TOKEN_2')
+            openai.api_key = self.so.get_object('OPENAI_KEY')
+            print("bearer_token = {}".format(self.tvc.bearer_token))
+            print("openai.api_key = {}".format(openai.api_key))
 
     def set_engine_callback(self, event:tk.Event = None):
         engine_str = self.engine_list.get_selected()

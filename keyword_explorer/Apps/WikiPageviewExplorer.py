@@ -4,6 +4,7 @@ import tkinter.messagebox as message
 from tkinter import filedialog
 import inspect
 import re
+import os
 import getpass
 import webbrowser
 import matplotlib.pyplot as plt
@@ -19,6 +20,7 @@ from keyword_explorer.tkUtils.ConsoleDprint import ConsoleDprint
 from keyword_explorer.tkUtils.DateEntryField import DateEntryField
 from keyword_explorer.tkUtils.DataField import DataField
 from keyword_explorer.tkUtils.ListField import ListField
+from keyword_explorer.utils.SharedObjects import SharedObjects
 
 class WikiPageviewExplorer(tk.Tk):
     main_console:tk.Text
@@ -32,10 +34,13 @@ class WikiPageviewExplorer(tk.Tk):
     sample_list:ListField
     multi_count_list:List
     totals_dict:dict
+    user_agent:str
+    so:SharedObjects
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         print("WikiPageviewExplorer")
+        self.so = SharedObjects()
         self.dp = ConsoleDprint()
 
         self.title("WikiPageviewExplorer (v 3.3.22)")
@@ -45,6 +50,9 @@ class WikiPageviewExplorer(tk.Tk):
 
         self.multi_count_list = []
         self.totals_dict = {}
+        self.user_agent = os.environ.get("USER_AGENT")
+        if self.user_agent == None:
+            message.showwarning("Key Error", "Could not find Environment key 'USER_AGENT'")
 
     def build_view(self):
         print("build_view")
@@ -72,6 +80,17 @@ class WikiPageviewExplorer(tk.Tk):
         self.dp.dprint("build_view()")
         self.end_date_field.set_date()
         self.start_date_field.set_date(d = (datetime.utcnow() - timedelta(days=10)))
+        self.build_menus()
+
+    def build_menus(self):
+        print("building menus")
+        self.option_add('*tearOff', tk.FALSE)
+        menubar = tk.Menu(self)
+        self['menu'] = menubar
+        menu_file = tk.Menu(menubar)
+        menubar.add_cascade(menu=menu_file, label='File')
+        menu_file.add_command(label='Load IDs', command=self.load_ids_callback)
+        menu_file.add_command(label='Exit', command=self.terminate)
 
     def build_topic_search(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
@@ -108,6 +127,13 @@ class WikiPageviewExplorer(tk.Tk):
         self.set_time_sample_callback()
         row = self.sample_list.get_next_row()
 
+    def load_ids_callback(self):
+        result = filedialog.askopenfile(filetypes=(("JSON files", "*.json"),("All Files", "*.*")), title="Load json ID file")
+        if result:
+            self.so.load_from_file(result.name)
+            self.user_agent = self.so.get_object('USER_AGENT')
+            print("user agent = {}".format(self.user_agent))
+
     def copy_selected_callback(self):
         s = self.response_text_field.get_selected()
         self.wiki_pages_text_field.set_text(s)
@@ -132,7 +158,7 @@ class WikiPageviewExplorer(tk.Tk):
         for topic in topic_list:
             query = topic.replace(" ", "_")
             query = query.replace("&", "%26")
-            view_list, totals = ws.get_pageview_list(query, start_dt, end_dt, granularity)
+            view_list, totals = ws.get_pageview_list(query, start_dt, end_dt, granularity, self.user_agent)
             print("{} = {}".format(query, totals))
             self.totals_dict[topic] = totals
             view_list = sorted(view_list, key=lambda x: x.timestamp)
