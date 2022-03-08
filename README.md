@@ -2,7 +2,7 @@ Explorer Apps
 ====================================
 There are three applications in this project, _KeywordExplorer_, _TweetsCountExplorer_, and _WikiPageviewExplorer_. A brief overview of each is below. 
 
-##KeywordExplorer
+## KeywordExplorer
 
 KewordExplorer is a Python desktop app that lets you use the GPT-3 to search for keywords and Twitter to see if those keywords are any good. Below is an example of the running app:
 
