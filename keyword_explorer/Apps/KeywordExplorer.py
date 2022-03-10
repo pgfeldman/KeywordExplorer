@@ -1,30 +1,22 @@
-import tkinter as tk
-from tkinter import ttk
-import tkinter.messagebox as message
-from tkinter import filedialog
-import inspect
-import re
 import getpass
+import tkinter as tk
+import tkinter.messagebox as message
 from datetime import datetime, timedelta
+from tkinter import filedialog
+
 import pandas as pd
-import openai
-from typing import List, Any, Union, Dict
 
+from keyword_explorer.Apps.AppBase import AppBase
 from keyword_explorer.OpenAI.OpenAIComms import OpenAIComms
-
 from keyword_explorer.TwitterV2.TwitterV2Counts import TwitterV2Counts, TwitterV2Count
-
-from keyword_explorer.tkUtils.TextField import TextField
 from keyword_explorer.tkUtils.Buttons import Buttons
-from keyword_explorer.tkUtils.ConsoleDprint import ConsoleDprint
-from keyword_explorer.tkUtils.DateEntryField import DateEntryField
 from keyword_explorer.tkUtils.DataField import DataField
+from keyword_explorer.tkUtils.DateEntryField import DateEntryField
 from keyword_explorer.tkUtils.ListField import ListField
-from keyword_explorer.utils.SharedObjects import SharedObjects
+from keyword_explorer.tkUtils.TextField import TextField
 
-class KeywordExplorer(tk.Tk):
-    main_console:tk.Text
-    dp:ConsoleDprint
+
+class KeywordExplorer(AppBase):
     oai:OpenAIComms
     tvc:TwitterV2Counts
     prompt_text_field:TextField
@@ -33,71 +25,51 @@ class KeywordExplorer(tk.Tk):
     start_date_field:DateEntryField
     end_date_field:DateEntryField
     regex_field:DataField
-    experiment_field:DataField
     token_list:ListField
     engine_list:ListField
     sample_list:ListField
-    so:SharedObjects
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         print("KeywordExplorer")
-        self.so = SharedObjects()
-        self.dp = ConsoleDprint()
+
+    def setup_app(self):
+        self.app_name = "KeywordExplorer"
+        self.app_version = "2.17.22"
+        self.geom = (850, 670)
         self.oai = OpenAIComms()
         self.tvc = TwitterV2Counts()
-
-        self.title("Keyword Explorer (v 2.17.22)")
-        self.geometry("850x670")
-        self.resizable(width=True, height=False)
-        self.build_view()
 
         if not self.oai.key_exists():
             message.showwarning("Key Error", "Could not find Environment key 'OPENAI_KEY'")
         if not self.tvc.key_exists():
             message.showwarning("Key Error", "Could not find Environment key 'BEARER_TOKEN_2'")
 
-    def build_view(self):
-        print("build_view")
-        main_text_width = 53
-        main_label_width = 15
+
+    def build_app_view(self, row:int, main_text_width:int, main_label_width:int) -> int:
         param_text_width = 15
         param_label_width = 15
-
-        self.experiment_field = DataField(self, 0, "Experiment name:", 40, label_width=20)
-        self.experiment_field.set_text(getpass.getuser())
+        row += 1
 
         lf = tk.LabelFrame(self, text="GPT")
-        lf.grid(row=1, column=0, columnspan = 2, sticky="nsew", padx=5, pady=2)
+        lf.grid(row=row, column=0, columnspan = 2, sticky="nsew", padx=5, pady=2)
         self.build_gpt(lf, main_text_width, main_label_width)
 
         lf = tk.LabelFrame(self, text="GPT Params")
-        lf.grid(row=1, column=2, sticky="nsew", padx=5, pady=2)
+        lf.grid(row=row, column=2, sticky="nsew", padx=5, pady=2)
         self.build_gpt_params(lf, param_text_width, param_label_width)
+        row += 1
 
         lf = tk.LabelFrame(self, text="Twitter")
-        lf.grid(row=2, column=0, columnspan = 2, sticky="nsew", padx=5, pady=2)
+        lf.grid(row=row, column=0, columnspan = 2, sticky="nsew", padx=5, pady=2)
         self.build_twitter(lf, main_text_width, main_label_width)
 
         lf = tk.LabelFrame(self, text="Twitter Params")
-        lf.grid(row=2, column=2, columnspan = 2, sticky="nsew", padx=5, pady=2)
+        lf.grid(row=row, column=2, columnspan = 2, sticky="nsew", padx=5, pady=2)
         self.build_twitter_params(lf, param_text_width, param_label_width)
 
-        self.dp.create_tk_console(self, row=3, height=5, char_width=main_text_width+main_label_width, set_console=True)
-        self.dp.dprint("build_view()")
         self.end_date_field.set_date()
         self.start_date_field.set_date(d = (datetime.utcnow() - timedelta(days=10)))
-        self.build_menus()
-
-    def build_menus(self):
-        print("building menus")
-        self.option_add('*tearOff', tk.FALSE)
-        menubar = tk.Menu(self)
-        self['menu'] = menubar
-        menu_file = tk.Menu(menubar)
-        menubar.add_cascade(menu=menu_file, label='File')
-        menu_file.add_command(label='Load IDs', command=self.load_ids_callback)
-        menu_file.add_command(label='Exit', command=self.terminate)
 
     def build_gpt(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
@@ -153,15 +125,6 @@ class KeywordExplorer(tk.Tk):
         self.sample_list.set_callback(self.set_time_sample_callback)
         self.set_time_sample_callback()
         row = self.sample_list.get_next_row()
-
-    def load_ids_callback(self):
-        result = filedialog.askopenfile(filetypes=(("JSON files", "*.json"),("All Files", "*.*")), title="Load json ID file")
-        if result:
-            self.so.load_from_file(result.name)
-            self.tvc.bearer_token = self.so.get_object('BEARER_TOKEN_2')
-            openai.api_key = self.so.get_object('OPENAI_KEY')
-            print("bearer_token = {}".format(self.tvc.bearer_token))
-            print("openai.api_key = {}".format(openai.api_key))
 
     def set_engine_callback(self, event:tk.Event = None):
         engine_str = self.engine_list.get_selected()
@@ -305,29 +268,6 @@ class KeywordExplorer(tk.Tk):
             if s != "":
                 par = "{}\n{}".format(par, s)
         return par.strip()
-
-    def terminate(self):
-        """
-        The callback called when clicking the exit button
-        :return:
-        """
-        print("terminating")
-        self.destroy()
-
-    def implement_me(self, event:tk.Event = None):
-        """
-        A callback to point to when you you don't have a method ready. Prints "implement me!" to the output and
-        an abbreviated version of the call stack to the console
-        :return:
-        """
-        #self.dprint("Implement me!")
-        self.dp.dprint("Implement me! (see console for call stack)")
-        fi:inspect.FrameInfo
-        count = 0
-        self.dp.dprint("\nImplement me!")
-        for fi in inspect.stack():
-            filename = re.split(r"(/)|(\\)", fi.filename)
-            print("Call stack[{}] = {}() (line {} in {})".format(count, fi.function, fi.lineno, filename[-1]))
 
 def main():
     app = KeywordExplorer()
