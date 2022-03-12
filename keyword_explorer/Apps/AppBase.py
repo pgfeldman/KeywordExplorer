@@ -1,17 +1,14 @@
-import tkinter as tk
-from tkinter import ttk
-import tkinter.messagebox as message
-from tkinter import filedialog
 import getpass
 import inspect
 import re
-import os
+import tkinter as tk
+from tkinter import filedialog
+from typing import Tuple
 
 from keyword_explorer.tkUtils.ConsoleDprint import ConsoleDprint
-from keyword_explorer.utils.SharedObjects import SharedObjects
 from keyword_explorer.tkUtils.DataField import DataField
+from keyword_explorer.utils.SharedObjects import SharedObjects
 
-from typing import Tuple
 
 class AppBase(tk.Tk):
     experiment_field:DataField
