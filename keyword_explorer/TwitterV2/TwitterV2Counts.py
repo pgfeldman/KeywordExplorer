@@ -26,6 +26,7 @@ class TwitterV2Counts (TwitterV2Base):
     count_list:List
     multi_count_list:List
     query_list:List
+    totals_dict:Dict
 
     def __init__(self):
         super().__init__()
@@ -39,6 +40,7 @@ class TwitterV2Counts (TwitterV2Base):
         self.query_list = []
         self.multi_count_list = []
         self.total_tweets = 0
+        self.totals_dict = {}
 
     def parse_json(self, json_response) -> Union[str, None]:
         meta:Dict = json_response['meta']
@@ -52,6 +54,13 @@ class TwitterV2Counts (TwitterV2Base):
             return meta['next_token']
 
         return None
+
+    def get_query_totals(self, query:str):
+        totals = 0
+        tvc:TwitterV2Count
+        for tvc in self.count_list:
+            totals += tvc.count
+        self.totals_dict[query] = totals
 
     def get_sampled_counts(self, query:str, start_time:datetime, end_time:datetime = None, skip_days:int=3):
         self.count_list = []
@@ -80,6 +89,7 @@ class TwitterV2Counts (TwitterV2Base):
             cur_start = cur_start + timedelta(days=skip_days)
         self.count_list = sorted(self.count_list, key=lambda x: x.start_time)
         self.multi_count_list.append(self.count_list)
+        self.get_query_totals(query)
 
     def get_counts(self, query:str, start_time:datetime, end_time:datetime = None, granularity:str = "day"):
         self.count_list = []
@@ -110,6 +120,7 @@ class TwitterV2Counts (TwitterV2Base):
 
         self.count_list = sorted(self.count_list, key=lambda x: x.start_time)
         self.multi_count_list.append(self.count_list)
+        self.get_query_totals(query)
 
     @staticmethod
     def create_counts_url(query:str, start_time:str, end_time:str, granularity:str = "day", next_token:str = None):
@@ -139,7 +150,8 @@ class TwitterV2Counts (TwitterV2Base):
                 dates.append(tvc.start_time)
             plt.plot(dates, y_vals)
         plt.yscale("log")
-        plt.gca().legend(self.query_list)
+        # plt.gca().legend(self.query_list)
+        plt.gca().legend(["{}: {:,}".format(k, v) for k, v in self.totals_dict.items()])
         plt.gcf().autofmt_xdate()
         plt.show()
 

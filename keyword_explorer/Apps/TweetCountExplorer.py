@@ -14,6 +14,7 @@ from keyword_explorer.tkUtils.DateEntryField import DateEntryField
 from keyword_explorer.tkUtils.ListField import ListField
 from keyword_explorer.tkUtils.TextField import TextField
 
+from typing import Dict
 
 class TweetCountExplorer(AppBase):
     tvc:TwitterV2Counts
@@ -27,8 +28,10 @@ class TweetCountExplorer(AppBase):
     engine_list:ListField
     sample_list:ListField
 
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.totals_dict = {}
         print("TweetCountExplorer")
 
     def setup_app(self):
