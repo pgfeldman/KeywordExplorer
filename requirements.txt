@@ -9,3 +9,4 @@ wikipedia~=1.4.0
 transformers~=4.10.0.dev0
 openai~=0.11.5
 networkx~=2.6.2
+tkinterweb~=3.12.2

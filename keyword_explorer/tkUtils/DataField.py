@@ -11,16 +11,16 @@ class DataField:
 
     def __init__(self, parent:'ttk.Frame', row:int, label:str, width:int = 20, password:bool = False, label_width:int = 16):
         self.row = row
-        self.tk_label = tk.Label(parent, text=label, width=label_width)
+        self.tk_label = tk.Label(parent, text=label, width=label_width, anchor="w")#, background="pink")
         if password:
-            self.tk_entry = tk.Entry(parent, show = "*", width=width)
+            self.tk_entry = tk.Entry(parent, show = "*", width=width, anchor="w")
         else:
             self.tk_entry = tk.Entry(parent, width=width)
 
 
         self.tk_label.grid(column=0, row=row, sticky=(tk.W), padx=5)
         #self.tk_entry.grid(column=1, row=row, sticky=(tk.N, tk.E, tk.W), pady=2, padx=5)
-        self.tk_entry.grid(column=1, row=row, sticky="w", pady=2, padx=5)
+        self.tk_entry.grid(column=1, row=row, sticky=(tk.W), pady=2, padx=5)
 
     def tuple_extract(self, obj:Any, index:int=0) -> Any:
         if isinstance(obj, tuple):

@@ -23,7 +23,6 @@ class TweetCountExplorer(AppBase):
     keyword_text_field:TextField
     start_date_field:DateEntryField
     end_date_field:DateEntryField
-    regex_field:DataField
     token_list:ListField
     engine_list:ListField
     sample_list:ListField
