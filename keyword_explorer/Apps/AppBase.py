@@ -3,7 +3,8 @@ import inspect
 import re
 import tkinter as tk
 from tkinter import filedialog
-from typing import Tuple
+from datetime import datetime
+from typing import Tuple, Dict, IO
 
 from keyword_explorer.tkUtils.ConsoleDprint import ConsoleDprint
 from keyword_explorer.tkUtils.DataField import DataField
@@ -12,6 +13,7 @@ from keyword_explorer.utils.SharedObjects import SharedObjects
 
 class AppBase(tk.Tk):
     experiment_field:DataField
+    logfile:str
     app_name:str
     app_version:str
     app_geom:Tuple
@@ -25,6 +27,9 @@ class AppBase(tk.Tk):
         self.setup_app()
         self.build_view()
         self.dp.dprint("{} is running!".format(self.app_name))
+        dt = datetime.now()
+        self.logfile = "../../data/{}_{}.csv".format(self.app_name, dt.strftime("%Y-%m-%d-%H-%M-%S"))
+        self.log_action("session", {"session start":dt.strftime("%H:%M:%S")})
 
     def setup_app(self):
         self.app_name = "AppBase"
@@ -68,6 +73,18 @@ class AppBase(tk.Tk):
             self.so.load_from_file(result.name)
             self.tvc.bearer_token = self.so.get_object('BEARER_TOKEN_2')
             print("bearer_token = {}".format(self.tvc.bearer_token))
+
+    def log_action(self, task:str, row_info:Dict, mode:str = "a"):
+        with open(self.logfile, mode) as fio:
+            dt = datetime.now()
+            ds = dt.strftime("%H:%M:%S")
+            s = "time, {}, task, {}".format(ds, task)
+            for key, val in row_info.items():
+                if isinstance(val, str):
+                    val = val.replace("\n", " ")
+                s += ", {}, {}".format(key, val)
+            fio.write("{}\n".format(s))
+            fio.close()
 
     def terminate(self):
         """

@@ -176,8 +176,8 @@ class KeywordExplorer(AppBase):
                 message.showwarning("Keyword too short",
                                     "Please enter something longer than [{}] text area".format(keyword))
                 return
-
         granularity = self.sample_list.get_selected()
+        log_dict = {"granularity":granularity, "twitter_start": start_dt.strftime("%Y-%m-%d"), "twitter_end":end_dt.strftime("%Y-%m-%d")}
         for keyword in key_list:
             if granularity == 'day':
                 self.tvc.get_counts(keyword, start_dt, end_time=end_dt, granularity=granularity)
@@ -195,6 +195,10 @@ class KeywordExplorer(AppBase):
             tvc:TwitterV2Count
             for tvc in self.tvc.count_list:
                 print(tvc.to_string())
+
+        for k, v in self.tvc.totals_dict.items():
+            log_dict[k] = v
+        self.log_action("test_keyword", log_dict)
         self.tvc.plot()
 
     def clear_counts_callbacks(self):
@@ -219,6 +223,7 @@ class KeywordExplorer(AppBase):
         key_list = self.keyword_text_field.get_list("\n")
         start_dt = self.start_date_field.get_date()
         end_dt = self.end_date_field.get_date()
+        self.log_action("Launch_twitter", {"twitter_start": start_dt.strftime("%Y-%m-%d"), "twitter_end":end_dt.strftime("%Y-%m-%d"), "terms":" ".join(key_list)})
         self.tvc.launch_twitter(key_list, start_dt, end_dt)
 
     def get_description_df(self, probe:str, response:str) -> pd.DataFrame:
@@ -243,15 +248,17 @@ class KeywordExplorer(AppBase):
             return ""
 
         # print(prompt)
-
         self.oai.max_tokens = self.adjust_tokens()
         self.oai.set_engine(name = self.engine_list.get_selected())
         results = self.oai.get_prompt_result(prompt, False)
         self.dp.dprint("\n------------\ntokens = {}, engine = {}\nprompt = {}".format(self.oai.max_tokens, self.oai.engine, prompt))
+        self.log_action("gpt_prompt", {"tokens":self.oai.max_tokens, "engine":self.oai.engine, "prompt":prompt})
 
         # clean up before returning
         s = results[0].strip()
-        return self.clean_list_text(s)
+        s =  self.clean_list_text(s)
+        self.log_action("gpt_response", {"gpt_text":s})
+        return s
 
     def clean_list_text(self, s:str) -> str:
         """

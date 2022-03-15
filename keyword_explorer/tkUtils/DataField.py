@@ -21,6 +21,7 @@ class DataField:
         self.tk_label.grid(column=0, row=row, sticky=(tk.W), padx=5)
         #self.tk_entry.grid(column=1, row=row, sticky=(tk.N, tk.E, tk.W), pady=2, padx=5)
         self.tk_entry.grid(column=1, row=row, sticky=(tk.W), pady=2, padx=5)
+        parent.columnconfigure(1, weight=1)
 
     def tuple_extract(self, obj:Any, index:int=0) -> Any:
         if isinstance(obj, tuple):

@@ -88,6 +88,7 @@ class TweetCountExplorer(AppBase):
         key_list = self.keyword_text_field.get_list("\n")
         start_dt = self.start_date_field.get_date()
         end_dt = self.end_date_field.get_date()
+        self.log_action("Launch_twitter", {"twitter_start": start_dt.strftime("%Y-%m-%d"), "twitter_end":end_dt.strftime("%Y-%m-%d"), "terms":" ".join(key_list)})
         self.tvc.launch_twitter(key_list, start_dt, end_dt)
         # webbrowser.open('https://twitter.com/search?q=chinavirus%20until%3A2020-02-01%20since%3A2019-12-01&src=typed_query')
         # webbrowser.open('https://twitter.com/search?q=%22china%20virus%22%20until%3A2020-02-01%20since%3A2019-12-01&src=typed_query')
@@ -109,6 +110,7 @@ class TweetCountExplorer(AppBase):
                 return
 
         granularity = self.sample_list.get_selected()
+        log_dict = {"granularity":granularity, "twitter_start": start_dt.strftime("%Y-%m-%d"), "twitter_end":end_dt.strftime("%Y-%m-%d")}
         for keyword in key_list:
             if granularity == 'day':
                 self.tvc.get_counts(keyword, start_dt, end_time=end_dt, granularity=granularity)
@@ -126,6 +128,9 @@ class TweetCountExplorer(AppBase):
             tvc:TwitterV2Count
             for tvc in self.tvc.count_list:
                 print(tvc.to_string())
+        for k, v in self.tvc.totals_dict.items():
+            log_dict[k] = v
+        self.log_action("test_keyword", log_dict)
         self.tvc.plot()
 
     def clear_counts_callbacks(self):

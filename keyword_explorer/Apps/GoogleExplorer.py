@@ -53,9 +53,6 @@ class GoogleExplorer(AppBase):
         lf.grid(row=row, column=0, columnspan = 2, sticky="nsew", padx=5, pady=2)
         self.build_search(lf, text_width, label_width)
 
-
-        #frame.pack(fill="both", expand=True)
-
     def build_search(self, parent:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
         self.search_field = DataField(parent, row, "Search:", text_width, label_width=label_width)
@@ -81,17 +78,19 @@ class GoogleExplorer(AppBase):
             message.showwarning("Key Error", "Could not find Environment key 'GOOGLE_CSE_KEY. Please load from ids.json file'")
             return
 
+        self.log_action("search", {"query":query})
         l = gs.get_search_results_list(query, engine, key)
         s = html_begin
         g:gs.GoogleCSEResult
         for g in l:
             s += g.to_html()
-            print("\n{}".format(g.to_string()))
+            # print("\n{}".format(g.to_string()))
         s += html_end
         self.search_frame.load_html(s)
 
     def load_new_page(self, url):
         print(url)
+        self.log_action("load_new_page", {"clicked":url})
         webbrowser.open(url)
         # self.search_frame.load_url(url)
 
@@ -105,7 +104,7 @@ def example_main():
     root.mainloop()
 
 def main():
-    print("GoogleExplorer")
+    print("Hello GoogleExplorer: {}".format(os.getcwd()))
     app = GoogleExplorer()
     app.mainloop()
 
