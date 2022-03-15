@@ -50,6 +50,12 @@ def get_search_results_list(query:str, engine:str, key:str) -> List:
             results_list.append(g)
     return results_list
 
+def key_exists(key:str = "GOOGLE_CSE_KEY") -> bool:
+    val = os.environ.get(key)
+    if val == None:
+        return False
+    return True
+
 def main():
 
     engine = engines['all.com']

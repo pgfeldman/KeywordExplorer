@@ -1,7 +1,9 @@
 from tkinterweb import HtmlFrame #import the HTML browser
 import tkinter as tk
+import tkinter.messagebox as message
 import os
 import webbrowser
+
 
 from keyword_explorer.Apps.AppBase import AppBase
 from keyword_explorer.tkUtils.DataField import DataField
@@ -42,6 +44,8 @@ class GoogleExplorer(AppBase):
         self.app_name = "GoogleExplorer"
         self.app_version = "3.14.22"
         self.geom = (850, 850)
+        if not gs.key_exists():
+            message.showwarning("Key Error", "Could not find Environment key 'GOOGLE_CSE_KEY'")
 
     def build_app_view(self, row:int, text_width:int, label_width:int) -> int:
         row += 1
@@ -71,6 +75,12 @@ class GoogleExplorer(AppBase):
         query = self.search_field.get_text()
         engine = gs.engines['all.com']
         key = os.environ.get("GOOGLE_CSE_KEY")
+        if key == None:
+            key = self.so.get_object("GOOGLE_CSE_KEY")
+        if key == None:
+            message.showwarning("Key Error", "Could not find Environment key 'GOOGLE_CSE_KEY. Please load from ids.json file'")
+            return
+
         l = gs.get_search_results_list(query, engine, key)
         s = html_begin
         g:gs.GoogleCSEResult
