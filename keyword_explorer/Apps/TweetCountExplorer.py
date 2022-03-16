@@ -150,6 +150,7 @@ class TweetCountExplorer(AppBase):
                 df1.to_excel(writer, sheet_name='Experiment')
                 df2.to_excel(writer, sheet_name='Results')
                 writer.save()
+            self.log_action("save", {"filename":filename})
 
     def get_description_df(self, probe:str, response:str) -> pd.DataFrame:
         now = datetime.now()

@@ -218,6 +218,7 @@ class KeywordExplorer(AppBase):
                 df1.to_excel(writer, sheet_name='Experiment')
                 df2.to_excel(writer, sheet_name='Results')
                 writer.save()
+                self.log_action("save", {"filename":filename})
 
     def launch_twitter_callback(self):
         key_list = self.keyword_text_field.get_list("\n")

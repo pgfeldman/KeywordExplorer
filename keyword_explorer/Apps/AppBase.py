@@ -4,6 +4,7 @@ import re
 import tkinter as tk
 from tkinter import filedialog
 from datetime import datetime
+from pathlib import Path
 from typing import Tuple, Dict, IO
 
 from keyword_explorer.tkUtils.ConsoleDprint import ConsoleDprint
@@ -28,7 +29,7 @@ class AppBase(tk.Tk):
         self.build_view()
         self.dp.dprint("{} is running!".format(self.app_name))
         dt = datetime.now()
-        self.logfile = "../../data/{}_{}.csv".format(self.app_name, dt.strftime("%Y-%m-%d-%H-%M-%S"))
+        self.logfile = "{}/{}_{}.csv".format(Path.home(), self.app_name, dt.strftime("%Y-%m-%d-%H-%M-%S"))
         self.log_action("session", {"session start":dt.strftime("%H:%M:%S")})
 
     def setup_app(self):
@@ -114,4 +115,5 @@ def main():
     app.mainloop()
 
 if __name__ == "__main__":
+    # print(Path.home())
     main()

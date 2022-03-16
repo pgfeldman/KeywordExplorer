@@ -183,6 +183,7 @@ class WikiPageviewExplorer(AppBase):
             with pd.ExcelWriter(filename) as writer:
                 df.to_excel(writer, sheet_name='Page Views')
                 writer.save()
+            self.log_action("save", {"filename":filename})
 
     def show_pages_callback(self):
         topic_list = self.wiki_pages_text_field.get_list("\n")
