@@ -25,6 +25,7 @@ class KeywordExplorer(AppBase):
     start_date_field:DateEntryField
     end_date_field:DateEntryField
     regex_field:DataField
+    max_chars_field:DataField
     token_list:ListField
     engine_list:ListField
     sample_list:ListField
@@ -35,7 +36,7 @@ class KeywordExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "KeywordExplorer"
-        self.app_version = "2.17.22"
+        self.app_version = "4.5.22"
         self.geom = (850, 670)
         self.oai = OpenAIComms()
         self.tvc = TwitterV2Counts()
@@ -78,6 +79,9 @@ class KeywordExplorer(AppBase):
         row = self.prompt_text_field.get_next_row()
         self.response_text_field = TextField(lf, row, 'Response', text_width, height=10, label_width=label_width)
         row = self.response_text_field.get_next_row()
+        self.max_chars_field = DataField(lf, row, 'Max chars:', text_width, label_width=label_width)
+        self.max_chars_field.set_text('20')
+        row = self.max_chars_field.get_next_row()
         self.regex_field = DataField(lf, row, 'Parse regex', text_width, label_width=label_width)
         self.regex_field.set_text(r"\n[0-9]+\)|\n[0-9]+|[0-9]+\)")
         row = self.regex_field.get_next_row()
@@ -158,8 +162,14 @@ class KeywordExplorer(AppBase):
         split_regex = self.regex_field.get_text()
         response_list = self.response_text_field.get_list(split_regex)
         print(response_list)
+
         if len(response_list) > 1:
-            s = '\n'.join(response_list)
+            s:str = ""
+            max_chars = self.max_chars_field.get_as_int()
+            for r in response_list:
+                if len(r) < max_chars:
+                    s += r+"\n"
+            #s = '\n'.join(response_list)
             self.keyword_text_field.set_text(s.strip())
         else:
             message.showwarning("Parse Error",

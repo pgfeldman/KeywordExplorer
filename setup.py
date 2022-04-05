@@ -1,15 +1,20 @@
 from  distutils.core import  setup
-from datetime import datetime
 
 setup(
     name='keyword_explorer',
-    version=datetime.now().strftime("%d.%m.%Y"),
-    packages=['keyword_explorer'],
+    version= "0.0.3.dev",
+    packages=['keyword_explorer',
+              'keyword_explorer.utils',
+              'keyword_explorer.TwitterV2',
+              'keyword_explorer.tkUtils',
+              'keyword_explorer.OpenAI',
+              'keyword_explorer.Apps'],
     url='https://github.com/pgfeldman/KeywordExplorer',
     license='MIT',
     author='Philip Feldman',
     author_email='phil@philfeldman.com',
     description='A tool for producing and exploring keywords',
+    long_description='A tool for producing and exploring keywords',
     install_requires=[
         'pandas~=1.3.5',
         'matplotlib~=3.2.2',
@@ -22,14 +27,6 @@ setup(
         'networkx~=2.6.2',
         'tkinterweb~=3.12.2'],
 
-    entry_points={
-        'console_scripts': [
-            'keyword-explorer = KeywordExplorer.__main__:main',
-            'tweet-count-explorer = TweetCountExplorer.__main__:main',
-            'wiki-page-explorer = WikiPageviewExplorer.__main__:main',
-            'google-explorer = GoogleExplorer.__main__:main',
-        ]},
-
     classifiers=[  # Optional
         # How mature is this project? Common values are
         #   3 - Alpha
@@ -39,4 +36,6 @@ setup(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
-    ],)
+    ],
+)
+
