@@ -1,8 +1,10 @@
+# I spent a good deal of time trying to figure out how to deploy to PyPI using the JetBrains IDE. You can read
+# the details at https://viztales.com/2022/04/05/phil-4-5-2022/
 from  distutils.core import  setup
 
 setup(
     name='keyword_explorer',
-    version= "0.0.3.dev",
+    version= "0.0.4.dev",
     packages=['keyword_explorer',
               'keyword_explorer.utils',
               'keyword_explorer.TwitterV2',
