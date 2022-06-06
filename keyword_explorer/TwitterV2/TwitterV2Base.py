@@ -4,6 +4,7 @@ import json
 import urllib.parse
 import webbrowser
 from datetime import datetime
+import time
 from typing import List, Dict
 
 class TwitterV2Base:
@@ -40,10 +41,23 @@ class TwitterV2Base:
             webbrowser.open(url_str)
             #print(url_str)
 
-    def connect_to_endpoint(self, url) -> json:
+    def connect_to_endpoint(self, url, time_to_wait:float = 0) -> json:
         response = requests.request("GET", url, auth=self.bearer_oauth)
-        print("Status code = : {}".format(response.status_code))
-        if response.status_code != 200:
+        if response.status_code == 200:
+            return response.json()
+
+        elif response.status_code == 429: # too many requests
+            throttle_end_timestamp = int(response.headers.get('x-rate-limit-reset'))
+            throttle_end_time = datetime.strftime(datetime.fromtimestamp(throttle_end_timestamp), "%H:%M:%S")
+            if time_to_wait == 0:
+                time_to_wait = 0.5
+            else:
+                time_to_wait = int(throttle_end_timestamp - datetime.now().timestamp()) + 5
+            print('connect_to_endpoint(): lets sleep for', time_to_wait, 'seconds')
+            time.sleep(time_to_wait)
+            return self.connect_to_endpoint(url, time_to_wait)
+        else:
+            print("Status code = : {}".format(response.status_code))
             raise Exception(
                 "Request returned an error: {} {}".format(
                     response.status_code, response.text
