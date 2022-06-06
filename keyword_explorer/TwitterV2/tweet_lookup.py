@@ -1,6 +1,8 @@
 import requests
 import os
 import json
+import datetime
+import urllib
 from typing import Dict
 
 """
@@ -63,6 +65,17 @@ def create_tweets_url(tweet_ids:str) -> str:
     print(url)
     return url
 
+def create_keywords_url(query:str, max_result:int = 10, time_str:str = None, next_token:str = None) -> str:
+    tweet_fields = "tweet.fields=lang,author_id,in_reply_to_user_id,created_at"
+    url = "https://api.twitter.com/2/tweets/search/all?max_results={}&query={}&{}".format(max_result, query, tweet_fields)
+    if time_str != None:
+        url = "{}&{}".format(url, time_str)
+    if next_token != None:
+        url = "{}&next_token={}".format(url, next_token)
+    print("max_result = {}\nurl = {}".format(max_result, url))
+    return url
+
+
 
 def bearer_oauth(r):
     """
@@ -89,24 +102,31 @@ def print_response(title:str, j:json):
     json_str = json.dumps(j, indent=4, sort_keys=True)
     print("\n------------ Begin '{}':\nresponse:\n{}\n------------ End '{}'\n".format(title, json_str, title))
 
-def main():
-    print("BEARER_TOKEN = {}".format(bearer_token))
-
+def tweet_id_query_example():
     url = create_tweets_url("1484131517878181891")
     url = create_tweets_url("1019189517977313280")
     json_response = connect_to_endpoint(url)
     print_response("Get tweet", json_response)
 
-    # url = create_recent_conversation_url("1484131517878181891")
-    # json_response = connect_to_endpoint(url)
-    # print_response("Get recent conversation", json_response)
-
+def historical_query_example():
     query = "from:philfeld" # "to:philfeld and is:reply"
     timeframe = "end_time=2018-07-18T00:00:00.000Z"
     url = create_historical_url(query=query, time_str=timeframe, max_result=100)
     json_response = connect_to_endpoint(url)
     print_response("Get historical conversation", json_response)
 
+def tweet_keyword_time_query_example(query:str = "aaaa bbbb"):
+    print("tweet_keyword_time_query_example")
+    query = "chinavirus OR sars-cov-2 place_country:US lang:en"
+    date_str = "2022-06-05T00:00:00Z"
+    dt = datetime.datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%SZ')
+    print("dt = {}".format(dt.strftime("%B %d %Y %H:%M")))
+    url = create_keywords_url(query)
+    json_response = connect_to_endpoint(url)
+    print_response("Get keyword tweets", json_response)
+
+
+def counts_query_example():
     query = "from:twitterdev"
     query = "chinavirus"
     start_time = "2020-01-01T00:00:00Z"
@@ -124,6 +144,20 @@ def main():
         print_response("Get counts {}".format(count), json_response)
         meta = json_response['meta']
         count += 1
+
+def main():
+    print("BEARER_TOKEN = {}".format(bearer_token))
+
+    #tweet_id_query_example()
+    # url = create_recent_conversation_url("1484131517878181891")
+    # json_response = connect_to_endpoint(url)
+    # print_response("Get recent conversation", json_response)
+    # historical_query_example()
+    # counts_query_example()
+
+    tweet_keyword_time_query_example()
+
+
 
 
 if __name__ == "__main__":

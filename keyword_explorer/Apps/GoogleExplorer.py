@@ -70,7 +70,7 @@ class GoogleExplorer(AppBase):
 
     def search_callback(self):
         query = self.search_field.get_text()
-        engine = gs.engines['all.com']
+        engine = gs.engines['com-org-edu']
         key = os.environ.get("GOOGLE_CSE_KEY")
         if key == None:
             key = self.so.get_object("GOOGLE_CSE_KEY")

@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List
 
 engines = {
+    'com-org-edu': '814dff357c3d046aa',
     'all.com': '017379340413921634422:swl1wknfxia',
     'all.edu': '017379340413921634422:6d0y9yrpnew',
     'all.us': '017379340413921634422:9qwxkhnqoi0',
