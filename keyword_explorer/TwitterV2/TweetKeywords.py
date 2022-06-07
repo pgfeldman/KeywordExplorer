@@ -34,7 +34,7 @@ class TweetKeywords(TwitterV2Base):
     @staticmethod
     def create_keywords_url(query:str, max_result:int = 10, time_str:str = None, next_token:str = None) -> str:
         tweet_fields = "tweet.fields=lang,geo,author_id,in_reply_to_user_id,created_at,conversation_id&expansions=geo.place_id"
-        tweet_fields = "tweet.fields=lang,author_id,in_reply_to_user_id,created_at,conversation_id"
+        tweet_fields = "tweet.fields=lang,author_id,in_reply_to_user_id,created_at,conversation_id,geo"
         tweet_options = "lang:en"
         url = "https://api.twitter.com/2/tweets/search/all?max_results={}&query={} {}&{}".format(max_result, query, tweet_options, tweet_fields)
         if time_str != None:
@@ -99,7 +99,7 @@ def exercise_get_keyword_tweets():
     date_str = "June 6, 2022 (00:00:00)"
     end_dt = datetime.strptime(date_str, "%B %d, %Y (%H:%M:%S)")
     for s in l:
-        tk.get_keywords(s, start_dt, end_dt=end_dt, tweets_per_sample=10) # tweets_per_sample need to be between 10 - 500
+        tk.get_keywords(s, start_dt, end_dt=end_dt, tweets_per_sample=500) # tweets_per_sample need to be between 10 - 500
 
 
 def main():

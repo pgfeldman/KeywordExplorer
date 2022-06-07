@@ -52,7 +52,7 @@ class TwitterV2Base:
             if time_to_wait == 0:
                 time_to_wait = 0.5
             else:
-                time_to_wait = int(throttle_end_timestamp - datetime.now().timestamp()) + 5
+                time_to_wait = 15 #int(throttle_end_timestamp - datetime.now().timestamp()) + 5
             print('connect_to_endpoint(): lets sleep for', time_to_wait, 'seconds')
             time.sleep(time_to_wait)
             return self.connect_to_endpoint(url, time_to_wait)
