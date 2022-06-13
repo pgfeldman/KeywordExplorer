@@ -32,6 +32,15 @@ class TweetKeywords(TwitterV2Base):
         self.totals_dict = {}
 
     @staticmethod
+    def create_counts_url(query:str, start_time:str, end_time:str, granularity:str = "day", next_token:str = None):
+        url = "https://api.twitter.com/2/tweets/counts/all?query={}&start_time={}&end_time={}&granularity={}".format(
+            query, start_time, end_time, granularity)
+        if next_token != None:
+            url = "{}&next_token={}".format(url, next_token)
+        # print("create_counts_url(): {}".format(url))
+        return url
+
+    @staticmethod
     def create_keywords_url(query:str, max_result:int = 10, time_str:str = None, next_token:str = None) -> str:
         tweet_fields = "tweet.fields=lang,geo,author_id,in_reply_to_user_id,created_at,conversation_id&expansions=geo.place_id"
         tweet_fields = "tweet.fields=lang,author_id,in_reply_to_user_id,created_at,conversation_id,geo"
@@ -53,6 +62,20 @@ class TweetKeywords(TwitterV2Base):
             return meta['next_token']
 
         return None
+
+    def get_keywords_per_day(self, keyword:str, start_dt:datetime):
+        query = self.prep_query(keyword)
+        end_dt = start_dt + timedelta(days=1)
+        end_time_str = end_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+        start_time_str = start_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+        url = self.create_counts_url(query, start_time_str, end_time_str)
+        json_response = self.connect_to_endpoint(url)
+        # print(json_response)
+        meta = json_response['meta']
+        if 'total_tweet_count' in meta:
+            return int(meta['total_tweet_count'])
+        return -1
+
 
     def get_keywords(self, keyword:str, start_dt:datetime, end_dt:datetime = None, tweets_per_sample:int = 10, skip_days:int = 1):
         #clean up the query so it works with the api
@@ -91,7 +114,7 @@ class TweetKeywords(TwitterV2Base):
 
 
 def exercise_get_keyword_tweets():
-    l = ['china virus']#, 'covid', 'sars-cov-2', 'chinavirus', 'virus', 'mask', 'vaccine']
+    l = ['china virus', 'covid', 'sars-cov-2', 'chinavirus', 'virus', 'mask', 'vaccine']
     tk = TweetKeywords()
     date_str = "June 1, 2022 (00:00:00)"
     start_dt = datetime.strptime(date_str, "%B %d, %Y (%H:%M:%S)")
@@ -99,7 +122,9 @@ def exercise_get_keyword_tweets():
     date_str = "June 6, 2022 (00:00:00)"
     end_dt = datetime.strptime(date_str, "%B %d, %Y (%H:%M:%S)")
     for s in l:
-        tk.get_keywords(s, start_dt, end_dt=end_dt, tweets_per_sample=500) # tweets_per_sample need to be between 10 - 500
+        count = tk.get_keywords_per_day(s, start_dt)
+        print("{}: keywords per day = {:,}".format(s, count))
+        # tk.get_keywords(s, start_dt, end_dt=end_dt, tweets_per_sample=10) # tweets_per_sample need to be between 10 - 500
 
 
 def main():

@@ -24,6 +24,9 @@ class ConsoleDprint:
         else:
             print(text)
 
+    def clear(self):
+        self.main_console.delete('1.0', tk.END)
+
     def create_tk_console(self, parent, row:int, height:int = 5, char_width:int = 100, set_console:bool = True) -> tk.Text:
         console_wrapper = tk.LabelFrame(parent, text="Console")
         main_console = tk.Text(console_wrapper, width=char_width, height=height, wrap=tk.WORD, borderwidth=2, relief="groove")

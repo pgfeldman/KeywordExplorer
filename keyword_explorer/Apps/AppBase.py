@@ -20,9 +20,11 @@ class AppBase(tk.Tk):
     app_geom:Tuple
     dp:ConsoleDprint
     so:SharedObjects
+    console_lines:int
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.console_lines = 5
         self.so = SharedObjects()
         self.dp = ConsoleDprint()
         self.setup_app()
@@ -52,7 +54,7 @@ class AppBase(tk.Tk):
 
         row = self.build_app_view(row, text_width, label_width)
 
-        self.dp.create_tk_console(self, row=row, height=5, char_width=text_width+label_width, set_console=True)
+        self.dp.create_tk_console(self, row=row, height=self.console_lines, char_width=text_width+label_width, set_console=True)
         self.build_menus()
 
     def build_app_view(self, row:int, text_width:int, label_width:int) -> int:

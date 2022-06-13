@@ -29,6 +29,8 @@ class TweetDownloader(AppBase):
     sample_list:ListField
     samples_field:DataField
     sample_mult_field:DataField
+    lowest_count_field:DataField
+    highest_count_field:DataField
     option_checkboxes:Checkboxes
 
 
@@ -40,14 +42,15 @@ class TweetDownloader(AppBase):
     def setup_app(self):
         self.app_name = "TweetDownloader"
         self.app_version = "5.7.22"
-        self.geom = (850, 440)
+        self.geom = (900, 500)
+        self.console_lines = 10
 
         self.tkey = TweetKeywords()
         if not self.tkey.key_exists():
             message.showwarning("Key Error", "Could not find Environment key 'BEARER_TOKEN_2'")
 
     def build_app_view(self, row:int, main_text_width:int, main_label_width:int) -> int:
-        param_text_width = 15
+        param_text_width = 20
         param_label_width = 15
         row += 1
         lf = tk.LabelFrame(self, text="Twitter")
@@ -72,6 +75,7 @@ class TweetDownloader(AppBase):
         self.end_date_field = DateEntryField(lf, row, 'End Date', text_width, label_width=label_width)
         row = self.end_date_field.get_next_row()
         buttons = Buttons(lf, row, "Actions", label_width=label_width)
+        buttons.add_button("Calc rates", self.calc_rates_callback)
         buttons.add_button("Individual", self.implement_me())
         buttons.add_button("OR everything!", self.implement_me())
         buttons.add_button("Launch Twitter", self.launch_twitter_callback)
@@ -93,13 +97,46 @@ class TweetDownloader(AppBase):
         self.sample_mult_field.set_text('1')
         row = self.sample_mult_field.get_next_row()
 
-        self.option_checkboxes = Checkboxes(lf, row, "Options")
+        self.option_checkboxes = Checkboxes(lf, row, "Options", label_width=label_width)
         self.option_checkboxes.add_checkbox("Randomize", self.implement_me, dir=DIR.ROW)
         self.option_checkboxes.add_checkbox("Save to DB", self.implement_me, dir=DIR.ROW)
         self.option_checkboxes.add_checkbox("Save to CSV", self.implement_me, dir=DIR.ROW)
         row = self.option_checkboxes.get_next_row()
 
+        self.lowest_count_field = DataField(lf, row, 'Lowest/Day:', text_width, label_width=label_width)
+        self.lowest_count_field.set_text('0')
+        row = self.lowest_count_field.get_next_row()
 
+        self.highest_count_field = DataField(lf, row, 'Highest/Day:', text_width, label_width=label_width)
+        self.highest_count_field.set_text('0')
+        row = self.highest_count_field.get_next_row()
+
+    def calc_rates_callback(self):
+        corpus_size = 500000
+        key_list = self.keyword_text_field.get_list("\n")
+        start_dt = self.start_date_field.get_date()
+        i = 0
+        lowest = 0
+        lkey = "unset"
+        highest = 0
+        hkey = "unset"
+        self.dp.clear()
+        for s in key_list:
+            count = self.tkey.get_keywords_per_day(s, start_dt)
+            if i == 0:
+                lowest = highest = count
+                lkey = hkey = s
+            else:
+                if count < lowest:
+                    lowest = count
+                    lkey = s
+                elif count > highest:
+                    highest = count
+                    hkey = s
+            self.dp.dprint("{}: {:,} keywords/day = {:.1f} days for 500k ".format(s, count, corpus_size/count+1))
+            i += 1
+        self.highest_count_field.set_text("{}: {:,}".format(hkey, highest))
+        self.lowest_count_field.set_text("{}: {:,}".format(lkey, lowest))
 
     def launch_twitter_callback(self):
         # single word
