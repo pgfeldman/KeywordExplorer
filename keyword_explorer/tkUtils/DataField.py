@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from typing import List, Any
+from typing import List, Any, Callable
 
 class DataField:
     name = "unset"
@@ -8,20 +8,30 @@ class DataField:
     tk_label = None
     tk_entry = None
     row = 0
+    wrapper:ttk.Frame
 
-    def __init__(self, parent:'ttk.Frame', row:int, label:str, width:int = 20, password:bool = False, label_width:int = 16):
+    def __init__(self, parent:'ttk.Frame', row:int, label:str, width:int = 20, password:bool = False, label_width:int = 16, sticky="nsew"):
         self.row = row
+        self.wrapper = tk.Frame(parent)
+        self.wrapper.grid(column=1, row=row, sticky=sticky)
+        self.col = 1
         self.tk_label = tk.Label(parent, text=label, width=label_width, anchor="w")#, background="pink")
         if password:
-            self.tk_entry = tk.Entry(parent, show = "*", width=width, anchor="w")
+            self.tk_entry = tk.Entry(self.wrapper, show = "*", width=width, anchor="w")
         else:
-            self.tk_entry = tk.Entry(parent, width=width)
+            self.tk_entry = tk.Entry(self.wrapper, width=width)
 
 
         self.tk_label.grid(column=0, row=row, sticky=(tk.W), padx=5)
         #self.tk_entry.grid(column=1, row=row, sticky=(tk.N, tk.E, tk.W), pady=2, padx=5)
-        self.tk_entry.grid(column=1, row=row, sticky=(tk.W), pady=2, padx=5)
+        self.tk_entry.grid(column=0, row=0, sticky=(tk.W), pady=2, padx=5)
         parent.columnconfigure(1, weight=1)
+
+    def add_button(self, name:str, command:Callable, sticky:Any = (tk.N, tk.W)) -> ttk.Button:
+        b = ttk.Button(self.wrapper, text=name, command=command)
+        b.grid(column=self.col, row=0, sticky=sticky, pady=2, padx=5)
+        self.col += 1
+        return b
 
     def tuple_extract(self, obj:Any, index:int=0) -> Any:
         if isinstance(obj, tuple):

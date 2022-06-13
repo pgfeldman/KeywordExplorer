@@ -15,7 +15,20 @@ from keyword_explorer.tkUtils.DateEntryField import DateEntryField
 from keyword_explorer.tkUtils.ListField import ListField
 from keyword_explorer.tkUtils.TextField import TextField
 
-from typing import Dict
+from typing import Dict, List, Callable
+
+class KeywordData:
+    tweets_per_day:int
+    name:str
+    def __init__(self, name:str, tweets:int):
+        self.reset(name, tweets)
+
+    def reset(self, name:str, tweets:int):
+        self.name = name
+        self.tweets_per_day = tweets
+
+    def to_string(self) -> str:
+        return "{}: {:,}".format(self.name, self.tweets_per_day)
 
 class TweetDownloader(AppBase):
     tkey:TweetKeywords
@@ -24,25 +37,25 @@ class TweetDownloader(AppBase):
     keyword_text_field:TextField
     start_date_field:DateEntryField
     end_date_field:DateEntryField
-    token_list:ListField
-    engine_list:ListField
-    sample_list:ListField
+    duration_field:DataField
     samples_field:DataField
     sample_mult_field:DataField
+    corpus_size_field:DataField
     lowest_count_field:DataField
     highest_count_field:DataField
     option_checkboxes:Checkboxes
+    keyword_data_list:List
 
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.totals_dict = {}
+        self.keyword_data_list = {}
         print("TweetDownloader")
 
     def setup_app(self):
         self.app_name = "TweetDownloader"
         self.app_version = "5.7.22"
-        self.geom = (900, 500)
+        self.geom = (900, 530)
         self.console_lines = 10
 
         self.tkey = TweetKeywords()
@@ -63,6 +76,7 @@ class TweetDownloader(AppBase):
 
         self.end_date_field.set_date()
         self.start_date_field.set_date(d = (datetime.utcnow() - timedelta(days=10)))
+        self.duration_field.set_text(10)
 
         return row+1
 
@@ -74,6 +88,10 @@ class TweetDownloader(AppBase):
         row = self.start_date_field.get_next_row()
         self.end_date_field = DateEntryField(lf, row, 'End Date', text_width, label_width=label_width)
         row = self.end_date_field.get_next_row()
+        self.duration_field = DataField(lf, row, 'Duration:', int(text_width/2), label_width=label_width)
+        self.duration_field.add_button("set start", self.set_start_callback)
+        self.duration_field.add_button("set end", self.set_end_callback)
+        row = self.duration_field.get_next_row()
         buttons = Buttons(lf, row, "Actions", label_width=label_width)
         buttons.add_button("Calc rates", self.calc_rates_callback)
         buttons.add_button("Individual", self.implement_me())
@@ -83,12 +101,6 @@ class TweetDownloader(AppBase):
 
     def build_twitter_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
-        self.sample_list = ListField(lf, row, "Sample", width=text_width, label_width=label_width, static_list=True)
-        self.sample_list.set_text(text='hour, day, week, month')
-        self.sample_list.set_callback(self.set_time_sample_callback)
-        self.set_time_sample_callback()
-        row = self.sample_list.get_next_row()
-
         self.samples_field = DataField(lf, row, 'Samples (10 - 500):', text_width, label_width=label_width)
         self.samples_field.set_text('500')
         row = self.samples_field.get_next_row()
@@ -99,9 +111,14 @@ class TweetDownloader(AppBase):
 
         self.option_checkboxes = Checkboxes(lf, row, "Options", label_width=label_width)
         self.option_checkboxes.add_checkbox("Randomize", self.implement_me, dir=DIR.ROW)
-        self.option_checkboxes.add_checkbox("Save to DB", self.implement_me, dir=DIR.ROW)
-        self.option_checkboxes.add_checkbox("Save to CSV", self.implement_me, dir=DIR.ROW)
+        self.option_checkboxes.add_checkbox("Balance", self.implement_me, dir=DIR.ROW)
+        self.option_checkboxes.add_checkbox("Stream to DB", self.implement_me, dir=DIR.ROW)
+        self.option_checkboxes.add_checkbox("Stream to CSV", self.implement_me, dir=DIR.ROW)
         row = self.option_checkboxes.get_next_row()
+
+        self.corpus_size_field = DataField(lf, row, 'Corpus Size:', text_width, label_width=label_width)
+        self.corpus_size_field.set_text('500000')
+        row = self.corpus_size_field.get_next_row()
 
         self.lowest_count_field = DataField(lf, row, 'Lowest/Day:', text_width, label_width=label_width)
         self.lowest_count_field.set_text('0')
@@ -111,32 +128,48 @@ class TweetDownloader(AppBase):
         self.highest_count_field.set_text('0')
         row = self.highest_count_field.get_next_row()
 
+    def set_start_callback(self):
+        duration = int(self.duration_field.get_text())
+        end_dt = self.end_date_field.get_date()
+        start_dt = end_dt - timedelta(days= duration)
+        self.start_date_field.set_date(start_dt)
+
+    def set_end_callback(self):
+        duration = int(self.duration_field.get_text())
+        start_dt = self.start_date_field.get_date()
+        end_dt = start_dt + timedelta(days = duration)
+        self.end_date_field.set_date(end_dt)
+
     def calc_rates_callback(self):
-        corpus_size = 500000
+        corpus_size = int(self.corpus_size_field.get_text())
         key_list = self.keyword_text_field.get_list("\n")
         start_dt = self.start_date_field.get_date()
         i = 0
-        lowest = 0
-        lkey = "unset"
-        highest = 0
-        hkey = "unset"
+        highest = KeywordData("unset", 0)
+        lowest = KeywordData("unset", 0)
         self.dp.clear()
+        self.keyword_data_list = []
         for s in key_list:
             count = self.tkey.get_keywords_per_day(s, start_dt)
+            self.keyword_data_list.append(KeywordData(s, count))
             if i == 0:
-                lowest = highest = count
-                lkey = hkey = s
+                lowest.reset(s, count)
+                highest.reset(s, count)
             else:
-                if count < lowest:
-                    lowest = count
-                    lkey = s
-                elif count > highest:
-                    highest = count
-                    hkey = s
-            self.dp.dprint("{}: {:,} keywords/day = {:.1f} days for 500k ".format(s, count, corpus_size/count+1))
+                if count < lowest.tweets_per_day:
+                    lowest.reset(s, count)
+                elif count > highest.tweets_per_day:
+                    highest.reset(s, count)
+            self.dp.dprint("{}: {:,} keywords/day = {:.1f} days for {}k ".format(s, count, corpus_size/count+1, corpus_size/1000))
             i += 1
-        self.highest_count_field.set_text("{}: {:,}".format(hkey, highest))
-        self.lowest_count_field.set_text("{}: {:,}".format(lkey, lowest))
+        self.highest_count_field.set_text(highest.to_string())
+        self.lowest_count_field.set_text(lowest.to_string())
+
+        # sort the list from lowest to highest
+        kd:KeywordData
+        self.keyword_data_list.sort(key=lambda kd:kd.tweets_per_day)
+        for kd in self.keyword_data_list:
+            print(kd.to_string())
 
     def launch_twitter_callback(self):
         # single word
