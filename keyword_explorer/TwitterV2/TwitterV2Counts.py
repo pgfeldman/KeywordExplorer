@@ -124,8 +124,9 @@ class TwitterV2Counts (TwitterV2Base):
 
     @staticmethod
     def create_counts_url(query:str, start_time:str, end_time:str, granularity:str = "day", next_token:str = None):
-        url = "https://api.twitter.com/2/tweets/counts/all?query={}&start_time={}&end_time={}&granularity={}".format(
-            query, start_time, end_time, granularity)
+        tweet_options = "lang:en -is:retweet"
+        url = "https://api.twitter.com/2/tweets/counts/all?query={} {}&start_time={}&end_time={}&granularity={}".format(
+            query, tweet_options, start_time, end_time, granularity)
         if next_token != None:
             url = "{}&next_token={}".format(url, next_token)
         # print("create_counts_url(): {}".format(url))

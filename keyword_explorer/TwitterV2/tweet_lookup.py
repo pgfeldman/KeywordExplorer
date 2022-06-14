@@ -104,7 +104,7 @@ def print_response(title:str, j:json):
 
 def tweet_id_query_example():
     url = create_tweets_url("1484131517878181891")
-    url = create_tweets_url("1019189517977313280")
+    url = create_tweets_url("1531844023459008512")
     json_response = connect_to_endpoint(url)
     print_response("Get tweet", json_response)
 
@@ -150,14 +150,14 @@ def counts_query_example():
 def main():
     print("BEARER_TOKEN = {}".format(bearer_token))
 
-    #tweet_id_query_example()
+    tweet_id_query_example()
     # url = create_recent_conversation_url("1484131517878181891")
     # json_response = connect_to_endpoint(url)
     # print_response("Get recent conversation", json_response)
     # historical_query_example()
     # counts_query_example()
 
-    tweet_keyword_time_query_example()
+    #tweet_keyword_time_query_example()
 
 
 

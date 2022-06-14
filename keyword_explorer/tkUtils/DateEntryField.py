@@ -43,3 +43,6 @@ class DateEntryField:
         s = self.tk_entry.get()
         d = datetime.strptime(s, "%B %d, %Y")
         return d
+
+    def update(self):
+        self.tk_entry.update()

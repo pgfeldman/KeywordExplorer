@@ -1,4 +1,5 @@
-import getpass
+import random
+import time
 import tkinter as tk
 import tkinter.messagebox as message
 from datetime import datetime, timedelta
@@ -37,6 +38,7 @@ class TweetDownloader(AppBase):
     keyword_text_field:TextField
     start_date_field:DateEntryField
     end_date_field:DateEntryField
+    cur_date_field:DateEntryField
     duration_field:DataField
     samples_field:DataField
     sample_mult_field:DataField
@@ -45,11 +47,13 @@ class TweetDownloader(AppBase):
     highest_count_field:DataField
     option_checkboxes:Checkboxes
     keyword_data_list:List
+    randomize:bool
 
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.keyword_data_list = {}
+        self.keyword_data_list = []
+        self.randomize = False
         print("TweetDownloader")
 
     def setup_app(self):
@@ -76,6 +80,7 @@ class TweetDownloader(AppBase):
 
         self.end_date_field.set_date()
         self.start_date_field.set_date(d = (datetime.utcnow() - timedelta(days=10)))
+        self.cur_date_field.set_date(d = (datetime.utcnow() - timedelta(days=10)))
         self.duration_field.set_text(10)
 
         return row+1
@@ -94,7 +99,7 @@ class TweetDownloader(AppBase):
         row = self.duration_field.get_next_row()
         buttons = Buttons(lf, row, "Actions", label_width=label_width)
         buttons.add_button("Calc rates", self.calc_rates_callback)
-        buttons.add_button("Individual", self.implement_me())
+        buttons.add_button("Individual", self.collect_individual_callback)
         buttons.add_button("OR everything!", self.implement_me())
         buttons.add_button("Launch Twitter", self.launch_twitter_callback)
         row = buttons.get_next_row()
@@ -110,7 +115,7 @@ class TweetDownloader(AppBase):
         row = self.sample_mult_field.get_next_row()
 
         self.option_checkboxes = Checkboxes(lf, row, "Options", label_width=label_width)
-        self.option_checkboxes.add_checkbox("Randomize", self.implement_me, dir=DIR.ROW)
+        self.option_checkboxes.add_checkbox("Randomize", self.randomize_callback, dir=DIR.ROW)
         self.option_checkboxes.add_checkbox("Balance", self.implement_me, dir=DIR.ROW)
         self.option_checkboxes.add_checkbox("Stream to DB", self.implement_me, dir=DIR.ROW)
         self.option_checkboxes.add_checkbox("Stream to CSV", self.implement_me, dir=DIR.ROW)
@@ -128,17 +133,60 @@ class TweetDownloader(AppBase):
         self.highest_count_field.set_text('0')
         row = self.highest_count_field.get_next_row()
 
+        self.cur_date_field = DateEntryField(lf, row, 'Cur Date', text_width, label_width=label_width)
+        row = self.cur_date_field.get_next_row()
+
+    def randomize_callback(self):
+        self.randomize = not self.randomize
+        # print("self.randomize = {}".format(self.randomize))
+
     def set_start_callback(self):
         duration = int(self.duration_field.get_text())
         end_dt = self.end_date_field.get_date()
         start_dt = end_dt - timedelta(days= duration)
         self.start_date_field.set_date(start_dt)
+        self.cur_date_field.set_date(start_dt)
 
     def set_end_callback(self):
         duration = int(self.duration_field.get_text())
         start_dt = self.start_date_field.get_date()
         end_dt = start_dt + timedelta(days = duration)
         self.end_date_field.set_date(end_dt)
+
+    def collect_individual_callback(self):
+        rand_min = 0
+        if self.randomize:
+            rand_min = random.randint(0, 59)
+        cur_dt = self.start_date_field.get_date()+timedelta(hours=6)
+        cur_start = cur_dt + timedelta(minutes=rand_min)
+        cur_end = cur_start + timedelta(days=1)
+        end_dt = self.end_date_field.get_date()
+        self.cur_date_field.set_date(cur_dt)
+        self.cur_date_field.update()
+
+        while cur_dt < end_dt:
+            print("collect_individual_callback(): getting data for {}-{}".format(cur_start.strftime("%Y-%m-%dT%H:%M:%SZ"), cur_end.strftime("%Y-%m-%dT%H:%M:%SZ")))
+            time.sleep(1)
+            if self.randomize:
+                rand_min = random.randint(0, 59)
+            cur_dt += timedelta(days=1)
+            # get the dates we're going to collect
+            cur_start = cur_dt + timedelta(minutes=rand_min)
+            cur_end = cur_start + timedelta(days=1)
+
+            #get the counts for this period
+            self.cur_date_field.set_date(cur_dt)
+            self.cur_date_field.update()
+
+            self.keyword_data_list = []
+            key_list = self.keyword_text_field.get_list("\n")
+            for s in key_list:
+                count = self.tkey.get_keywords_per_day(s, cur_start, cur_end)
+                self.keyword_data_list.append(KeywordData(s, count))
+
+            self.keyword_data_list.append(KeywordData(s, count))
+        print("collect_individual_callback(): done")
+
 
     def calc_rates_callback(self):
         corpus_size = int(self.corpus_size_field.get_text())
