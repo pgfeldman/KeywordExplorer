@@ -25,10 +25,16 @@ class TwitterV2Base:
 
     def prep_query(self, query:str) -> str:
         #clean up the query so it works with the api
-        query = query.strip()
-        if query[0] != '"' and len(query.split()) > 1:
-            query = '\"{}\"'.format(query)
-        return query
+        query_list = query.split(" OR ")
+        or_list = []
+        for query in query_list:
+            query = query.strip()
+            if query[0] != '"' and len(query.split()) > 1:
+                query = '\"{}\"'.format(query)
+            or_list.append(query)
+        if len(or_list) > 1:
+            return " OR ".join(or_list)
+        return or_list[0]
 
     def launch_twitter(self, key_list:List, start_dt:datetime, end_dt:datetime):
         since = start_dt.strftime("%Y-%m-%d")
@@ -80,6 +86,10 @@ class TwitterV2Base:
 def main():
     tc = TwitterV2Base()
     print("Key exists = {}".format(tc.key_exists()))
+
+    raw = "china virus OR chinavirus OR foo bar"
+    cooked = tc.prep_query(raw)
+    print(cooked)
 
 if __name__ == "__main__":
     main()

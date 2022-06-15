@@ -7,6 +7,19 @@ import pandas as pd
 
 from keyword_explorer.TwitterV2.TwitterV2Base import TwitterV2Base
 
+class TweetData():
+    author_id:int
+    conversation_id:int
+    created_at:str
+    id:int
+    lang:str
+    text:str
+
+    def __init__(self, d):
+        for key in d:
+            if hasattr(self, key):
+                setattr(self, key, d[key])
+
 class TweetKeyword():
     keyword:str
     data_list:List
