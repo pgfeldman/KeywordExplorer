@@ -48,12 +48,14 @@ class TweetDownloader(AppBase):
     option_checkboxes:Checkboxes
     keyword_data_list:List
     randomize:bool
+    hour_offset:int
 
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.keyword_data_list = []
         self.randomize = False
+        self.hour_offset = 6 # offset from zulu
         print("TweetDownloader")
 
     def setup_app(self):
@@ -79,9 +81,10 @@ class TweetDownloader(AppBase):
         self.build_twitter_params(lf, param_text_width, param_label_width)
 
         self.end_date_field.set_date()
-        self.start_date_field.set_date(d = (datetime.utcnow() - timedelta(days=10)))
-        self.cur_date_field.set_date(d = (datetime.utcnow() - timedelta(days=10)))
-        self.duration_field.set_text(10)
+        day_delta = 2
+        self.start_date_field.set_date(d = (datetime.utcnow() - timedelta(days=day_delta)))
+        self.cur_date_field.set_date(d = (datetime.utcnow() - timedelta(days=day_delta)))
+        self.duration_field.set_text(day_delta)
 
         return row+1
 
@@ -155,36 +158,53 @@ class TweetDownloader(AppBase):
 
     def collect_individual_callback(self):
         rand_min = 0
-        if self.randomize:
-            rand_min = random.randint(0, 59)
-        cur_dt = self.start_date_field.get_date()+timedelta(hours=6)
-        cur_start = cur_dt + timedelta(minutes=rand_min)
+        sample = self.samples_field.get_as_int()
+        sample_mult = self.sample_mult_field.get_as_int()
+        max_samples = sample * sample_mult
+
+        key_list = self.keyword_text_field.get_list("\n")
+        cur_dt = self.start_date_field.get_date()
+        cur_start = cur_dt + timedelta(hours=self.hour_offset, minutes=rand_min)
         cur_end = cur_start + timedelta(days=1)
         end_dt = self.end_date_field.get_date()
         self.cur_date_field.set_date(cur_dt)
         self.cur_date_field.update()
 
         while cur_dt < end_dt:
-            print("collect_individual_callback(): getting data for {}-{}".format(cur_start.strftime("%Y-%m-%dT%H:%M:%SZ"), cur_end.strftime("%Y-%m-%dT%H:%M:%SZ")))
+            print("\ncollect_individual_callback(): getting data for {}-{}".format(cur_start.strftime("%Y-%m-%dT%H:%M:%SZ"), cur_end.strftime("%Y-%m-%dT%H:%M:%SZ")))
+            # first, get the counts for each keyword
+            self.keyword_data_list = []
+            for s in key_list:
+                count = self.tkey.get_keywords_per_day(s, cur_dt)
+                self.keyword_data_list.append(KeywordData(s, count))
+            self.keyword_data_list.sort(key=lambda kd:kd.tweets_per_day)
+
             time.sleep(1)
             if self.randomize:
                 rand_min = random.randint(0, 59)
-            cur_dt += timedelta(days=1)
             # get the dates we're going to collect
-            cur_start = cur_dt + timedelta(minutes=rand_min)
+            cur_start = cur_dt + timedelta(hours=self.hour_offset, minutes=rand_min)
             cur_end = cur_start + timedelta(days=1)
 
-            #get the counts for this period
+            #show the date we are collecting for
             self.cur_date_field.set_date(cur_dt)
             self.cur_date_field.update()
 
-            self.keyword_data_list = []
-            key_list = self.keyword_text_field.get_list("\n")
-            for s in key_list:
-                count = self.tkey.get_keywords_per_day(s, cur_start, cur_end)
-                self.keyword_data_list.append(KeywordData(s, count))
+            #get the tweets based on the lowest counts
+            kd:KeywordData
+            min_kd:KeywordData = self.keyword_data_list[0]
+            for kd in self.keyword_data_list:
+                print("{} collecting {:,} of {:,} tweets".format(kd.name, min_kd.tweets_per_day, kd.tweets_per_day))
+                num_samples = sample
+                if min_kd.tweets_per_day < max_samples: # make a new sample size that's at least 10
+                    num_samples = min(10, min_kd.tweets_per_day/sample_mult)
+                #figure out the best spacing of samples across the day
 
-            self.keyword_data_list.append(KeywordData(s, count))
+
+            # next day
+            cur_dt += timedelta(days=1)
+
+
         print("collect_individual_callback(): done")
 
 

@@ -7,7 +7,8 @@ class DataField:
     value = None
     tk_label = None
     tk_entry = None
-    row = 0
+    row:int
+    col:int
     wrapper:ttk.Frame
 
     def __init__(self, parent:'ttk.Frame', row:int, label:str, width:int = 20, password:bool = False, label_width:int = 16, sticky="nsew"):

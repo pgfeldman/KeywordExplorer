@@ -69,7 +69,7 @@ class TwitterV2Base:
                     response.status_code, response.text
                 )
             )
-        return response.json()
+        # return response.json()
 
     def key_exists(self) -> bool:
         val = os.environ.get("BEARER_TOKEN_2")
