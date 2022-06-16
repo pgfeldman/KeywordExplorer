@@ -158,20 +158,15 @@ class TweetDownloader(AppBase):
 
     def collect_individual_callback(self):
         rand_min = 0
+        date_fmt = "%B %d, %Y (%H:%M:%S)"
         sample = self.samples_field.get_as_int()
-        sample_mult = self.sample_mult_field.get_as_int()
-        max_samples = sample * sample_mult
 
         key_list = self.keyword_text_field.get_list("\n")
         cur_dt = self.start_date_field.get_date()
-        cur_start = cur_dt + timedelta(hours=self.hour_offset, minutes=rand_min)
-        cur_end = cur_start + timedelta(days=1)
         end_dt = self.end_date_field.get_date()
-        self.cur_date_field.set_date(cur_dt)
-        self.cur_date_field.update()
 
         while cur_dt < end_dt:
-            print("\ncollect_individual_callback(): getting data for {}-{}".format(cur_start.strftime("%Y-%m-%dT%H:%M:%SZ"), cur_end.strftime("%Y-%m-%dT%H:%M:%SZ")))
+            print("\n{}".format(cur_dt.strftime(date_fmt)))
             # first, get the counts for each keyword
             self.keyword_data_list = []
             for s in key_list:
@@ -182,25 +177,44 @@ class TweetDownloader(AppBase):
             time.sleep(1)
             if self.randomize:
                 rand_min = random.randint(0, 59)
-            # get the dates we're going to collect
-            cur_start = cur_dt + timedelta(hours=self.hour_offset, minutes=rand_min)
-            cur_end = cur_start + timedelta(days=1)
-
-            #show the date we are collecting for
-            self.cur_date_field.set_date(cur_dt)
-            self.cur_date_field.update()
 
             #get the tweets based on the lowest counts
             kd:KeywordData
             min_kd:KeywordData = self.keyword_data_list[0]
+            num_samples = sample
+
+            if min_kd.tweets_per_day < sample: # make a new sample size that's at least 10
+                num_samples = max(10, min_kd.tweets_per_day)
+                sample_mult = 1
             for kd in self.keyword_data_list:
-                print("{} collecting {:,} of {:,} tweets".format(kd.name, min_kd.tweets_per_day, kd.tweets_per_day))
-                num_samples = sample
-                if min_kd.tweets_per_day < max_samples: # make a new sample size that's at least 10
-                    num_samples = min(10, min_kd.tweets_per_day/sample_mult)
+                if kd.tweets_per_day <= sample:
+                    # get the dates we're going to collect
+                    cur_start = cur_dt
+                    cur_end = cur_dt + timedelta(days=1)
+
+                    #show the date we are collecting for
+                    print("{} collecting all {:,} of {:,} tweets".format(kd.name, num_samples*sample_mult, kd.tweets_per_day))
+                    print("\tcollecting all from {} to {}".format(cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
+
+                else:
+                    total_frac = day_frac = num_samples / min_kd.tweets_per_day
+                    sample_mult = 1/day_frac
+                    # get the dates we're going to collect
+                    cur_start = cur_dt + timedelta(hours=self.hour_offset, minutes=rand_min)
+                    cur_end = cur_dt + timedelta(days=total_frac)
+                    #show the date we are collecting for
+                    print("{} subsampling {:,} of {:,} tweets".format(kd.name, num_samples*sample_mult, kd.tweets_per_day))
+                    while total_frac < 1.0:
+                        print("\tsubsampling {} from {} to {}".format(num_samples, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
+                        total_frac += day_frac
+                        cur_start = cur_end
+                        cur_end = cur_dt + timedelta(days=total_frac)
+
+
                 #figure out the best spacing of samples across the day
 
-
+            self.cur_date_field.set_date(cur_dt)
+            self.cur_date_field.update()
             # next day
             cur_dt += timedelta(days=1)
 
