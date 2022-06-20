@@ -110,7 +110,7 @@ class TweetDownloader(AppBase):
     def build_twitter_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
         self.samples_field = DataField(lf, row, 'Samples (10 - 500):', text_width, label_width=label_width)
-        self.samples_field.set_text('500')
+        self.samples_field.set_text('100')
         row = self.samples_field.get_next_row()
 
         self.sample_mult_field = DataField(lf, row, 'Sample Multiple:', text_width, label_width=label_width)
@@ -159,7 +159,7 @@ class TweetDownloader(AppBase):
     def collect_individual_callback(self):
         rand_min = 0
         date_fmt = "%B %d, %Y (%H:%M:%S)"
-        sample = self.samples_field.get_as_int()
+        num_samples = self.samples_field.get_as_int()
 
         key_list = self.keyword_text_field.get_list("\n")
         cur_dt = self.start_date_field.get_date()
@@ -181,13 +181,13 @@ class TweetDownloader(AppBase):
             #get the tweets based on the lowest counts
             kd:KeywordData
             min_kd:KeywordData = self.keyword_data_list[0]
-            num_samples = sample
 
-            if min_kd.tweets_per_day < sample: # make a new sample size that's at least 10
+            if min_kd.tweets_per_day < num_samples: # make a new sample size that's at least 10
                 num_samples = max(10, min_kd.tweets_per_day)
-                sample_mult = 1
+
             for kd in self.keyword_data_list:
-                if kd.tweets_per_day <= sample:
+                if kd.tweets_per_day <= num_samples:
+                    sample_mult = 1
                     # get the dates we're going to collect
                     cur_start = cur_dt
                     cur_end = cur_dt + timedelta(days=1)
@@ -197,18 +197,27 @@ class TweetDownloader(AppBase):
                     print("\tcollecting all from {} to {}".format(cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
 
                 else:
-                    total_frac = day_frac = num_samples / min_kd.tweets_per_day
-                    sample_mult = 1/day_frac
-                    # get the dates we're going to collect
-                    cur_start = cur_dt + timedelta(hours=self.hour_offset, minutes=rand_min)
-                    cur_end = cur_dt + timedelta(days=total_frac)
-                    #show the date we are collecting for
-                    print("{} subsampling {:,} of {:,} tweets".format(kd.name, num_samples*sample_mult, kd.tweets_per_day))
-                    while total_frac < 1.0:
-                        print("\tsubsampling {} from {} to {}".format(num_samples, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
-                        total_frac += day_frac
-                        cur_start = cur_end
+                    if num_samples == min_kd.tweets_per_day:
+                        # Make one random sample in the day, but far enough away from t
+                        ratio = min_kd.tweets_per_day / kd.tweets_per_day
+                        day_offset = random.random() * (1.0 - 2*ratio)
+                        cur_start = cur_dt + timedelta(days=day_offset)
+                        cur_end = cur_start + timedelta(days=ratio)
+                        print("{}: Randomly choosing {}/{} from {} to {}".format(kd.name, num_samples, kd.tweets_per_day, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
+                    else:
+                        # Make several samples across the day
+                        total_frac = day_frac = num_samples / min_kd.tweets_per_day
+                        sample_mult = 1/day_frac
+                        # get the dates we're going to collect
+                        cur_start = cur_dt + timedelta(hours=self.hour_offset, minutes=rand_min)
                         cur_end = cur_dt + timedelta(days=total_frac)
+                        #show the date we are collecting for
+                        print("{} subsampling {:,} of {:,} tweets".format(kd.name, num_samples*sample_mult, kd.tweets_per_day))
+                        while total_frac < 1.0:
+                            print("\tsubsampling {} from {} to {}".format(num_samples, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
+                            total_frac += day_frac
+                            cur_start = cur_end
+                            cur_end = cur_dt + timedelta(days=total_frac)
 
 
                 #figure out the best spacing of samples across the day
