@@ -55,7 +55,7 @@ class TweetDownloader(AppBase):
         super().__init__(*args, **kwargs)
         self.keyword_data_list = []
         self.randomize = False
-        self.hour_offset = 6 # offset from zulu
+        self.hour_offset = 0 # offset from zulu
         print("TweetDownloader")
 
     def setup_app(self):
@@ -197,27 +197,31 @@ class TweetDownloader(AppBase):
                     print("\tcollecting all from {} to {}".format(cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
 
                 else:
-                    if num_samples == min_kd.tweets_per_day:
-                        # Make one random sample in the day, but far enough away from t
+                    if self.randomize or num_samples == min_kd.tweets_per_day:
+                        # Make one random sample in the day
                         ratio = min_kd.tweets_per_day / kd.tweets_per_day
+                        if self.randomize:
+                            ratio = num_samples / kd.tweets_per_day
                         day_offset = random.random() * (1.0 - 2*ratio)
                         cur_start = cur_dt + timedelta(days=day_offset)
                         cur_end = cur_start + timedelta(days=ratio)
                         print("{}: Randomly choosing {}/{} from {} to {}".format(kd.name, num_samples, kd.tweets_per_day, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
                     else:
                         # Make several samples across the day
-                        total_frac = day_frac = num_samples / min_kd.tweets_per_day
+                        day_frac = num_samples / min_kd.tweets_per_day
                         sample_mult = 1/day_frac
-                        # get the dates we're going to collect
-                        cur_start = cur_dt + timedelta(hours=self.hour_offset, minutes=rand_min)
-                        cur_end = cur_dt + timedelta(days=total_frac)
+
                         #show the date we are collecting for
                         print("{} subsampling {:,} of {:,} tweets".format(kd.name, num_samples*sample_mult, kd.tweets_per_day))
+                        total_frac = 0
+                        count = 0
                         while total_frac < 1.0:
-                            print("\tsubsampling {} from {} to {}".format(num_samples, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
-                            total_frac += day_frac
-                            cur_start = cur_end
+                            # get the dates we're going to collect
+                            cur_start = cur_dt + timedelta(days=(count * day_frac))
+                            total_frac = min(1.0, (count+1) * day_frac)
                             cur_end = cur_dt + timedelta(days=total_frac)
+                            print("\tsubsampling {} from {} to {}".format(num_samples, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
+                            count += 1
 
 
                 #figure out the best spacing of samples across the day
@@ -242,6 +246,9 @@ class TweetDownloader(AppBase):
         self.keyword_data_list = []
         for s in key_list:
             count = self.tkey.get_keywords_per_day(s, start_dt)
+            if count == 0:
+                self.dp.dprint("{}: {:,} SKIPPING".format(s, count))
+                continue
             self.keyword_data_list.append(KeywordData(s, count))
             if i == 0:
                 lowest.reset(s, count)
@@ -251,7 +258,7 @@ class TweetDownloader(AppBase):
                     lowest.reset(s, count)
                 elif count > highest.tweets_per_day:
                     highest.reset(s, count)
-            self.dp.dprint("{}: {:,} keywords/day = {:.1f} days for {}k ".format(s, count, corpus_size/count+1, corpus_size/1000))
+            self.dp.dprint("[{}]: {:,} keywords/day = {:.1f} days for {}k ".format(s, count, corpus_size/count+1, corpus_size/1000))
             i += 1
         self.highest_count_field.set_text(highest.to_string())
         self.lowest_count_field.set_text(lowest.to_string())
