@@ -1,0 +1,27 @@
+china virus: keywords per day = 1,427
+covid: keywords per day = 503,869
+sars-cov-2: keywords per day = 6,108
+chinavirus: keywords per day = 75
+virus: keywords per day = 67,223
+mask: keywords per day = 95,444
+vaccine: keywords per day = 85,794
+
+china virus
+covid
+sars-cov-2
+chinavirus
+virus
+mask
+vaccine
+
+china virus OR chinavirus
+covid
+sars-cov-2
+virus
+mask
+vaccine
+
+texas secede
+texas secession
+texas
+secession
