@@ -49,7 +49,10 @@ class AppBase(tk.Tk):
         self.resizable(width=True, height=False)
 
         self.experiment_field = DataField(self, row, "Experiment name:", text_width, label_width=label_width)
-        self.experiment_field.set_text(getpass.getuser())
+        dt = datetime.now()
+        self.logfile = "{}/{}_{}.csv".format(Path.home(), self.app_name, dt.strftime("%Y-%m-%d-%H-%M-%S"))
+        experiment_str = "{}_{}_{}".format(getpass.getuser(), self.app_name, dt.strftime("%Y-%m-%d-%H-%M-%S"))
+        self.experiment_field.set_text(experiment_str)
         row = self.experiment_field.get_next_row()
 
         row = self.build_app_view(row, text_width, label_width)
@@ -75,7 +78,7 @@ class AppBase(tk.Tk):
         if result:
             self.so.load_from_file(result.name)
             self.tvc.bearer_token = self.so.get_object('BEARER_TOKEN_2')
-            print("bearer_token = {}".format(self.tvc.bearer_token))
+            #print("bearer_token = {}".format(self.tvc.bearer_token))
 
     def log_action(self, task:str, row_info:Dict, mode:str = "a"):
         with open(self.logfile, mode) as fio:

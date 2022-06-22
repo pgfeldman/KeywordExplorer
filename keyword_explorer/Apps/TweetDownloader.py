@@ -16,6 +16,8 @@ from keyword_explorer.tkUtils.DateEntryField import DateEntryField
 from keyword_explorer.tkUtils.ListField import ListField
 from keyword_explorer.tkUtils.TextField import TextField
 
+from keyword_explorer.utils.MySqlInterface import MySqlInterface
+
 from typing import Dict, List, Callable
 
 class KeywordData:
@@ -32,6 +34,7 @@ class KeywordData:
         return "{}: {:,}".format(self.name, self.tweets_per_day)
 
 class TweetDownloader(AppBase):
+    msi:MySqlInterface
     tkey:TweetKeywords
     prompt_text_field:TextField
     response_text_field:TextField
@@ -41,7 +44,6 @@ class TweetDownloader(AppBase):
     cur_date_field:DateEntryField
     duration_field:DataField
     samples_field:DataField
-    sample_mult_field:DataField
     corpus_size_field:DataField
     lowest_count_field:DataField
     highest_count_field:DataField
@@ -56,15 +58,16 @@ class TweetDownloader(AppBase):
         self.keyword_data_list = []
         self.randomize = False
         self.hour_offset = 0 # offset from zulu
-        print("TweetDownloader")
+        print("TweetDownloader.init()")
 
     def setup_app(self):
         self.app_name = "TweetDownloader"
-        self.app_version = "5.7.22"
+        self.app_version = "6.22.22"
         self.geom = (900, 530)
         self.console_lines = 10
 
         self.tkey = TweetKeywords()
+        self.msi = MySqlInterface(user_name ="root", db_name ="twitter_v2")
         if not self.tkey.key_exists():
             message.showwarning("Key Error", "Could not find Environment key 'BEARER_TOKEN_2'")
 
@@ -102,8 +105,8 @@ class TweetDownloader(AppBase):
         row = self.duration_field.get_next_row()
         buttons = Buttons(lf, row, "Actions", label_width=label_width)
         buttons.add_button("Calc rates", self.calc_rates_callback)
-        buttons.add_button("Individual", self.collect_individual_callback)
-        buttons.add_button("OR everything!", self.implement_me())
+        buttons.add_button("Balanced", self.collect_balanced_callback)
+        buttons.add_button("Unbalanced", self.implement_me)
         buttons.add_button("Launch Twitter", self.launch_twitter_callback)
         row = buttons.get_next_row()
 
@@ -113,13 +116,8 @@ class TweetDownloader(AppBase):
         self.samples_field.set_text('100')
         row = self.samples_field.get_next_row()
 
-        self.sample_mult_field = DataField(lf, row, 'Sample Multiple:', text_width, label_width=label_width)
-        self.sample_mult_field.set_text('1')
-        row = self.sample_mult_field.get_next_row()
-
         self.option_checkboxes = Checkboxes(lf, row, "Options", label_width=label_width)
         self.option_checkboxes.add_checkbox("Randomize", self.randomize_callback, dir=DIR.ROW)
-        self.option_checkboxes.add_checkbox("Balance", self.implement_me, dir=DIR.ROW)
         self.option_checkboxes.add_checkbox("Stream to DB", self.implement_me, dir=DIR.ROW)
         self.option_checkboxes.add_checkbox("Stream to CSV", self.implement_me, dir=DIR.ROW)
         row = self.option_checkboxes.get_next_row()
@@ -156,7 +154,7 @@ class TweetDownloader(AppBase):
         end_dt = start_dt + timedelta(days = duration)
         self.end_date_field.set_date(end_dt)
 
-    def collect_individual_callback(self):
+    def collect_balanced_callback(self):
         rand_min = 0
         date_fmt = "%B %d, %Y (%H:%M:%S)"
         num_samples = self.samples_field.get_as_int()
@@ -164,8 +162,12 @@ class TweetDownloader(AppBase):
         key_list = self.keyword_text_field.get_list("\n")
         cur_dt = self.start_date_field.get_date()
         end_dt = self.end_date_field.get_date()
+        sql = "insert into table_experiment (name, date) values (%s, %s)"
+        values = (self.experiment_field.get_text(), datetime.now())
+        experiment_id = self.msi.write_sql_values_get_row(sql, values)
 
         while cur_dt < end_dt:
+            max_end = cur_dt + timedelta(days=1)
             print("\n{}".format(cur_dt.strftime(date_fmt)))
             # first, get the counts for each keyword
             self.keyword_data_list = []
@@ -190,7 +192,7 @@ class TweetDownloader(AppBase):
                     sample_mult = 1
                     # get the dates we're going to collect
                     cur_start = cur_dt
-                    cur_end = cur_dt + timedelta(days=1)
+                    cur_end = max_end
 
                     #show the date we are collecting for
                     print("{} collecting all {:,} of {:,} tweets".format(kd.name, num_samples*sample_mult, kd.tweets_per_day))

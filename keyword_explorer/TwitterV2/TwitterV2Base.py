@@ -11,7 +11,7 @@ class TwitterV2Base:
     bearer_token:str
 
     def __init__(self):
-        print("TwitterV2Base")
+        print("TwitterV2Base.init()")
         self.bearer_token = os.environ.get("BEARER_TOKEN_2")
 
     def bearer_oauth(self,r):

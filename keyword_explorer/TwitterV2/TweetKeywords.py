@@ -57,11 +57,12 @@ class TweetKeyword():
 
 
 class TweetKeywords(TwitterV2Base):
-    start_time:datetime
+    max_tweets_per_sample = 500
+    min_tweets_per_sample = 10
 
     def __init__(self):
         super().__init__()
-        print("TweetKeywords, token = {}".format(self.bearer_token))
+        print("TweetKeywords.init()")
         self.reset()
 
     def reset(self):
@@ -125,42 +126,43 @@ class TweetKeywords(TwitterV2Base):
         return -1
 
 
-    def get_keywords(self, tk:TweetKeyword, start_dt:datetime, end_dt:datetime = None, tweets_per_sample:int = 10, skip_days:int = 1, total_tweets:int = 10):
+    def get_keywords(self, tk:TweetKeyword, start_dt:datetime, end_dt:datetime = None, tweets_per_sample:int = 10, total_tweets:int = 10) -> List:
         #clean up the query so it works with the api
         query = self.prep_query(tk.keyword)
         self.query_list.append(query)
+        api_query_list = []
 
         if end_dt == None:
             # The most recent end time has to be ten seconds ago. To be on the safe side, we subtract one minute
             end_dt = datetime.utcnow() - timedelta(minutes=1)
         end_time_str = end_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
         start_time_str = start_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
-        print("query: '{}', start_time: {}, end_time: {} skip_days:{}".format(query, start_time_str, end_time_str, skip_days))
+        print("query: '{}', start_time: {}, end_time: {}".format(query, start_time_str, end_time_str))
 
-        cur_start = start_dt
-        cur_stop = cur_start + timedelta(days=skip_days)
-        while cur_start < end_dt:
-            end_time_str = cur_stop.strftime('%Y-%m-%dT%H:%M:%SZ')
-            start_time_str = cur_start.strftime('%Y-%m-%dT%H:%M:%SZ')
-            time_str = "start_time={}&end_time={}".format(start_time_str, end_time_str)
-            print("\t{}".format(time_str))
-            url = self. create_keywords_url(query, max_result=tweets_per_sample, time_str=time_str)
+        end_time_str = end_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+        start_time_str = start_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+        time_str = "start_time={}&end_time={}".format(start_time_str, end_time_str)
+        print("\t{}".format(time_str))
+        url = self. create_keywords_url(query, max_result=tweets_per_sample, time_str=time_str)
+        api_query_list.append(url)
+        json_response = self.connect_to_endpoint(url)
+        tk.parse_json(json_response)
+        next_token = self.parse_json(json_response, total_tweets)
+        # self.print_response("Get tk tweets [1] ", json_response)
+
+        count = 2
+        while next_token != None and tk.get_entries() < total_tweets:
+            url = self. create_keywords_url(query, max_result=tweets_per_sample, time_str=time_str, next_token=next_token)
+            api_query_list.append(url)
             json_response = self.connect_to_endpoint(url)
             tk.parse_json(json_response)
-            next_token = self.parse_json(json_response, tweets_per_sample)
-            # self.print_response("Get tk tweets [1] ", json_response)
+            next_token = self.parse_json(json_response, total_tweets)
+            # self.print_response("Get tk tweets [{}] ".format(count), json_response)
+            count += 1
 
-            count = 2
-            while next_token != None and tk.get_entries() < total_tweets:
-                url = self. create_keywords_url(query, max_result=tweets_per_sample, time_str=time_str, next_token=next_token)
-                json_response = self.connect_to_endpoint(url)
-                tk.parse_json(json_response)
-                next_token = self.parse_json(json_response, tweets_per_sample)
-                # self.print_response("Get tk tweets [{}] ".format(count), json_response)
-                count += 1
-
-            cur_start = cur_start + timedelta(days=skip_days)
-            cur_stop = cur_start + timedelta(days=skip_days)
+            # cur_start = cur_start + timedelta(days=skip_days)
+            # cur_stop = cur_start + timedelta(days=skip_days)
+        return api_query_list
 
 
 def exercise_get_keyword_tweets():
@@ -175,8 +177,10 @@ def exercise_get_keyword_tweets():
         tw = TweetKeyword(keyword=s)
         count = tks.get_keywords_per_day(s, start_dt)
         print("{}: keywords per day = {:,}".format(s, count))
-        tks.get_keywords(tw, start_dt, end_dt=end_dt, tweets_per_sample=100, total_tweets=100) # tweets_per_sample need to be between 10 - 500
+        l = tks.get_keywords(tw, start_dt, end_dt=end_dt, tweets_per_sample=10, total_tweets=30) # tweets_per_sample need to be between 10 - 500
         tw.to_print()
+        for q in l:
+            print("query = {}".format(q))
 
 
 def main():
