@@ -8,7 +8,7 @@ from tkinter import filedialog
 import pandas as pd
 
 from keyword_explorer.Apps.AppBase import AppBase
-from keyword_explorer.TwitterV2.TweetKeywords import TweetKeywords
+from keyword_explorer.TwitterV2.TweetKeywords import TweetKeywords, TweetKeyword
 from keyword_explorer.tkUtils.Buttons import Buttons
 from keyword_explorer.tkUtils.Checkboxes import Checkboxes, DIR
 from keyword_explorer.tkUtils.DataField import DataField
@@ -35,7 +35,7 @@ class KeywordData:
 
 class TweetDownloader(AppBase):
     msi:MySqlInterface
-    tkey:TweetKeywords
+    tkws:TweetKeywords
     prompt_text_field:TextField
     response_text_field:TextField
     keyword_text_field:TextField
@@ -66,9 +66,9 @@ class TweetDownloader(AppBase):
         self.geom = (900, 530)
         self.console_lines = 10
 
-        self.tkey = TweetKeywords()
+        self.tkws = TweetKeywords()
         self.msi = MySqlInterface(user_name ="root", db_name ="twitter_v2")
-        if not self.tkey.key_exists():
+        if not self.tkws.key_exists():
             message.showwarning("Key Error", "Could not find Environment key 'BEARER_TOKEN_2'")
 
     def build_app_view(self, row:int, main_text_width:int, main_label_width:int) -> int:
@@ -172,7 +172,7 @@ class TweetDownloader(AppBase):
             # first, get the counts for each keyword
             self.keyword_data_list = []
             for s in key_list:
-                count = self.tkey.get_keywords_per_day(s, cur_dt)
+                count = self.tkws.get_keywords_per_day(s, cur_dt)
                 self.keyword_data_list.append(KeywordData(s, count))
             self.keyword_data_list.sort(key=lambda kd:kd.tweets_per_day)
 
@@ -188,6 +188,8 @@ class TweetDownloader(AppBase):
                 num_samples = max(10, min_kd.tweets_per_day)
 
             for kd in self.keyword_data_list:
+                tk:TweetKeyword = TweetKeyword(kd.name)
+                tweets_per_sample = min(self.tkws.max_tweets_per_sample, kd.tweets_per_day)
                 if kd.tweets_per_day <= num_samples:
                     sample_mult = 1
                     # get the dates we're going to collect
@@ -195,8 +197,10 @@ class TweetDownloader(AppBase):
                     cur_end = max_end
 
                     #show the date we are collecting for
-                    print("{} collecting all {:,} of {:,} tweets".format(kd.name, num_samples*sample_mult, kd.tweets_per_day))
+                    print("\n{} collecting all {:,} of {:,} tweets".format(kd.name, num_samples*sample_mult, kd.tweets_per_day))
                     print("\tcollecting all from {} to {}".format(cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
+                    self.tkws.get_keywords(tk, cur_start, end_dt=cur_end, tweets_per_sample=tweets_per_sample,
+                                           total_tweets=kd.tweets_per_day, msi=self.msi, experiment_id=experiment_id)
 
                 else:
                     if self.randomize or num_samples == min_kd.tweets_per_day:
@@ -206,15 +210,19 @@ class TweetDownloader(AppBase):
                             ratio = num_samples / kd.tweets_per_day
                         day_offset = random.random() * (1.0 - 2*ratio)
                         cur_start = cur_dt + timedelta(days=day_offset)
-                        cur_end = cur_start + timedelta(days=ratio)
-                        print("{}: Randomly choosing {}/{} from {} to {}".format(kd.name, num_samples, kd.tweets_per_day, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
+                        cur_end = max_end #cur_start + timedelta(days=ratio)
+                        print("\n{}: Randomly choosing {}/{} from {} to {}".format(kd.name, num_samples, kd.tweets_per_day, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
+                        self.tkws.get_keywords(tk, cur_start, end_dt=cur_end, tweets_per_sample=tweets_per_sample,
+                                               total_tweets=tweets_per_sample, msi=self.msi, experiment_id=experiment_id)
+
                     else:
                         # Make several samples across the day
                         day_frac = num_samples / min_kd.tweets_per_day
                         sample_mult = 1/day_frac
 
                         #show the date we are collecting for
-                        print("{} subsampling {:,} of {:,} tweets".format(kd.name, num_samples*sample_mult, kd.tweets_per_day))
+                        print("\n{} subsampling {:,} of {:,} tweets".format(kd.name, num_samples*sample_mult, kd.tweets_per_day))
+
                         total_frac = 0
                         count = 0
                         while total_frac < 1.0:
@@ -223,6 +231,8 @@ class TweetDownloader(AppBase):
                             total_frac = min(1.0, (count+1) * day_frac)
                             cur_end = cur_dt + timedelta(days=total_frac)
                             print("\tsubsampling {} from {} to {}".format(num_samples, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
+                            self.tkws.get_keywords(tk, cur_start, end_dt=cur_end, tweets_per_sample=tweets_per_sample,
+                                                   total_tweets=kd.tweets_per_day, msi=self.msi, experiment_id=experiment_id)
                             count += 1
 
 
@@ -247,7 +257,7 @@ class TweetDownloader(AppBase):
         self.dp.clear()
         self.keyword_data_list = []
         for s in key_list:
-            count = self.tkey.get_keywords_per_day(s, start_dt)
+            count = self.tkws.get_keywords_per_day(s, start_dt)
             if count == 0:
                 self.dp.dprint("{}: {:,} SKIPPING".format(s, count))
                 continue
@@ -277,7 +287,7 @@ class TweetDownloader(AppBase):
         start_dt = self.start_date_field.get_date()
         end_dt = self.end_date_field.get_date()
         self.log_action("Launch_twitter", {"twitter_start": start_dt.strftime("%Y-%m-%d"), "twitter_end":end_dt.strftime("%Y-%m-%d"), "terms":" ".join(key_list)})
-        self.tkey.launch_twitter(key_list, start_dt, end_dt)
+        self.tkws.launch_twitter(key_list, start_dt, end_dt)
         # webbrowser.open('https://twitter.com/search?q=chinavirus%20until%3A2020-02-01%20since%3A2019-12-01&src=typed_query')
         # webbrowser.open('https://twitter.com/search?q=%22china%20virus%22%20until%3A2020-02-01%20since%3A2019-12-01&src=typed_query')
 

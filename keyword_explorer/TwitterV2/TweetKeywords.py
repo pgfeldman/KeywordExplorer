@@ -42,22 +42,28 @@ class TweetKeyword():
                 self.data_list.append(d)
         print("TweetKeyword.parse_json(): {} got {}/{} tweets".format(self.keyword, self.get_entries(), meta['result_count']))
 
+    def force_dict_value(self, d:Dict, name:str, force):
+        if name in d:
+            return d[name]
+        return force
+
     def to_db(self, msi:MySqlInterface, max_dt:datetime):
         d:Dict
         count = 1
         for d in self.data_list:
-            created_at = datetime.strptime(d['created_at'], '%Y-%m-%dT%H:%M:%SZ')
+            created_at = datetime.strptime(d['created_at'], '%Y-%m-%dT%H:%M:%S.000Z')
             if created_at < max_dt:
-                author_id = d['author_id']
-                conversation_id = d['conversation_id']
-                id = d['id']
-                in_reply_to_user_id = d['in_reply_to_user_id']
-                lang = d['lang']
-                query_id = d['query_id']
-                text = d['text']
+                self.last_stored_dt = created_at
+                author_id = self.force_dict_value(d, 'author_id', -1)
+                conversation_id = self.force_dict_value(d, 'conversation_id', -1)
+                id = self.force_dict_value(d, 'id', -1)
+                in_reply_to_user_id = self.force_dict_value(d, 'in_reply_to_user_id', -1)
+                lang = self.force_dict_value(d, 'lang', 'NO LANG')
+                query_id = self.force_dict_value(d, 'query_id', -1)
+                text = self.force_dict_value(d, 'text', 'NO TEXT')
 
-                sql = "insert into table_tweet (query_id, conversation_id, created_at, in_reply_to_user_id, lang, id, text) VALUES (%s, %s, %s, %s, %s, %s, %s)"
-                vals = (query_id, conversation_id, created_at, in_reply_to_user_id, lang, id, text)
+                sql = "insert into table_tweet (query_id, author_id, conversation_id, created_at, in_reply_to_user_id, lang, id, text) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+                vals = (query_id, author_id, conversation_id, created_at, in_reply_to_user_id, lang, id, text)
                 msi.write_sql_values_get_row(sql, vals)
 
                 print("\t[{}]: {}".format(count, d))
@@ -154,13 +160,14 @@ class TweetKeywords(TwitterV2Base):
         #clean up the query so it works with the api
         query = self.prep_query(tk.keyword)
         self.query_list.append(query)
+        query_id = -1
 
         if end_dt == None:
             # The most recent end time has to be ten seconds ago. To be on the safe side, we subtract one minute
             end_dt = datetime.utcnow() - timedelta(minutes=1)
         end_time_str = end_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
         start_time_str = start_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
-        print("query: '{}', start_time: {}, end_time: {}".format(query, start_time_str, end_time_str))
+        print("TweetKeywords.get_keywords() query: '{}', start_time: {}, end_time: {}".format(query, start_time_str, end_time_str))
 
         end_time_str = end_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
         start_time_str = start_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -168,8 +175,8 @@ class TweetKeywords(TwitterV2Base):
         print("\t{}".format(time_str))
         url = self. create_keywords_url(query, max_result=tweets_per_sample, time_str=time_str)
         if msi != None:
-            sql = "insert into table_query (date_executed, query, keyword, start_time, end_time) VALUES (%s, %s, %s, %s, %s)"
-            vals = (datetime.now(), url, tk.keyword, start_dt, end_dt)
+            sql = "insert into table_query (experiment_id, date_executed, query, keyword, start_time, end_time) VALUES (%s, %s, %s, %s, %s, %s)"
+            vals = (experiment_id, datetime.now(), url, tk.keyword, start_dt, end_dt)
             query_id = msi.write_sql_values_get_row(sql, vals)
         json_response = self.connect_to_endpoint(url)
         tk.parse_json(json_response, query_id)
