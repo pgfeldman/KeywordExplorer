@@ -162,8 +162,8 @@ class TweetDownloader(AppBase):
         key_list = self.keyword_text_field.get_list("\n")
         cur_dt = self.start_date_field.get_date()
         end_dt = self.end_date_field.get_date()
-        sql = "insert into table_experiment (name, date) values (%s, %s)"
-        values = (self.experiment_field.get_text(), datetime.now())
+        sql = "insert into table_experiment (name, date, sample_start, sample_end, keywords) values (%s, %s, %s, %s, %s)"
+        values = (self.experiment_field.get_text(), datetime.now(), cur_dt, end_dt, ", ".join(key_list))
         experiment_id = self.msi.write_sql_values_get_row(sql, values)
 
         while cur_dt < end_dt:

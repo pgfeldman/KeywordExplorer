@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from typing import Dict, List, Union
 import pprint
+from keyword_explorer.utils.MySqlInterface import MySqlInterface
 
-import pandas as pd
 
 from keyword_explorer.TwitterV2.TwitterV2Base import TwitterV2Base
 
@@ -23,21 +23,45 @@ class TweetData():
 class TweetKeyword():
     keyword:str
     data_list:List
+    last_stored_dt:[None, datetime]
 
     def __init__(self, keyword:str):
         self.keyword = keyword
         self.data_list = []
+        self.last_stored_dt = None
 
-    def parse_json(self, jd:Dict, filter:bool = False):
+    def parse_json(self, jd:Dict, filter:bool = False, query_id:int = -1):
         meta = jd['meta']
         data = jd['data']
         for d in data:
+            d['query_id'] = query_id
             if filter:
                 if self.keyword in d['text']:
                     self.data_list.append(d)
             else:
                 self.data_list.append(d)
         print("TweetKeyword.parse_json(): {} got {}/{} tweets".format(self.keyword, self.get_entries(), meta['result_count']))
+
+    def to_db(self, msi:MySqlInterface, max_dt:datetime):
+        d:Dict
+        count = 1
+        for d in self.data_list:
+            created_at = datetime.strptime(d['created_at'], '%Y-%m-%dT%H:%M:%SZ')
+            if created_at < max_dt:
+                author_id = d['author_id']
+                conversation_id = d['conversation_id']
+                id = d['id']
+                in_reply_to_user_id = d['in_reply_to_user_id']
+                lang = d['lang']
+                query_id = d['query_id']
+                text = d['text']
+
+                sql = "insert into table_tweet (query_id, conversation_id, created_at, in_reply_to_user_id, lang, id, text) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+                vals = (query_id, conversation_id, created_at, in_reply_to_user_id, lang, id, text)
+                msi.write_sql_values_get_row(sql, vals)
+
+                print("\t[{}]: {}".format(count, d))
+                count += 1
 
     def get_entries(self) -> int:
         return len(self.data_list)
@@ -126,11 +150,10 @@ class TweetKeywords(TwitterV2Base):
         return -1
 
 
-    def get_keywords(self, tk:TweetKeyword, start_dt:datetime, end_dt:datetime = None, tweets_per_sample:int = 10, total_tweets:int = 10) -> List:
+    def get_keywords(self, tk:TweetKeyword, start_dt:datetime, end_dt:datetime = None, tweets_per_sample:int = 10, total_tweets:int = 10, msi:MySqlInterface = None, experiment_id:int = -1):
         #clean up the query so it works with the api
         query = self.prep_query(tk.keyword)
         self.query_list.append(query)
-        api_query_list = []
 
         if end_dt == None:
             # The most recent end time has to be ten seconds ago. To be on the safe side, we subtract one minute
@@ -144,25 +167,29 @@ class TweetKeywords(TwitterV2Base):
         time_str = "start_time={}&end_time={}".format(start_time_str, end_time_str)
         print("\t{}".format(time_str))
         url = self. create_keywords_url(query, max_result=tweets_per_sample, time_str=time_str)
-        api_query_list.append(url)
+        if msi != None:
+            sql = "insert into table_query (date_executed, query, keyword, start_time, end_time) VALUES (%s, %s, %s, %s, %s)"
+            vals = (datetime.now(), url, tk.keyword, start_dt, end_dt)
+            query_id = msi.write_sql_values_get_row(sql, vals)
         json_response = self.connect_to_endpoint(url)
-        tk.parse_json(json_response)
+        tk.parse_json(json_response, query_id)
         next_token = self.parse_json(json_response, total_tweets)
         # self.print_response("Get tk tweets [1] ", json_response)
 
         count = 2
         while next_token != None and tk.get_entries() < total_tweets:
             url = self. create_keywords_url(query, max_result=tweets_per_sample, time_str=time_str, next_token=next_token)
-            api_query_list.append(url)
+            if msi != None:
+                sql = "insert into table_query (date_executed, query, keyword, start_time, end_time) VALUES (%s, %s, %s, %s, %s)"
+                vals = (datetime.now(), url, tk.keyword, start_dt, end_dt)
+                query_id = msi.write_sql_values_get_row(sql, vals)
             json_response = self.connect_to_endpoint(url)
-            tk.parse_json(json_response)
+            tk.parse_json(json_response, query_id)
             next_token = self.parse_json(json_response, total_tweets)
             # self.print_response("Get tk tweets [{}] ".format(count), json_response)
             count += 1
-
-            # cur_start = cur_start + timedelta(days=skip_days)
-            # cur_stop = cur_start + timedelta(days=skip_days)
-        return api_query_list
+        if msi != None:
+            tk.to_db(msi, end_dt)
 
 
 def exercise_get_keyword_tweets():
@@ -174,14 +201,11 @@ def exercise_get_keyword_tweets():
     date_str = "June 2, 2022 (00:00:00)"
     end_dt = datetime.strptime(date_str, "%B %d, %Y (%H:%M:%S)")
     for s in l:
-        tw = TweetKeyword(keyword=s)
+        tk = TweetKeyword(keyword=s)
         count = tks.get_keywords_per_day(s, start_dt)
         print("{}: keywords per day = {:,}".format(s, count))
-        l = tks.get_keywords(tw, start_dt, end_dt=end_dt, tweets_per_sample=10, total_tweets=30) # tweets_per_sample need to be between 10 - 500
-        tw.to_print()
-        for q in l:
-            print("query = {}".format(q))
-
+        tks.get_keywords(tk, start_dt, end_dt=end_dt, tweets_per_sample=10, total_tweets=30) # tweets_per_sample need to be between 10 - 500
+        tk.to_print()
 
 def main():
     # exercise_get_counts()
