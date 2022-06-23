@@ -30,9 +30,10 @@ class TweetKeyword():
         self.data_list = []
         self.last_stored_dt = None
 
-    def parse_json(self, jd:Dict, filter:bool = False, query_id:int = -1):
+    def parse_json(self, jd:Dict, filter:bool = False, query_id:int = -1, clamp = -1):
         meta = jd['meta']
         data = jd['data']
+        count = 0
         for d in data:
             d['query_id'] = query_id
             if filter:
@@ -40,7 +41,11 @@ class TweetKeyword():
                     self.data_list.append(d)
             else:
                 self.data_list.append(d)
-        print("TweetKeyword.parse_json(): {} got {}/{} tweets".format(self.keyword, self.get_entries(), meta['result_count']))
+                count += 1
+            if clamp > 0 and count > clamp:
+                break
+
+        print("TweetKeyword.parse_json(): query_id = {} [{}] got {}/{}, Max = {:,} tweets".format(query_id, self.keyword, self.get_entries(), count, meta['result_count']))
 
     def force_dict_value(self, d:Dict, name:str, force):
         if name in d:
@@ -48,6 +53,7 @@ class TweetKeyword():
         return force
 
     def to_db(self, msi:MySqlInterface, max_dt:datetime):
+        print("TweetKeyword.to_db() [{}] writing {:,} items to db".format(self.keyword, len(self.data_list)))
         d:Dict
         count = 1
         for d in self.data_list:
@@ -66,7 +72,7 @@ class TweetKeyword():
                 vals = (query_id, author_id, conversation_id, created_at, in_reply_to_user_id, lang, id, text)
                 msi.write_sql_values_get_row(sql, vals)
 
-                print("\t[{}]: {}".format(count, d))
+                # print("\t[{}]: {}".format(count, d))
                 count += 1
 
     def get_entries(self) -> int:
@@ -128,7 +134,7 @@ class TweetKeywords(TwitterV2Base):
             url = "{}&{}".format(url, time_str)
         if next_token != None:
             url = "{}&next_token={}".format(url, next_token)
-        print("\turl = {}".format(url))
+        # print("\tTweetKeywords.create_keywords_url(): url = {}".format(url))
         return url
 
     def parse_json(self, json_response, num_responses:int) -> Union[str, None]:
@@ -167,20 +173,22 @@ class TweetKeywords(TwitterV2Base):
             end_dt = datetime.utcnow() - timedelta(minutes=1)
         end_time_str = end_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
         start_time_str = start_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
-        print("TweetKeywords.get_keywords() query: '{}', start_time: {}, end_time: {}".format(query, start_time_str, end_time_str))
+        # print("TweetKeywords.get_keywords() query: '{}', start_time: {}, end_time: {}".format(query, start_time_str, end_time_str))
 
         end_time_str = end_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
         start_time_str = start_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
         time_str = "start_time={}&end_time={}".format(start_time_str, end_time_str)
-        print("\t{}".format(time_str))
-        url = self. create_keywords_url(query, max_result=tweets_per_sample, time_str=time_str)
+        # print("\t{}".format(time_str))
+        url = self.create_keywords_url(query, max_result=min(tweets_per_sample, total_tweets), time_str=time_str)
         if msi != None:
             sql = "insert into table_query (experiment_id, date_executed, query, keyword, start_time, end_time) VALUES (%s, %s, %s, %s, %s, %s)"
             vals = (experiment_id, datetime.now(), url, tk.keyword, start_dt, end_dt)
             query_id = msi.write_sql_values_get_row(sql, vals)
+        # print("query_id = {}, url = {}".format(query_id, url))
+        next_token = None
         json_response = self.connect_to_endpoint(url)
-        tk.parse_json(json_response, query_id)
-        next_token = self.parse_json(json_response, total_tweets)
+        tk.parse_json(json_response, query_id=query_id, clamp=tweets_per_sample)
+        # next_token = self.parse_json(json_response, total_tweets)
         # self.print_response("Get tk tweets [1] ", json_response)
 
         count = 2
@@ -191,7 +199,7 @@ class TweetKeywords(TwitterV2Base):
                 vals = (datetime.now(), url, tk.keyword, start_dt, end_dt)
                 query_id = msi.write_sql_values_get_row(sql, vals)
             json_response = self.connect_to_endpoint(url)
-            tk.parse_json(json_response, query_id)
+            tk.parse_json(json_response, query_id=query_id, clamp=tweets_per_sample)
             next_token = self.parse_json(json_response, total_tweets)
             # self.print_response("Get tk tweets [{}] ".format(count), json_response)
             count += 1

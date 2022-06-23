@@ -112,8 +112,9 @@ class TweetDownloader(AppBase):
 
     def build_twitter_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
-        self.samples_field = DataField(lf, row, 'Samples (10 - 500):', text_width, label_width=label_width)
-        self.samples_field.set_text('100')
+        self.samples_field = DataField(lf, row, 'Samples ({} - {}):'.format(TweetKeywords.min_tweets_per_sample, TweetKeywords.max_tweets_per_sample),
+                                       text_width, label_width=label_width)
+        self.samples_field.set_text(TweetKeywords.max_tweets_per_sample)
         row = self.samples_field.get_next_row()
 
         self.option_checkboxes = Checkboxes(lf, row, "Options", label_width=label_width)
@@ -154,83 +155,102 @@ class TweetDownloader(AppBase):
         end_dt = start_dt + timedelta(days = duration)
         self.end_date_field.set_date(end_dt)
 
+    # Collect the same number of tweets for each keyword over the sample duration
     def collect_balanced_callback(self):
-        rand_min = 0
         date_fmt = "%B %d, %Y (%H:%M:%S)"
-        num_samples = self.samples_field.get_as_int()
 
+        # get the keywords
         key_list = self.keyword_text_field.get_list("\n")
+
+        # get the entire date range
         cur_dt = self.start_date_field.get_date()
         end_dt = self.end_date_field.get_date()
+
+        # save this experiment to the database
         sql = "insert into table_experiment (name, date, sample_start, sample_end, keywords) values (%s, %s, %s, %s, %s)"
         values = (self.experiment_field.get_text(), datetime.now(), cur_dt, end_dt, ", ".join(key_list))
         experiment_id = self.msi.write_sql_values_get_row(sql, values)
 
+        # starting with the start date, step towards the end date one day at a time
         while cur_dt < end_dt:
+            # Get the number of tweets for each keyword for today. From cur_dt to max_end is 24 hours
+            # from 0 Zulu
             max_end = cur_dt + timedelta(days=1)
             print("\n{}".format(cur_dt.strftime(date_fmt)))
-            # first, get the counts for each keyword
+
+            # first, get the counts for each keyword for this day
             self.keyword_data_list = []
             for s in key_list:
                 count = self.tkws.get_keywords_per_day(s, cur_dt)
                 self.keyword_data_list.append(KeywordData(s, count))
             self.keyword_data_list.sort(key=lambda kd:kd.tweets_per_day)
 
-            time.sleep(1)
-            if self.randomize:
-                rand_min = random.randint(0, 59)
-
-            #get the tweets based on the lowest counts
+            #get the keyword with the lowest number of tweets
             kd:KeywordData
             min_kd:KeywordData = self.keyword_data_list[0]
 
-            if min_kd.tweets_per_day < num_samples: # make a new sample size that's at least 10
-                num_samples = max(10, min_kd.tweets_per_day)
+            # If the lowest number of tweets is less than max_samples_per_day,
+            # then set max_samples_per_day to that value, or the minimum allowed
+            # by the Twitter API
+            one_random_sample = self.randomize
+            # get the max number of samples that we want to get per day
+            max_samples_per_day = self.samples_field.get_as_int()
+            if min_kd.tweets_per_day <= max_samples_per_day:
+                max_samples_per_day = max(TweetKeywords.min_tweets_per_sample, min_kd.tweets_per_day)
+                one_random_sample = True
 
+            # For each keyword in the sorted list
             for kd in self.keyword_data_list:
                 tk:TweetKeyword = TweetKeyword(kd.name)
+
+                # The tweets per sample has to be >= the Twitter API
                 tweets_per_sample = min(self.tkws.max_tweets_per_sample, kd.tweets_per_day)
-                if kd.tweets_per_day <= num_samples:
-                    sample_mult = 1
+
+                # The sample size is within user specs
+                if kd.tweets_per_day <= max_samples_per_day:
                     # get the dates we're going to collect
                     cur_start = cur_dt
                     cur_end = max_end
 
+
                     #show the date we are collecting for
-                    print("\n{} collecting all {:,} of {:,} tweets".format(kd.name, num_samples*sample_mult, kd.tweets_per_day))
+                    print("\n{} collecting all of {:,} tweets".format(kd.name, kd.tweets_per_day))
                     print("\tcollecting all from {} to {}".format(cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
+
+                    # collect all the tweets for this keyword.
                     self.tkws.get_keywords(tk, cur_start, end_dt=cur_end, tweets_per_sample=tweets_per_sample,
                                            total_tweets=kd.tweets_per_day, msi=self.msi, experiment_id=experiment_id)
 
+                # if there are more tweets than the user spec
                 else:
-                    if self.randomize or num_samples == min_kd.tweets_per_day:
+                    if one_random_sample:
                         # Make one random sample in the day
                         ratio = min_kd.tweets_per_day / kd.tweets_per_day
                         if self.randomize:
-                            ratio = num_samples / kd.tweets_per_day
+                            ratio = max_samples_per_day / kd.tweets_per_day
                         day_offset = random.random() * (1.0 - 2*ratio)
                         cur_start = cur_dt + timedelta(days=day_offset)
                         cur_end = max_end #cur_start + timedelta(days=ratio)
-                        print("\n{}: Randomly choosing {}/{} from {} to {}".format(kd.name, num_samples, kd.tweets_per_day, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
+                        print("{}: Randomly choosing {}/{:,} from {} to {}".format(kd.name, max_samples_per_day, kd.tweets_per_day, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
                         self.tkws.get_keywords(tk, cur_start, end_dt=cur_end, tweets_per_sample=tweets_per_sample,
-                                               total_tweets=tweets_per_sample, msi=self.msi, experiment_id=experiment_id)
+                                               total_tweets=max_samples_per_day, msi=self.msi, experiment_id=experiment_id)
 
                     else:
                         # Make several samples across the day
-                        day_frac = num_samples / min_kd.tweets_per_day
-                        sample_mult = 1/day_frac
+                        day_frac = max_samples_per_day / min_kd.tweets_per_day
 
                         #show the date we are collecting for
-                        print("\n{} subsampling {:,} of {:,} tweets".format(kd.name, num_samples*sample_mult, kd.tweets_per_day))
+                        print("\n{} subsampling {:,} of {:,} tweets".format(kd.name, min_kd.tweets_per_day, kd.tweets_per_day))
 
                         total_frac = 0
                         count = 0
                         while total_frac < 1.0:
+                            sample_size = min(TweetKeywords.max_tweets_per_sample, min_kd.tweets_per_day-(count*TweetKeywords.max_tweets_per_sample))
                             # get the dates we're going to collect
                             cur_start = cur_dt + timedelta(days=(count * day_frac))
                             total_frac = min(1.0, (count+1) * day_frac)
                             cur_end = cur_dt + timedelta(days=total_frac)
-                            print("\tsubsampling {} from {} to {}".format(num_samples, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
+                            print("\tsubsampling {} from {} to {}".format(sample_size, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
                             self.tkws.get_keywords(tk, cur_start, end_dt=cur_end, tweets_per_sample=tweets_per_sample,
                                                    total_tweets=kd.tweets_per_day, msi=self.msi, experiment_id=experiment_id)
                             count += 1
