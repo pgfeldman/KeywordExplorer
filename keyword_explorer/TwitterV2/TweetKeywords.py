@@ -14,6 +14,7 @@ class TweetData():
     id:int
     lang:str
     text:str
+    num_entries:int
 
     def __init__(self, d):
         for key in d:
@@ -45,7 +46,7 @@ class TweetKeyword():
             if clamp > 0 and count > clamp:
                 break
 
-        print("TweetKeyword.parse_json(): query_id = {} [{}] got {}/{}, Max = {:,} tweets".format(query_id, self.keyword, self.get_entries(), count, meta['result_count']))
+        print("\tTweetKeyword.parse_json(): query_id = {} [{}] got {}/{}, Max = {:,} tweets".format(query_id, self.keyword, self.get_entries(), count, meta['result_count']))
 
     def force_dict_value(self, d:Dict, name:str, force):
         if name in d:
@@ -53,7 +54,7 @@ class TweetKeyword():
         return force
 
     def to_db(self, msi:MySqlInterface, max_dt:datetime):
-        print("TweetKeyword.to_db() [{}] writing {:,} items to db".format(self.keyword, len(self.data_list)))
+        print("\tTweetKeyword.to_db() [{}] writing {:,} items to db".format(self.keyword, len(self.data_list)))
         d:Dict
         count = 1
         for d in self.data_list:
@@ -74,9 +75,14 @@ class TweetKeyword():
 
                 # print("\t[{}]: {}".format(count, d))
                 count += 1
+        self.num_entries = len(self.data_list)
+        self.data_list = [] # clear the list so we don't write the same things
 
     def get_entries(self) -> int:
-        return len(self.data_list)
+        n = len(self.data_list)
+        if n > 0:
+            return n
+        return self.num_entries
 
     def to_print(self, pretty:bool = True):
         print("Keyword = {}".format(self.keyword))
@@ -162,7 +168,7 @@ class TweetKeywords(TwitterV2Base):
         return -1
 
 
-    def get_keywords(self, tk:TweetKeyword, start_dt:datetime, end_dt:datetime = None, tweets_per_sample:int = 10, total_tweets:int = 10, msi:MySqlInterface = None, experiment_id:int = -1):
+    def get_keywords(self, tk:TweetKeyword, start_dt:datetime, end_dt:datetime = None, tweets_per_sample:int = 10, total_tweets:int = 10, msi:MySqlInterface = None, experiment_id:int = -1) :
         #clean up the query so it works with the api
         query = self.prep_query(tk.keyword)
         self.query_list.append(query)
@@ -185,14 +191,15 @@ class TweetKeywords(TwitterV2Base):
             vals = (experiment_id, datetime.now(), url, tk.keyword, start_dt, end_dt)
             query_id = msi.write_sql_values_get_row(sql, vals)
         # print("query_id = {}, url = {}".format(query_id, url))
-        next_token = None
+        # next_token = None
         json_response = self.connect_to_endpoint(url)
         tk.parse_json(json_response, query_id=query_id, clamp=tweets_per_sample)
-        # next_token = self.parse_json(json_response, total_tweets)
+        next_token = self.parse_json(json_response, total_tweets)
         # self.print_response("Get tk tweets [1] ", json_response)
 
         count = 2
-        while next_token != None and tk.get_entries() < total_tweets:
+        max_result = min(tweets_per_sample, total_tweets)
+        while next_token != None and tk.get_entries() < max_result:
             url = self. create_keywords_url(query, max_result=tweets_per_sample, time_str=time_str, next_token=next_token)
             if msi != None:
                 sql = "insert into table_query (date_executed, query, keyword, start_time, end_time) VALUES (%s, %s, %s, %s, %s)"
@@ -201,6 +208,7 @@ class TweetKeywords(TwitterV2Base):
             json_response = self.connect_to_endpoint(url)
             tk.parse_json(json_response, query_id=query_id, clamp=tweets_per_sample)
             next_token = self.parse_json(json_response, total_tweets)
+            print("\ttk.get_entries() = {}, max_result = {}".format(tk.get_entries(), max_result))
             # self.print_response("Get tk tweets [{}] ".format(count), json_response)
             count += 1
         if msi != None:
