@@ -63,7 +63,7 @@ class TweetDownloader(AppBase):
     def setup_app(self):
         self.app_name = "TweetDownloader"
         self.app_version = "6.27.22"
-        self.geom = (900, 530)
+        self.geom = (900, 560)
         self.console_lines = 10
 
         self.tkws = TweetKeywords()
@@ -103,21 +103,30 @@ class TweetDownloader(AppBase):
         self.duration_field.add_button("set start", self.set_start_callback)
         self.duration_field.add_button("set end", self.set_end_callback)
         row = self.duration_field.get_next_row()
-        buttons = Buttons(lf, row, "Actions", label_width=label_width)
-        buttons.add_button("Calc rates", self.calc_rates_callback)
+        buttons = Buttons(lf, row, "Collect:", label_width=label_width)
         buttons.add_button("Balanced", self.collect_balanced_callback)
         buttons.add_button("Unbalanced", self.implement_me)
+        buttons.add_button("Clamped", self.implement_me)
+        buttons.add_button("Percent", self.implement_me)
+        row = buttons.get_next_row()
+
+        buttons = Buttons(lf, row, "Analytics:", label_width=label_width)
+        buttons.add_button("Calc rates", self.calc_rates_callback)
         buttons.add_button("Launch Twitter", self.launch_twitter_callback)
         row = buttons.get_next_row()
 
     def build_twitter_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
-        self.samples_field = DataField(lf, row, 'Samples ({} - {}):'.format(TweetKeywords.min_tweets_per_sample, TweetKeywords.max_tweets_per_sample),
-                                       text_width, label_width=label_width)
+        self.samples_field = DataField(lf, row, 'Samples/Clamp:', text_width, label_width=label_width)
         self.samples_field.set_text(TweetKeywords.max_tweets_per_sample)
         row = self.samples_field.get_next_row()
 
+        percent_field = DataField(lf, row, 'Percent:', text_width, label_width=label_width)
+        percent_field.set_text(0)
+        row = percent_field.get_next_row()
+
         self.option_checkboxes = Checkboxes(lf, row, "Options", label_width=label_width)
+        self.option_checkboxes.add_checkbox("Max to clamp", self.implement_me, dir=DIR.ROW)
         self.option_checkboxes.add_checkbox("Randomize", self.randomize_callback, dir=DIR.ROW)
         self.option_checkboxes.add_checkbox("Stream to DB", self.implement_me, dir=DIR.ROW)
         self.option_checkboxes.add_checkbox("Stream to CSV", self.implement_me, dir=DIR.ROW)
