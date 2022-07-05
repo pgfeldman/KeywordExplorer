@@ -47,6 +47,7 @@ class TweetDownloader(AppBase):
     corpus_size_field:DataField
     lowest_count_field:DataField
     highest_count_field:DataField
+    percent_field:DataField
     option_checkboxes:Checkboxes
     keyword_data_list:List
     randomize:bool
@@ -105,9 +106,7 @@ class TweetDownloader(AppBase):
         row = self.duration_field.get_next_row()
         buttons = Buttons(lf, row, "Collect:", label_width=label_width)
         buttons.add_button("Balanced", self.collect_balanced_callback)
-        buttons.add_button("Unbalanced", self.implement_me)
-        buttons.add_button("Clamped", self.implement_me)
-        buttons.add_button("Percent", self.implement_me)
+        buttons.add_button("Percent", self.collect_percent_callback)
         row = buttons.get_next_row()
 
         buttons = Buttons(lf, row, "Analytics:", label_width=label_width)
@@ -121,9 +120,9 @@ class TweetDownloader(AppBase):
         self.samples_field.set_text(TweetKeywords.max_tweets_per_sample)
         row = self.samples_field.get_next_row()
 
-        percent_field = DataField(lf, row, 'Percent:', text_width, label_width=label_width)
-        percent_field.set_text(0)
-        row = percent_field.get_next_row()
+        self.percent_field = DataField(lf, row, 'Percent:', text_width, label_width=label_width)
+        self.percent_field.set_text('100')
+        row = self.percent_field.get_next_row()
 
         self.option_checkboxes = Checkboxes(lf, row, "Options", label_width=label_width)
         self.option_checkboxes.add_checkbox("Max to clamp", self.implement_me, dir=DIR.ROW)
@@ -164,7 +163,48 @@ class TweetDownloader(AppBase):
         end_dt = start_dt + timedelta(days = duration)
         self.end_date_field.set_date(end_dt)
 
-    # Collect the same number of tweets for each keyword over the sample duration
+    def collect_percent_callback(self):
+        date_fmt = "%B %d, %Y (%H:%M:%S)"
+        percent = self.percent_field.get_as_int()
+        clamp = self.samples_field.get_as_int()
+        # get the keywords
+        key_list = self.keyword_text_field.get_list("\n")
+
+        # get the entire date range
+        cur_dt = self.start_date_field.get_date()
+        end_dt = self.end_date_field.get_date()
+
+        # save this experiment to the database
+        sql = "insert into table_experiment (name, date, sample_start, sample_end, keywords) values (%s, %s, %s, %s, %s)"
+        values = (self.experiment_field.get_text(), datetime.now(), cur_dt, end_dt, ", ".join(key_list))
+        experiment_id = self.msi.write_sql_values_get_row(sql, values)
+
+        # starting with the start date, step towards the end date one day at a time
+        while cur_dt < end_dt:
+            # Get the number of tweets for each keyword for today. From cur_dt to max_end is 24 hours
+            # from 0 Zulu
+            max_end = cur_dt + timedelta(days=1)
+            print("\n{}".format(cur_dt.strftime(date_fmt)))
+
+            # first, get the counts for each keyword for this day
+            self.keyword_data_list = []
+            for s in key_list:
+                count = self.tkws.get_keywords_per_day(s, cur_dt)
+                scaled = count * percent/100
+                tweets_to_download = int(min(scaled, clamp))
+                tweets_to_download = max(TweetKeywords.min_tweets_per_sample, tweets_to_download)
+                tk:TweetKeyword = TweetKeyword(s)
+                ratio = tweets_to_download / count
+                day_offset = random.random() * (1.0 - 2*ratio)
+                cur_start = cur_dt + timedelta(days=day_offset)
+                cur_end = max_end #cur_start + timedelta(days=ratio)
+                tweets_per_sample = min(tweets_to_download, TweetKeywords.max_tweets_per_sample)
+                print("{}: Randomly choosing {}/{:,} from {} to {}".format(s, tweets_to_download, count, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
+                self.tkws.get_keywords(tk, cur_start, end_dt=cur_end, tweets_per_sample=tweets_per_sample,
+                                       total_tweets=tweets_to_download, msi=self.msi, experiment_id=experiment_id)
+
+
+# Collect the same number of tweets for each keyword over the sample duration
     def collect_balanced_callback(self):
         date_fmt = "%B %d, %Y (%H:%M:%S)"
 
