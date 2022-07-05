@@ -13,7 +13,7 @@ And this is an example of the Twitter results:
 ![Tweets for pets](./images/example_plot.png)
 
 ## Before using!!
-KeywordExploere *requires* that you have an OpenAI account and a Twitter developer account.
+KeywordExplorer *requires* that you have an OpenAI account and a Twitter developer account.
 
 OpenAI: https://openai.com/api/
 
