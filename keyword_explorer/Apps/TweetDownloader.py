@@ -206,6 +206,7 @@ class TweetDownloader(AppBase):
             self.cur_date_field.update()
             # next day
             cur_dt += timedelta(days=1)
+        print("collect_percent_callback() - done")
 
 
 # Collect the same number of tweets for each keyword over the sample duration
@@ -318,7 +319,7 @@ class TweetDownloader(AppBase):
                     min_kd.tweets_per_day = min(min_kd.tweets_per_day, total_downloaded)
                     print("max_tweets_per_sample set from {} to {}".format(old_mkd, min_kd.tweets_per_day))
 
-
+                    print("collect_balanced_callback() - done")
                 #figure out the best spacing of samples across the day
 
             self.cur_date_field.set_date(cur_dt)
