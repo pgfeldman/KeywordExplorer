@@ -125,7 +125,6 @@ class TweetDownloader(AppBase):
         row = self.percent_field.get_next_row()
 
         self.option_checkboxes = Checkboxes(lf, row, "Options", label_width=label_width)
-        self.option_checkboxes.add_checkbox("Max to clamp", self.implement_me, dir=DIR.ROW)
         self.option_checkboxes.add_checkbox("Randomize", self.randomize_callback, dir=DIR.ROW)
         self.option_checkboxes.add_checkbox("Stream to DB", self.implement_me, dir=DIR.ROW)
         self.option_checkboxes.add_checkbox("Stream to CSV", self.implement_me, dir=DIR.ROW)
@@ -178,7 +177,7 @@ class TweetDownloader(AppBase):
         sql = "insert into table_experiment (name, date, sample_start, sample_end, keywords) values (%s, %s, %s, %s, %s)"
         values = (self.experiment_field.get_text(), datetime.now(), cur_dt, end_dt, ", ".join(key_list))
         experiment_id = -1
-        #experiment_id = self.msi.write_sql_values_get_row(sql, values)
+        experiment_id = self.msi.write_sql_values_get_row(sql, values)
 
         # starting with the start date, step towards the end date one day at a time
         while cur_dt < end_dt:
@@ -201,8 +200,12 @@ class TweetDownloader(AppBase):
                 cur_end = max_end #cur_start + timedelta(days=ratio)
                 tweets_per_sample = min(tweets_to_download, TweetKeywords.max_tweets_per_sample)
                 print("collect_percent_callback(): {}: Randomly choosing {}/{:,} from {} to {}".format(s, tweets_to_download, count, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
-                # self.tkws.get_keywords(tk, cur_start, end_dt=cur_end, tweets_per_sample=tweets_per_sample,
-                #                        total_tweets=tweets_to_download, msi=self.msi, experiment_id=experiment_id)
+                self.tkws.get_keywords(tk, cur_start, end_dt=cur_end, tweets_per_sample=tweets_per_sample,
+                                       total_tweets=tweets_to_download, msi=self.msi, experiment_id=experiment_id)
+            self.cur_date_field.set_date(cur_dt)
+            self.cur_date_field.update()
+            # next day
+            cur_dt += timedelta(days=1)
 
 
 # Collect the same number of tweets for each keyword over the sample duration
@@ -337,7 +340,8 @@ class TweetDownloader(AppBase):
         self.dp.clear()
         self.keyword_data_list = []
         for s in key_list:
-            count = self.tkws.get_keywords_per_day(s, start_dt)
+            percent = self.percent_field.get_as_int()/100.0
+            count = int(self.tkws.get_keywords_per_day(s, start_dt) * percent)
             if count == 0:
                 self.dp.dprint("{}: {:,} SKIPPING".format(s, count))
                 continue
@@ -350,7 +354,7 @@ class TweetDownloader(AppBase):
                     lowest.reset(s, count)
                 elif count > highest.tweets_per_day:
                     highest.reset(s, count)
-            self.dp.dprint("[{}]: {:,} keywords/day = {:.1f} days for {}k ".format(s, count, corpus_size/count+1, corpus_size/1000))
+            self.dp.dprint("[{}]{:.1f}%: {:,} keywords/day = {:.1f} days for {}k ".format(s, percent*100, count, corpus_size/count+1, corpus_size/1000))
             i += 1
         self.highest_count_field.set_text(highest.to_string())
         self.lowest_count_field.set_text(lowest.to_string())

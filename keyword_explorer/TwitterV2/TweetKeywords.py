@@ -202,8 +202,8 @@ class TweetKeywords(TwitterV2Base):
         while next_token != None and tk.get_entries() < max_result:
             url = self. create_keywords_url(query, max_result=tweets_per_sample, time_str=time_str, next_token=next_token)
             if msi != None:
-                sql = "insert into table_query (date_executed, query, keyword, start_time, end_time) VALUES (%s, %s, %s, %s, %s)"
-                vals = (datetime.now(), url, tk.keyword, start_dt, end_dt)
+                sql = "insert into table_query (experiment_id, date_executed, query, keyword, start_time, end_time) VALUES (%s, %s, %s, %s, %s, %s)"
+                vals = (experiment_id, datetime.now(), url, tk.keyword, start_dt, end_dt)
                 query_id = msi.write_sql_values_get_row(sql, vals)
             json_response = self.connect_to_endpoint(url)
             tk.parse_json(json_response, query_id=query_id, clamp=tweets_per_sample)
