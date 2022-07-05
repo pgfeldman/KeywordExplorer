@@ -111,7 +111,7 @@ class TweetDownloader(AppBase):
 
         buttons = Buttons(lf, row, "Analytics:", label_width=label_width)
         buttons.add_button("Calc rates", self.calc_rates_callback)
-        buttons.add_button("Launch Twitter", self.launch_twitter_callback)
+        buttons.add_button("Browser", self.launch_twitter_callback)
         row = buttons.get_next_row()
 
     def build_twitter_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
@@ -177,7 +177,8 @@ class TweetDownloader(AppBase):
         # save this experiment to the database
         sql = "insert into table_experiment (name, date, sample_start, sample_end, keywords) values (%s, %s, %s, %s, %s)"
         values = (self.experiment_field.get_text(), datetime.now(), cur_dt, end_dt, ", ".join(key_list))
-        experiment_id = self.msi.write_sql_values_get_row(sql, values)
+        experiment_id = -1
+        #experiment_id = self.msi.write_sql_values_get_row(sql, values)
 
         # starting with the start date, step towards the end date one day at a time
         while cur_dt < end_dt:
@@ -199,9 +200,9 @@ class TweetDownloader(AppBase):
                 cur_start = cur_dt + timedelta(days=day_offset)
                 cur_end = max_end #cur_start + timedelta(days=ratio)
                 tweets_per_sample = min(tweets_to_download, TweetKeywords.max_tweets_per_sample)
-                print("{}: Randomly choosing {}/{:,} from {} to {}".format(s, tweets_to_download, count, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
-                self.tkws.get_keywords(tk, cur_start, end_dt=cur_end, tweets_per_sample=tweets_per_sample,
-                                       total_tweets=tweets_to_download, msi=self.msi, experiment_id=experiment_id)
+                print("collect_percent_callback(): {}: Randomly choosing {}/{:,} from {} to {}".format(s, tweets_to_download, count, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
+                # self.tkws.get_keywords(tk, cur_start, end_dt=cur_end, tweets_per_sample=tweets_per_sample,
+                #                        total_tweets=tweets_to_download, msi=self.msi, experiment_id=experiment_id)
 
 
 # Collect the same number of tweets for each keyword over the sample duration
