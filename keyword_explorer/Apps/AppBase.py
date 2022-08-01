@@ -10,6 +10,7 @@ from typing import Tuple, Dict, IO
 from keyword_explorer.tkUtils.ConsoleDprint import ConsoleDprint
 from keyword_explorer.tkUtils.DataField import DataField
 from keyword_explorer.utils.SharedObjects import SharedObjects
+from keyword_explorer.tkUtils.ToolTip import ToolTip
 
 
 class AppBase(tk.Tk):
@@ -49,6 +50,7 @@ class AppBase(tk.Tk):
         self.resizable(width=True, height=False)
 
         self.experiment_field = DataField(self, row, "Experiment name:", text_width, label_width=label_width)
+        tt = ToolTip(self.experiment_field.tk_entry, "The name of the project\nUsed for file names and\ndatabase fields")
         dt = datetime.now()
         self.logfile = "{}/{}_{}.csv".format(Path.home(), self.app_name, dt.strftime("%Y-%m-%d-%H-%M-%S"))
         experiment_str = "{}_{}_{}".format(getpass.getuser(), self.app_name, dt.strftime("%Y-%m-%d-%H-%M-%S"))
