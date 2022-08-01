@@ -13,7 +13,7 @@ from keyword_explorer.tkUtils.Buttons import Buttons
 from keyword_explorer.tkUtils.Checkboxes import Checkboxes, DIR
 from keyword_explorer.tkUtils.DataField import DataField
 from keyword_explorer.tkUtils.DateEntryField import DateEntryField
-from keyword_explorer.tkUtils.ListField import ListField
+from keyword_explorer.tkUtils.ToolTip import ToolTip
 from keyword_explorer.tkUtils.TextField import TextField
 
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
@@ -63,7 +63,7 @@ class TweetDownloader(AppBase):
 
     def setup_app(self):
         self.app_name = "TweetDownloader"
-        self.app_version = "6.27.22"
+        self.app_version = "9.1.22"
         self.geom = (900, 560)
         self.console_lines = 10
 
@@ -95,23 +95,32 @@ class TweetDownloader(AppBase):
     def build_twitter(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
         self.keyword_text_field = TextField(lf, row, 'Test Keyword(s)', text_width, height=10, label_width=label_width)
+        ToolTip(self.keyword_text_field.tk_text,
+                "List of terms to search.\nTerms can have spaces or be combined with OR:\nNorth Korea\nSouth Korea\nNorth Korea or South Korea")
         row = self.keyword_text_field.get_next_row()
         self.start_date_field = DateEntryField(lf, row, 'Start Date', text_width, label_width=label_width)
         row = self.start_date_field.get_next_row()
         self.end_date_field = DateEntryField(lf, row, 'End Date', text_width, label_width=label_width)
         row = self.end_date_field.get_next_row()
         self.duration_field = DataField(lf, row, 'Duration:', int(text_width/2), label_width=label_width)
-        self.duration_field.add_button("set start", self.set_start_callback)
-        self.duration_field.add_button("set end", self.set_end_callback)
+        ToolTip(self.duration_field.tk_entry, "How many days in the pull\nCalculted from the start and stop dates")
+        b = self.duration_field.add_button("set start", self.set_start_callback)
+        ToolTip(b, "Reset the start date based on the end date and duration")
+        b = self.duration_field.add_button("set end", self.set_end_callback)
+        ToolTip(b, "Reset the end date based on the start date and duration")
         row = self.duration_field.get_next_row()
         buttons = Buttons(lf, row, "Collect:", label_width=label_width)
-        buttons.add_button("Balanced", self.collect_balanced_callback)
-        buttons.add_button("Percent", self.collect_percent_callback)
+        b = buttons.add_button("Balanced", self.collect_balanced_callback)
+        ToolTip(b, "Collect the same number (Samples/Clamp) of tweets per day for each item\nUses each day's smallest count")
+        b = buttons.add_button("Percent", self.collect_percent_callback)
+        ToolTip(b, "Collect a proportional (Percent) sample with\nan upper clamp (Samples/Clamp) per day for all terms\nMinimum of 10 samples per day")
         row = buttons.get_next_row()
 
         buttons = Buttons(lf, row, "Analytics:", label_width=label_width)
-        buttons.add_button("Calc rates", self.calc_rates_callback)
-        buttons.add_button("Browser", self.launch_twitter_callback)
+        b = buttons.add_button("Calc rates", self.calc_rates_callback)
+        ToolTip(b, "Gets the rough number of tweets per day per term\n and prints to the Console window")
+        b = buttons.add_button("Browser", self.launch_twitter_callback)
+        ToolTip(b, "Open tabs in the default browser for each term over the time period")
         row = buttons.get_next_row()
 
     def build_twitter_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
@@ -125,9 +134,11 @@ class TweetDownloader(AppBase):
         row = self.percent_field.get_next_row()
 
         self.option_checkboxes = Checkboxes(lf, row, "Options", label_width=label_width)
-        self.option_checkboxes.add_checkbox("Randomize", self.randomize_callback, dir=DIR.ROW)
-        self.option_checkboxes.add_checkbox("Stream to DB", self.implement_me, dir=DIR.ROW)
-        self.option_checkboxes.add_checkbox("Stream to CSV", self.implement_me, dir=DIR.ROW)
+        cb = self.option_checkboxes.add_checkbox("Randomize", self.randomize_callback, dir=DIR.ROW)
+        cb = self.option_checkboxes.add_checkbox("Stream to DB", self.implement_me, dir=DIR.ROW)
+        ToolTip(cb, "Stream to DB: Default at this point. ")
+        cb = self.option_checkboxes.add_checkbox("Stream to CSV", self.implement_me, dir=DIR.ROW)
+        ToolTip(cb, "Stream to CSV: Not implemented")
         row = self.option_checkboxes.get_next_row()
 
         self.corpus_size_field = DataField(lf, row, 'Corpus Size:', text_width, label_width=label_width)
