@@ -9,7 +9,7 @@ import pandas as pd
 from keyword_explorer.Apps.AppBase import AppBase
 from keyword_explorer.TwitterV2.TwitterV2Counts import TwitterV2Counts, TwitterV2Count
 from keyword_explorer.tkUtils.Buttons import Buttons
-from keyword_explorer.tkUtils.DataField import DataField
+from keyword_explorer.tkUtils.ToolTip import ToolTip
 from keyword_explorer.tkUtils.DateEntryField import DateEntryField
 from keyword_explorer.tkUtils.ListField import ListField
 from keyword_explorer.tkUtils.TextField import TextField
@@ -35,7 +35,7 @@ class TweetCountExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "TweetCountExplorer"
-        self.app_version = "3.2.22"
+        self.app_version = "9.1.22"
         self.geom = (850, 440)
 
         self.tvc = TwitterV2Counts()
@@ -62,17 +62,24 @@ class TweetCountExplorer(AppBase):
     def build_twitter(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
         self.keyword_text_field = TextField(lf, row, 'Test Keyword(s)', text_width, height=10, label_width=label_width)
+        ToolTip(self.keyword_text_field.tk_text,
+            "List of terms to search.\nTerms can have spaces or be combined with OR:\nNorth Korea\nSouth Korea\nNorth Korea or South Korea")
         row = self.keyword_text_field.get_next_row()
         self.start_date_field = DateEntryField(lf, row, 'Start Date', text_width, label_width=label_width)
         row = self.start_date_field.get_next_row()
         self.end_date_field = DateEntryField(lf, row, 'End Date', text_width, label_width=label_width)
         row = self.end_date_field.get_next_row()
         buttons = Buttons(lf, row, "Actions", label_width=label_width)
-        buttons.add_button("Clear", self.clear_counts_callbacks)
-        buttons.add_button("Test Keyword", self.test_keyword_callback)
-        buttons.add_button("Plot", self.plot_counts_callback)
-        buttons.add_button("Save", self.save_callback)
-        buttons.add_button("Launch Twitter", self.launch_twitter_callback)
+        b = buttons.add_button("Clear", self.clear_counts_callbacks)
+        ToolTip(b, "Clears any old data from the plot")
+        b = buttons.add_button("Test Keyword", self.test_keyword_callback)
+        ToolTip(b, "Query Twitter for each keyword and plot")
+        b = buttons.add_button("Plot", self.plot_counts_callback)
+        ToolTip(b, "Plot the current data")
+        b = buttons.add_button("Save", self.save_callback)
+        ToolTip(b, "Save the results as an xlsx file")
+        b = buttons.add_button("Launch Twitter", self.launch_twitter_callback)
+        ToolTip(b, "Open tabs in the default browser for each term over the time period")
         row = buttons.get_next_row()
 
     def build_twitter_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
@@ -80,6 +87,7 @@ class TweetCountExplorer(AppBase):
         self.sample_list = ListField(lf, row, "Sample", width=text_width, label_width=label_width, static_list=True)
         self.sample_list.set_text(text='day, week, month')
         self.sample_list.set_callback(self.set_time_sample_callback)
+        ToolTip(self.sample_list.tk_list, "The sampling period\nWeek and month are subsamples")
         self.set_time_sample_callback()
         row = self.sample_list.get_next_row()
 
