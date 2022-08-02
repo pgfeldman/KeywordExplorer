@@ -13,7 +13,7 @@ import pandas as pd
 import keyword_explorer.utils.wikipedia_search as ws
 from keyword_explorer.Apps.AppBase import AppBase
 from keyword_explorer.tkUtils.Buttons import Buttons
-from keyword_explorer.tkUtils.DataField import DataField
+from keyword_explorer.tkUtils.ToolTip import ToolTip
 from keyword_explorer.tkUtils.DateEntryField import DateEntryField
 from keyword_explorer.tkUtils.ListField import ListField
 from keyword_explorer.tkUtils.TextField import TextField
@@ -36,7 +36,7 @@ class WikiPageviewExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "WikiPageviewExplorer"
-        self.app_version = "3.3.22"
+        self.app_version = "9.2.22"
         self.geom = (850, 650)
 
         self.multi_count_list = []
@@ -73,27 +73,36 @@ class WikiPageviewExplorer(AppBase):
         row = 0
         self.topic_text_field = TextField(lf, row, "Topic", text_width, height=5, label_width=label_width)
         self.topic_text_field.set_text("simpson characters\npinky and the brain")
+        ToolTip(self.topic_text_field.tk_text, "List of possible Wikipedia topics")
         row = self.topic_text_field.get_next_row()
         self.response_text_field = TextField(lf, row, 'Response', text_width, height=10, label_width=label_width)
+        ToolTip(self.response_text_field.tk_text, "List of best matches in English Wikipedia\nSelect the desired results to examine and\nclick 'Copy Selected'")
         row = self.response_text_field.get_next_row()
         buttons = Buttons(lf, row, "Actions", label_width=label_width)
-        buttons.add_button("Search", self.search_wiki_callback)
-        buttons.add_button("Copy Selected", self.copy_selected_callback)
+        b = buttons.add_button("Search", self.search_wiki_callback)
+        ToolTip(b, "Search for best matches in English Wikipedia")
+        b = buttons.add_button("Copy Selected", self.copy_selected_callback)
+        ToolTip(b, "Copy selected responses to 'Pages' below for views")
         row = buttons.get_next_row()
 
     def build_page_views(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
         self.wiki_pages_text_field = TextField(lf, row, 'Pages', text_width, height=1, label_width=label_width)
+        ToolTip(self.wiki_pages_text_field.tk_text, "The list of topics to get page views for")
         row = self.wiki_pages_text_field.get_next_row()
         self.start_date_field = DateEntryField(lf, row, 'Start Date', text_width, label_width=label_width)
         row = self.start_date_field.get_next_row()
         self.end_date_field = DateEntryField(lf, row, 'End Date', text_width, label_width=label_width)
         row = self.end_date_field.get_next_row()
         buttons = Buttons(lf, row, "Actions", label_width=label_width)
-        buttons.add_button("Test Pages", self.test_pages_callback)
-        buttons.add_button("Plot", self.plot_callback)
-        buttons.add_button("Save", self.save_callback)
-        buttons.add_button("Show Pages", self.show_pages_callback)
+        b = buttons.add_button("Test Pages", self.test_pages_callback)
+        ToolTip(b, "Query page views between Start Date and End Date and plot results")
+        b = buttons.add_button("Plot", self.plot_callback)
+        ToolTip(b, "Plot page views")
+        b = buttons.add_button("Save", self.save_callback)
+        ToolTip(b, "Save page views to Excel file")
+        b = buttons.add_button("Show Pages", self.show_pages_callback)
+        ToolTip(b, "Launch each Wikipedia page as a separate tab in the default browser")
         row = buttons.get_next_row()
 
     def build_page_view_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
@@ -102,6 +111,7 @@ class WikiPageviewExplorer(AppBase):
         self.sample_list.set_text(text='daily, monthly')
         self.sample_list.set_callback(self.set_time_sample_callback)
         self.set_time_sample_callback()
+        ToolTip(self.sample_list.tk_list, "Sampling period")
         row = self.sample_list.get_next_row()
 
     def copy_selected_callback(self):

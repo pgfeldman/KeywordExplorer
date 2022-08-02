@@ -8,6 +8,7 @@ import webbrowser
 from keyword_explorer.Apps.AppBase import AppBase
 from keyword_explorer.tkUtils.DataField import DataField
 from keyword_explorer.tkUtils.Buttons import Buttons
+from keyword_explorer.tkUtils.ToolTip import ToolTip
 import keyword_explorer.utils.google_search as gs
 
 html_str = '''<!DOCTYPE html>
@@ -56,6 +57,7 @@ class GoogleExplorer(AppBase):
     def build_search(self, parent:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
         self.search_field = DataField(parent, row, "Search:", text_width, label_width=label_width)
+        ToolTip(self.search_field.tk_entry, "Type your search term or phrase here")
         row = self.search_field.get_next_row()
 
         buttons = Buttons(parent, row, "Actions:", label_width)
@@ -67,6 +69,7 @@ class GoogleExplorer(AppBase):
         self.search_frame.load_html(html_str)
         self.search_frame.on_link_click(self.load_new_page)
         self.search_frame.grid(row = row, column=0, columnspan = 2, sticky="nsew", padx=5, pady=2)
+        ToolTip(self.search_frame, "Search results are here\nLinks open tabs in your default browser")
 
     def search_callback(self):
         query = self.search_field.get_text()
