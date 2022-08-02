@@ -63,9 +63,10 @@ class TweetDownloader(AppBase):
 
     def setup_app(self):
         self.app_name = "TweetDownloader"
-        self.app_version = "9.1.22"
-        self.geom = (900, 560)
+        self.app_version = "9.2.22"
+        self.geom = (1000, 560)
         self.console_lines = 10
+        self.text_width = 70
 
         self.tkws = TweetKeywords()
         self.msi = MySqlInterface(user_name ="root", db_name ="twitter_v2")
@@ -127,14 +128,17 @@ class TweetDownloader(AppBase):
         row = 0
         self.samples_field = DataField(lf, row, 'Samples/Clamp:', text_width, label_width=label_width)
         self.samples_field.set_text(TweetKeywords.max_tweets_per_sample)
+        ToolTip(self.samples_field.tk_entry, "The sample size (10 - 500) if using 'balanced'\nThe maximum amount to download if using 'proportional'")
         row = self.samples_field.get_next_row()
 
         self.percent_field = DataField(lf, row, 'Percent:', text_width, label_width=label_width)
         self.percent_field.set_text('100')
+        ToolTip(self.percent_field.tk_entry, "The percent of the total tweets for an item")
         row = self.percent_field.get_next_row()
 
         self.option_checkboxes = Checkboxes(lf, row, "Options", label_width=label_width)
         cb = self.option_checkboxes.add_checkbox("Randomize", self.randomize_callback, dir=DIR.ROW)
+        ToolTip(cb, "Randomly select the starting time for each day so that a full pull won't go into tomorrow")
         cb = self.option_checkboxes.add_checkbox("Stream to DB", self.implement_me, dir=DIR.ROW)
         ToolTip(cb, "Stream to DB: Default at this point. ")
         cb = self.option_checkboxes.add_checkbox("Stream to CSV", self.implement_me, dir=DIR.ROW)
@@ -143,17 +147,21 @@ class TweetDownloader(AppBase):
 
         self.corpus_size_field = DataField(lf, row, 'Corpus Size:', text_width, label_width=label_width)
         self.corpus_size_field.set_text('500000')
+        ToolTip(self.corpus_size_field.tk_entry, "The maximum number to download. if\nStops the pull before end date")
         row = self.corpus_size_field.get_next_row()
 
         self.lowest_count_field = DataField(lf, row, 'Lowest/Day:', text_width, label_width=label_width)
         self.lowest_count_field.set_text('0')
+        ToolTip(self.lowest_count_field.tk_entry, "The item with fewest tweets. Set by Calc rates")
         row = self.lowest_count_field.get_next_row()
 
         self.highest_count_field = DataField(lf, row, 'Highest/Day:', text_width, label_width=label_width)
         self.highest_count_field.set_text('0')
+        ToolTip(self.highest_count_field.tk_entry, "The item with fewest tweets. Set by Calc rates")
         row = self.highest_count_field.get_next_row()
 
         self.cur_date_field = DateEntryField(lf, row, 'Cur Date', text_width, label_width=label_width)
+        ToolTip(self.cur_date_field.tk_entry, "The current date of the running pull")
         row = self.cur_date_field.get_next_row()
 
     def randomize_callback(self):
@@ -173,6 +181,7 @@ class TweetDownloader(AppBase):
         end_dt = start_dt + timedelta(days = duration)
         self.end_date_field.set_date(end_dt)
 
+    # TODO: Add condition that exits when corpus size is reached
     def collect_percent_callback(self):
         date_fmt = "%B %d, %Y (%H:%M:%S)"
         percent = self.percent_field.get_as_int()
@@ -220,7 +229,8 @@ class TweetDownloader(AppBase):
         print("collect_percent_callback() - done")
 
 
-# Collect the same number of tweets for each keyword over the sample duration
+    # Collect the same number of tweets for each keyword over the sample duration
+    # TODO: Add condition that exits when corpus size is reached
     def collect_balanced_callback(self):
         date_fmt = "%B %d, %Y (%H:%M:%S)"
 

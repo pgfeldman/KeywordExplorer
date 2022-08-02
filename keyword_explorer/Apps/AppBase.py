@@ -22,10 +22,14 @@ class AppBase(tk.Tk):
     dp:ConsoleDprint
     so:SharedObjects
     console_lines:int
+    text_width:int
+    label_width:int
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.console_lines = 5
+        self.text_width = 53
+        self.label_width = 15
         self.so = SharedObjects()
         self.dp = ConsoleDprint()
         self.setup_app()
@@ -35,21 +39,21 @@ class AppBase(tk.Tk):
         self.logfile = "{}/{}_{}.csv".format(Path.home(), self.app_name, dt.strftime("%Y-%m-%d-%H-%M-%S"))
         self.log_action("session", {"session start":dt.strftime("%H:%M:%S")})
 
+
     def setup_app(self):
         self.app_name = "AppBase"
         self.app_version = "3.10.2022"
         self.geom = (600, 150)
 
+
     def build_view(self):
-        text_width = 53
-        label_width = 15
         row = 0
 
         self.title("{} (v {})".format(self.app_name, self.app_version))
         self.geometry("{}x{}".format(self.geom[0], self.geom[1]))
         self.resizable(width=True, height=False)
 
-        self.experiment_field = DataField(self, row, "Experiment name:", text_width, label_width=label_width)
+        self.experiment_field = DataField(self, row, "Experiment name:", self.text_width, label_width=self.label_width)
         tt = ToolTip(self.experiment_field.tk_entry, "The name of the project\nUsed for file names and\ndatabase fields")
         dt = datetime.now()
         self.logfile = "{}/{}_{}.csv".format(Path.home(), self.app_name, dt.strftime("%Y-%m-%d-%H-%M-%S"))
@@ -57,9 +61,9 @@ class AppBase(tk.Tk):
         self.experiment_field.set_text(experiment_str)
         row = self.experiment_field.get_next_row()
 
-        row = self.build_app_view(row, text_width, label_width)
+        row = self.build_app_view(row, self.text_width, self.label_width)
 
-        self.dp.create_tk_console(self, row=row, height=self.console_lines, char_width=text_width+label_width, set_console=True)
+        self.dp.create_tk_console(self, row=row, height=self.console_lines, char_width=self.text_width+self.label_width, set_console=True)
         self.build_menus()
 
     def build_app_view(self, row:int, text_width:int, label_width:int) -> int:
