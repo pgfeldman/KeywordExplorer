@@ -175,7 +175,8 @@ class WikiPageviewExplorer(AppBase):
         plt.show()
 
     def save_callback(self):
-        filename = filedialog.asksaveasfilename(filetypes=(("Excel files", "*.xlsx"),("All Files", "*.*")), title="Save Excel File")
+        initial_file = self.experiment_field.get_text()+".xlsx"
+        filename = filedialog.asksaveasfilename(filetypes=(("Excel files", "*.xlsx"),("All Files", "*.*")), title="Save Excel File", initialfile=initial_file)
         if filename:
             print("saving to {}".format(filename))
             l = []
