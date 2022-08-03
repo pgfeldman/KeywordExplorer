@@ -1,1 +1,6 @@
-KewordExplorer is a Python desktop app that lets you use the GPT-3 to search for keywords and Twitter to see if those keywords are any good.
+KewordExplorer is a collection of Python desktop (tkinter) apps that lets you
+1) WikiPageviewExplorer: Find (english) Wikipedia pages and look at page views over time
+2) TweetCountExplorer: Look at the number of tweets containing substrings over time (Requires Twitter API)
+3) KeywordExplorer: Use the GPT-3 to search for keywords and Twitter to see if those keywords occur in the wild (Requires OpenAI GPT-3 and Twitter APIs)
+4) GoogleExplorer: Use Google to evaluate search terms
+5) TweetDownloader: Select terms to download tweets for (Requires mysql and Twitter API)
