@@ -217,6 +217,7 @@ class TweetKeywords(TwitterV2Base):
 
 def exercise_get_keyword_tweets():
     l = ['chinavirus OR china virus']#, 'covid', 'sars-cov-2', 'china virus', 'virus', 'mask', 'vaccine']
+    l = ['ivermectin', 'paxlovid']
     tks = TweetKeywords()
     date_str = "June 1, 2022 (00:00:00)"
     start_dt = datetime.strptime(date_str, "%B %d, %Y (%H:%M:%S)")
