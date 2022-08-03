@@ -114,6 +114,13 @@ class WikiPageviewExplorer(AppBase):
         ToolTip(self.sample_list.tk_list, "Sampling period")
         row = self.sample_list.get_next_row()
 
+    def set_experiment_text(self, l:List):
+        self.topic_text_field.clear()
+        pos = 0
+        for s in reversed(l):
+            self.topic_text_field.add_text(s+"\n")
+            pos += 1
+
     def copy_selected_callback(self):
         s = self.response_text_field.get_selected()
         self.wiki_pages_text_field.set_text(s)

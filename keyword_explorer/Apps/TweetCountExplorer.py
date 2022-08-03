@@ -14,7 +14,7 @@ from keyword_explorer.tkUtils.DateEntryField import DateEntryField
 from keyword_explorer.tkUtils.ListField import ListField
 from keyword_explorer.tkUtils.TextField import TextField
 
-from typing import Dict
+from typing import List
 
 class TweetCountExplorer(AppBase):
     tvc:TwitterV2Counts
@@ -140,6 +140,13 @@ class TweetCountExplorer(AppBase):
             log_dict[k] = v
         self.log_action("test_keyword", log_dict)
         self.tvc.plot()
+
+    def set_experiment_text(self, l:List):
+        self.keyword_text_field.clear()
+        pos = 0
+        for s in reversed(l):
+            self.keyword_text_field.add_text(s+"\n")
+            pos += 1
 
     def clear_counts_callbacks(self):
         self.tvc.reset()

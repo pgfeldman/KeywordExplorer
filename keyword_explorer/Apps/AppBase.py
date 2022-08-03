@@ -5,7 +5,7 @@ import tkinter as tk
 from tkinter import filedialog
 from datetime import datetime
 from pathlib import Path
-from typing import Tuple, Dict, IO
+from typing import Tuple, Dict, List
 
 from keyword_explorer.tkUtils.ConsoleDprint import ConsoleDprint
 from keyword_explorer.tkUtils.DataField import DataField
@@ -77,6 +77,7 @@ class AppBase(tk.Tk):
         menu_file = tk.Menu(menubar)
         menubar.add_cascade(menu=menu_file, label='File')
         menu_file.add_command(label='Load IDs', command=self.load_ids_callback)
+        menu_file.add_command(label='Load experiment', command=self.load_experiment_callback)
         menu_file.add_command(label='Exit', command=self.terminate)
 
     def load_ids_callback(self):
@@ -85,6 +86,24 @@ class AppBase(tk.Tk):
             self.so.load_from_file(result.name)
             self.tvc.bearer_token = self.so.get_object('BEARER_TOKEN_2')
             #print("bearer_token = {}".format(self.tvc.bearer_token))
+
+    # override to do app-specific stuff
+    def set_experiment_text(self, l:List):
+        for s in l:
+            self.dp.dprint(s)
+
+    def load_experiment_callback(self):
+        result = filedialog.askopenfile(filetypes=(("Text files", "*.txt"),("All Files", "*.*")), title="Load experiment")
+        l = []
+        if result:
+            filename = result.name
+            self.dp.dprint("AppBase.load_experiment_callback() loading {}".format(filename))
+            with open(filename, encoding="utf8") as f:
+                for line in f:
+                    if len(line) > 1:
+                        l.append(line.strip())
+        self.set_experiment_text(l)
+
 
     def log_action(self, task:str, row_info:Dict, mode:str = "a"):
         with open(self.logfile, mode) as fio:

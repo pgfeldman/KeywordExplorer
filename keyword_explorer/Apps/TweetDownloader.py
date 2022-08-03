@@ -164,6 +164,13 @@ class TweetDownloader(AppBase):
         ToolTip(self.cur_date_field.tk_entry, "The current date of the running pull")
         row = self.cur_date_field.get_next_row()
 
+    def set_experiment_text(self, l:List):
+        self.keyword_text_field.clear()
+        pos = 0
+        for s in reversed(l):
+            self.keyword_text_field.add_text(s+"\n")
+            pos += 1
+
     def randomize_callback(self):
         self.randomize = not self.randomize
         # print("self.randomize = {}".format(self.randomize))

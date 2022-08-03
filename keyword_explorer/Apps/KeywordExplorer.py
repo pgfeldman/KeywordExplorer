@@ -15,6 +15,8 @@ from keyword_explorer.tkUtils.DateEntryField import DateEntryField
 from keyword_explorer.tkUtils.ListField import ListField
 from keyword_explorer.tkUtils.TextField import TextField
 
+from typing import List
+
 
 class KeywordExplorer(AppBase):
     oai:OpenAIComms
@@ -129,6 +131,13 @@ class KeywordExplorer(AppBase):
         self.sample_list.set_callback(self.set_time_sample_callback)
         self.set_time_sample_callback()
         row = self.sample_list.get_next_row()
+
+    def set_experiment_text(self, l:List):
+        self.prompt_text_field.clear()
+        pos = 0
+        for s in reversed(l):
+            self.prompt_text_field.add_text(s+"\n")
+            pos += 1
 
     def set_engine_callback(self, event:tk.Event = None):
         engine_str = self.engine_list.get_selected()
