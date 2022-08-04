@@ -31,6 +31,7 @@ class KeywordData:
         self.num_tweets = tweets
 
     def add_to_num_tweets(self, val:int):
+        print("KeywordData: {} adding {} to {} = {}".format(self.name, val, self.num_tweets, self.num_tweets+val))
         self.num_tweets += val
 
     def to_string(self) -> str:
@@ -234,16 +235,22 @@ class TweetDownloader(AppBase):
                     print("collect_percent_callback(): {} already has more than {} tweets. Skipping...".format(s, corpus_size))
                     continue
                 count = self.tkws.get_keywords_per_day(s, cur_dt)
+                print("collect_percent_callback({}) count = {:,}".format(s, count))
+
                 scaled = count * percent/100
+                print("collect_percent_callback({}) scaled = {:,}".format(s, scaled))
+
                 tweets_to_download = int(min(scaled, clamp))
                 tweets_to_download = max(TweetKeywords.min_tweets_per_sample, tweets_to_download)
+                print("collect_percent_callback({}) tweets_to_download = {:,}".format(s, tweets_to_download))
+
                 tk:TweetKeyword = TweetKeyword(s)
                 ratio = tweets_to_download / count
                 day_offset = random.random() * (1.0 - 2*ratio)
                 cur_start = cur_dt + timedelta(days=day_offset)
                 cur_end = max_end #cur_start + timedelta(days=ratio)
                 tweets_per_sample = min(tweets_to_download, TweetKeywords.max_tweets_per_sample)
-                print("collect_percent_callback(): {}: Randomly choosing {}/{:,} from {} to {}".format(s, tweets_to_download, count, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
+                print("collect_percent_callback({}) tweets_per_sample = {:,} ".format(s, tweets_per_sample))
                 self.tkws.get_keywords(tk, cur_start, end_dt=cur_end, tweets_per_sample=tweets_per_sample,
                                        total_tweets=tweets_to_download, msi=self.msi, experiment_id=experiment_id)
                 corpus_kd:KeywordData = corpus_size_dict[s]
