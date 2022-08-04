@@ -35,8 +35,10 @@ class TweetKeyword():
         meta = jd['meta']
         data = jd['data']
         count = 0
+        raw_count = 0
         clamped = False
         for d in data:
+            raw_count += 1
             d['query_id'] = query_id
             if filter:
                 if self.keyword in d['text']:
@@ -49,7 +51,7 @@ class TweetKeyword():
                 break
 
         print("\tTweetKeyword.parse_json() = {}: query_id = {} [{}] got {}/{}, Max = {:,} tweets".format(
-            clamped, query_id, self.keyword, self.get_entries(), count, meta['result_count']))
+            clamped, query_id, self.keyword, count, raw_count, meta['result_count']))
         return clamped
 
     def force_dict_value(self, d:Dict, name:str, force):
