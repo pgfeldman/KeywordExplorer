@@ -48,6 +48,7 @@ class TweetDownloader(AppBase):
     cur_date_field:DateEntryField
     duration_field:DataField
     samples_field:DataField
+    clamp_field:DataField
     corpus_size_field:DataField
     lowest_count_field:DataField
     highest_count_field:DataField
@@ -90,7 +91,7 @@ class TweetDownloader(AppBase):
         self.build_twitter_params(lf, param_text_width, param_label_width)
 
         self.end_date_field.set_date()
-        day_delta = 2
+        day_delta = 3
         self.start_date_field.set_date(d = (datetime.utcnow() - timedelta(days=day_delta)))
         self.cur_date_field.set_date(d = (datetime.utcnow() - timedelta(days=day_delta)))
         self.duration_field.set_text(day_delta)
@@ -130,13 +131,18 @@ class TweetDownloader(AppBase):
 
     def build_twitter_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
-        self.samples_field = DataField(lf, row, 'Samples/Clamp:', text_width, label_width=label_width)
+        self.samples_field = DataField(lf, row, 'Samples:', text_width, label_width=label_width)
         self.samples_field.set_text(TweetKeywords.max_tweets_per_sample)
-        ToolTip(self.samples_field.tk_entry, "The sample size (10 - 500) if using 'balanced'\nThe maximum amount to download if using 'proportional'")
+        ToolTip(self.samples_field.tk_entry, "The sample size (10 - 500)")
         row = self.samples_field.get_next_row()
 
+        self.clamp_field = DataField(lf, row, 'Clamp:', text_width, label_width=label_width)
+        self.clamp_field.set_text(1000)
+        ToolTip(self.clamp_field.tk_entry, "The max tweets to pull per day")
+        row = self.clamp_field.get_next_row()
+
         self.percent_field = DataField(lf, row, 'Percent:', text_width, label_width=label_width)
-        self.percent_field.set_text('100')
+        self.percent_field.set_text('10')
         ToolTip(self.percent_field.tk_entry, "The percent of the total tweets for an item")
         row = self.percent_field.get_next_row()
 
@@ -150,7 +156,7 @@ class TweetDownloader(AppBase):
         row = self.option_checkboxes.get_next_row()
 
         self.corpus_size_field = DataField(lf, row, 'Corpus Size:', text_width, label_width=label_width)
-        self.corpus_size_field.set_text('1000')
+        self.corpus_size_field.set_text('2000')
         ToolTip(self.corpus_size_field.tk_entry, "The maximum number to download. if\nStops the pull before end date")
         row = self.corpus_size_field.get_next_row()
 
@@ -201,7 +207,7 @@ class TweetDownloader(AppBase):
     def collect_percent_callback(self):
         date_fmt = "%B %d, %Y (%H:%M:%S)"
         percent = self.percent_field.get_as_int()
-        clamp = self.samples_field.get_as_int()
+        clamp = self.clamp_field.get_as_int()
         # get the keywords
         key_list = self.keyword_text_field.get_list("\n")
         # set up the counters for corpus size
@@ -224,25 +230,30 @@ class TweetDownloader(AppBase):
             # Get the number of tweets for each keyword for today. From cur_dt to max_end is 24 hours
             # from 0 Zulu
             max_end = cur_dt + timedelta(days=1)
-            print("\n{}".format(cur_dt.strftime(date_fmt)))
+            print("\n-------------------------{}-------------------------".format(cur_dt.strftime(date_fmt)))
 
             # first, get the counts for each keyword for this day
             self.keyword_data_list = []
             for s in key_list:
+                print("\n-------------------------------\n{}".format(s))
                 corpus_kd:KeywordData = corpus_size_dict[s]
                 corpus_size = self.corpus_size_field.get_as_int()
                 if corpus_kd.num_tweets > corpus_size:
-                    print("collect_percent_callback(): {} already has more than {} tweets. Skipping...".format(s, corpus_size))
+                    print("collect_percent_callback({}):  already has more than {} tweets. Skipping...".format(s, corpus_size))
                     continue
                 count = self.tkws.get_keywords_per_day(s, cur_dt)
-                print("collect_percent_callback({}) count = {:,}".format(s, count))
+                print("collect_percent_callback() count = {:,}".format(count))
 
                 scaled = count * percent/100
-                print("collect_percent_callback({}) scaled = {:,}".format(s, scaled))
+                print("collect_percent_callback() scaled = {:,}".format(scaled))
 
                 tweets_to_download = int(min(scaled, clamp))
                 tweets_to_download = max(TweetKeywords.min_tweets_per_sample, tweets_to_download)
-                print("collect_percent_callback({}) tweets_to_download = {:,}".format(s, tweets_to_download))
+                print("collect_percent_callback() tweets_to_download = {:,}".format(tweets_to_download))
+
+                remaining = corpus_size - corpus_kd.num_tweets
+                tweets_to_download = min(remaining, tweets_to_download)
+                print("collect_percent_callback() tweets_to_download (adjusted for corpus remaining: {:,}) = {:,}".format(remaining, tweets_to_download))
 
                 tk:TweetKeyword = TweetKeyword(s)
                 ratio = tweets_to_download / count
@@ -250,9 +261,9 @@ class TweetDownloader(AppBase):
                 cur_start = cur_dt + timedelta(days=day_offset)
                 cur_end = max_end #cur_start + timedelta(days=ratio)
                 tweets_per_sample = min(tweets_to_download, TweetKeywords.max_tweets_per_sample)
-                print("collect_percent_callback({}) tweets_per_sample = {:,} ".format(s, tweets_per_sample))
+                print("collect_percent_callback() tweets_per_sample = {:,} ".format(tweets_per_sample))
                 self.tkws.get_keywords(tk, cur_start, end_dt=cur_end, tweets_per_sample=tweets_per_sample,
-                                       total_tweets=tweets_to_download, msi=self.msi, experiment_id=experiment_id)
+                                       tweets_to_download=tweets_to_download, msi=self.msi, experiment_id=experiment_id)
                 corpus_kd:KeywordData = corpus_size_dict[s]
                 corpus_kd.add_to_num_tweets(tk.num_entries)
 
@@ -338,7 +349,7 @@ class TweetDownloader(AppBase):
 
                     # collect all the tweets for this keyword.
                     self.tkws.get_keywords(tk, cur_start, end_dt=cur_end, tweets_per_sample=tweets_per_sample,
-                                           total_tweets=kd.num_tweets, msi=self.msi, experiment_id=experiment_id)
+                                           tweets_to_download=kd.num_tweets, msi=self.msi, experiment_id=experiment_id)
 
                 # if there are more tweets than the user spec
                 else:
@@ -352,7 +363,7 @@ class TweetDownloader(AppBase):
                         cur_end = max_end #cur_start + timedelta(days=ratio)
                         print("{}: Randomly choosing {}/{:,} from {} to {}".format(kd.name, max_tweets_per_sample, kd.num_tweets, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
                         self.tkws.get_keywords(tk, cur_start, end_dt=cur_end, tweets_per_sample=tweets_per_sample,
-                                               total_tweets=max_tweets_per_sample, msi=self.msi, experiment_id=experiment_id)
+                                               tweets_to_download=max_tweets_per_sample, msi=self.msi, experiment_id=experiment_id)
                         total_downloaded = tk.get_entries()
 
                     else:
@@ -373,7 +384,7 @@ class TweetDownloader(AppBase):
                             cur_end = cur_dt + timedelta(days=total_frac)
                             print("\tsubsampling {} from {} to {}".format(sample_size, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
                             self.tkws.get_keywords(tk, cur_start, end_dt=cur_end, tweets_per_sample=tweets_per_sample,
-                                                   total_tweets=kd.num_tweets, msi=self.msi, experiment_id=experiment_id)
+                                                   tweets_to_download=kd.num_tweets, msi=self.msi, experiment_id=experiment_id)
                             total_downloaded += tk.get_entries()
                             print("\t[{}]: got {} out of a max of {}".format(kd.name, total_downloaded, kd.num_tweets))
                             if total_downloaded > kd.num_tweets:

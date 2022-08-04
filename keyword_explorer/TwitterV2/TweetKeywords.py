@@ -31,10 +31,11 @@ class TweetKeyword():
         self.data_list = []
         self.last_stored_dt = None
 
-    def parse_json(self, jd:Dict, filter:bool = False, query_id:int = -1, clamp = -1):
+    def parse_json(self, jd:Dict, filter:bool = False, query_id:int = -1, clamp = -1) -> bool:
         meta = jd['meta']
         data = jd['data']
         count = 0
+        clamped = False
         for d in data:
             d['query_id'] = query_id
             if filter:
@@ -44,9 +45,12 @@ class TweetKeyword():
                 self.data_list.append(d)
                 count += 1
             if clamp > 0 and count > clamp:
+                clamped = True
                 break
 
-        print("\tTweetKeyword.parse_json(): query_id = {} [{}] got {}/{}, Max = {:,} tweets".format(query_id, self.keyword, self.get_entries(), count, meta['result_count']))
+        print("\tTweetKeyword.parse_json() = {}: query_id = {} [{}] got {}/{}, Max = {:,} tweets".format(
+            clamped, query_id, self.keyword, self.get_entries(), count, meta['result_count']))
+        return clamped
 
     def force_dict_value(self, d:Dict, name:str, force):
         if name in d:
@@ -168,7 +172,7 @@ class TweetKeywords(TwitterV2Base):
         return -1
 
 
-    def get_keywords(self, tk:TweetKeyword, start_dt:datetime, end_dt:datetime = None, tweets_per_sample:int = 10, total_tweets:int = 10, msi:MySqlInterface = None, experiment_id:int = -1) :
+    def get_keywords(self, tk:TweetKeyword, start_dt:datetime, end_dt:datetime = None, tweets_per_sample:int = 10, tweets_to_download:int = 10, msi:MySqlInterface = None, experiment_id:int = -1) :
         #clean up the query so it works with the api
         query = self.prep_query(tk.keyword)
         self.query_list.append(query)
@@ -185,7 +189,7 @@ class TweetKeywords(TwitterV2Base):
         start_time_str = start_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
         time_str = "start_time={}&end_time={}".format(start_time_str, end_time_str)
         # print("\t{}".format(time_str))
-        url = self.create_keywords_url(query, max_result=min(tweets_per_sample, total_tweets), time_str=time_str)
+        url = self.create_keywords_url(query, max_result=min(tweets_per_sample, tweets_to_download), time_str=time_str)
         if msi != None:
             sql = "insert into table_query (experiment_id, date_executed, query, keyword, start_time, end_time) VALUES (%s, %s, %s, %s, %s, %s)"
             vals = (experiment_id, datetime.now(), url, tk.keyword, start_dt, end_dt)
@@ -194,11 +198,11 @@ class TweetKeywords(TwitterV2Base):
         # next_token = None
         json_response = self.connect_to_endpoint(url)
         tk.parse_json(json_response, query_id=query_id, clamp=tweets_per_sample)
-        next_token = self.parse_json(json_response, total_tweets)
+        next_token = self.parse_json(json_response, tweets_to_download)
         # self.print_response("Get tk tweets [1] ", json_response)
 
         count = 2
-        max_result = min(tweets_per_sample, total_tweets)
+        max_result = min(tweets_per_sample, tweets_to_download)
         while next_token != None and tk.get_entries() < max_result:
             url = self. create_keywords_url(query, max_result=tweets_per_sample, time_str=time_str, next_token=next_token)
             if msi != None:
@@ -207,7 +211,7 @@ class TweetKeywords(TwitterV2Base):
                 query_id = msi.write_sql_values_get_row(sql, vals)
             json_response = self.connect_to_endpoint(url)
             tk.parse_json(json_response, query_id=query_id, clamp=tweets_per_sample)
-            next_token = self.parse_json(json_response, total_tweets)
+            next_token = self.parse_json(json_response, tweets_to_download)
             print("\ttk.get_entries() = {}, max_result = {}".format(tk.get_entries(), max_result))
             # self.print_response("Get tk tweets [{}] ".format(count), json_response)
             count += 1
@@ -228,7 +232,7 @@ def exercise_get_keyword_tweets():
         tk = TweetKeyword(keyword=s)
         count = tks.get_keywords_per_day(s, start_dt)
         print("{}: keywords per day = {:,}".format(s, count))
-        tks.get_keywords(tk, start_dt, end_dt=end_dt, tweets_per_sample=10, total_tweets=30) # tweets_per_sample need to be between 10 - 500
+        tks.get_keywords(tk, start_dt, end_dt=end_dt, tweets_per_sample=10, tweets_to_download=30) # tweets_per_sample need to be between 10 - 500
         tk.to_print()
 
 def main():
