@@ -76,8 +76,9 @@ class AppBase(tk.Tk):
         self['menu'] = menubar
         menu_file = tk.Menu(menubar)
         menubar.add_cascade(menu=menu_file, label='File')
-        menu_file.add_command(label='Load IDs', command=self.load_ids_callback)
         menu_file.add_command(label='Load experiment', command=self.load_experiment_callback)
+        menu_file.add_command(label='Save experiment', command=self.save_experiment_callback)
+        menu_file.add_command(label='Load IDs', command=self.load_ids_callback)
         menu_file.add_command(label='Exit', command=self.terminate)
 
     def load_ids_callback(self):
@@ -103,6 +104,20 @@ class AppBase(tk.Tk):
                     if len(line) > 1:
                         l.append(line.strip())
         self.set_experiment_text(l)
+
+    def save_experiment_text(self, filename:str):
+        l = ["one", "two", "three"]
+        with open(filename, mode="w", encoding="utf8") as f:
+            for line in l:
+                f.write(line+"\n")
+
+    def save_experiment_callback(self):
+        result = filedialog.asksaveasfile(filetypes=(("Text files", "*.txt"),("All Files", "*.*")), title="Save/Update experiment")
+        l = []
+        if result:
+            filename = result.name
+            print("AppBase.save_experiment_callback() Saving to {}".format(filename))
+            self.save_experiment_text(filename)
 
 
     def log_action(self, task:str, row_info:Dict, mode:str = "a"):

@@ -139,6 +139,11 @@ class KeywordExplorer(AppBase):
             self.prompt_text_field.add_text(s+"\n")
             pos += 1
 
+    def save_experiment_text(self, filename:str):
+        s = self.prompt_text_field.get_text()
+        with open(filename, mode="w", encoding="utf8") as f:
+            f.write(s)
+
     def set_engine_callback(self, event:tk.Event = None):
         engine_str = self.engine_list.get_selected()
         self.engine_list.set_label("Engines\n({})".format(engine_str))

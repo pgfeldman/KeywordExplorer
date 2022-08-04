@@ -148,6 +148,11 @@ class TweetCountExplorer(AppBase):
             self.keyword_text_field.add_text(s+"\n")
             pos += 1
 
+    def save_experiment_text(self, filename:str):
+        s = self.keyword_text_field.get_text()
+        with open(filename, mode="w", encoding="utf8") as f:
+            f.write(s)
+
     def clear_counts_callbacks(self):
         self.tvc.reset()
 

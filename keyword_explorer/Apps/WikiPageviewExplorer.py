@@ -121,6 +121,11 @@ class WikiPageviewExplorer(AppBase):
             self.topic_text_field.add_text(s+"\n")
             pos += 1
 
+    def save_experiment_text(self, filename:str):
+        s = self.topic_text_field.get_text()
+        with open(filename, mode="w", encoding="utf8") as f:
+            f.write(s)
+
     def copy_selected_callback(self):
         s = self.response_text_field.get_selected()
         self.wiki_pages_text_field.set_text(s)
