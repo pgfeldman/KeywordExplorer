@@ -1,8 +1,10 @@
-import matplotlib.pyplot as plt
+import math
 from datetime import datetime, timedelta
-from typing import Dict, List, Union
+import random
 import pprint
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
+
+from typing import Dict, List, Union
 
 
 from keyword_explorer.TwitterV2.TwitterV2Base import TwitterV2Base
@@ -220,6 +222,80 @@ class TweetKeywords(TwitterV2Base):
         if msi != None:
             tk.to_db(msi, end_dt)
 
+    def sample_keywords_one_day(self, tk:TweetKeyword, start_dt:datetime, tweets_available:int, clamp:int, tweets_per_sample:int, msi:MySqlInterface = None, experiment_id:int = -1):
+        date_fmt = "%B %d, %Y (%H:%M:%S)"
+        twitter_fmt = '%Y-%m-%dT%H:%M:%SZ'
+
+        # default is to get the entire day
+        stop_dt = start_dt + timedelta(days=0.9999)
+        query = self.prep_query(tk.keyword)
+        self.query_list.append(query)
+        query_id = -1
+
+        tweets_to_download = min(clamp, tweets_available)
+        print("tweets_to_download = {:,}".format(tweets_to_download))
+
+        ratio = tweets_to_download / tweets_available
+        print("ratio = {:.2f}".format(ratio))
+
+        if ratio < 1.0:
+            print("ratio < 1.0 - sample across the day")
+            num_pulls = math.ceil(tweets_to_download / tweets_per_sample)
+            print("num_pulls of {} = {}".format(tweets_per_sample, num_pulls))
+            remaining = tweets_to_download
+            for i in range(num_pulls):
+                print("\n\tPass {}".format(i))
+                span = (1.0 - ratio*num_pulls)/num_pulls
+                print("\tspan = {:.2f}".format(span))
+
+                start_offset = span * random.random()
+                start_dt = start_dt + timedelta(days = start_offset)
+                stop_dt = start_dt + timedelta(days=ratio)
+
+                print("\tStart date = {}".format(start_dt.strftime(date_fmt)))
+                print("\tEnd date = {}".format(stop_dt.strftime(date_fmt)))
+                end_time_str = stop_dt.strftime(twitter_fmt)
+                start_time_str = start_dt.strftime(twitter_fmt)
+                time_str = "start_time={}&end_time={}".format(start_time_str, end_time_str)
+                pull = min(remaining, tweets_per_sample)
+                pull = max(self.min_tweets_per_sample, pull) # don
+                print("\tDownloading {} tweets".format(pull))
+
+                url = self.create_keywords_url(query, max_result=pull, time_str=time_str)
+                if msi != None:
+                    sql = "insert into table_query (experiment_id, date_executed, query, keyword, start_time, end_time) VALUES (%s, %s, %s, %s, %s, %s)"
+                    vals = (experiment_id, datetime.now(), url, tk.keyword, start_dt, stop_dt)
+                    query_id = msi.write_sql_values_get_row(sql, vals)
+
+                json_response = self.connect_to_endpoint(url)
+                tk.parse_json(json_response, query_id=query_id, clamp=tweets_per_sample)
+                next_token = self.parse_json(json_response, tweets_to_download)
+                remaining -= tweets_per_sample
+                start_dt = stop_dt
+
+        else:
+            print("ratio > 1.0 - get the entire day")
+            # get the entire day
+            stop_dt = start_dt + timedelta(days=0.9999)
+            print("Start date = {}".format(start_dt.strftime(date_fmt)))
+            print("End date = {}".format(stop_dt.strftime(date_fmt)))
+            end_time_str = stop_dt.strftime(twitter_fmt)
+            start_time_str = start_dt.strftime(twitter_fmt)
+            time_str = "start_time={}&end_time={}".format(start_time_str, end_time_str)
+            url = self.create_keywords_url(query, max_result=tweets_to_download, time_str=time_str)
+            if msi != None:
+                sql = "insert into table_query (experiment_id, date_executed, query, keyword, start_time, end_time) VALUES (%s, %s, %s, %s, %s, %s)"
+                vals = (experiment_id, datetime.now(), url, tk.keyword, start_dt, stop_dt)
+                query_id = msi.write_sql_values_get_row(sql, vals)
+            # print("query_id = {}, url = {}".format(query_id, url))
+            # next_token = None
+            json_response = self.connect_to_endpoint(url)
+            tk.parse_json(json_response, query_id=query_id, clamp=clamp)
+
+        if msi != None:
+            tk.to_db(msi, stop_dt)
+        return tk.get_entries()
+
 
 def exercise_get_keyword_tweets():
     l = ['chinavirus OR china virus']#, 'covid', 'sars-cov-2', 'china virus', 'virus', 'mask', 'vaccine']
@@ -237,9 +313,28 @@ def exercise_get_keyword_tweets():
         tks.get_keywords(tk, start_dt, end_dt=end_dt, tweets_per_sample=10, tweets_to_download=30) # tweets_per_sample need to be between 10 - 500
         tk.to_print()
 
+def exercise_sample_keywords_one_day():
+    tweets_available = 2000
+    clamp = 1234
+    tweets_per_sample = 500
+    l = ['ivermectin', 'paxlovid']
+    tks = TweetKeywords()
+    date_str = "June 1, 2022 (00:00:00)"
+    start_dt = datetime.strptime(date_str, "%B %d, %Y (%H:%M:%S)")
+    print("dt = {}".format(start_dt))
+    date_str = "June 2, 2022 (00:00:00)"
+    end_dt = datetime.strptime(date_str, "%B %d, %Y (%H:%M:%S)")
+    for s in l:
+        tk = TweetKeyword(keyword=s)
+        count = tks.sample_keywords_one_day(tk, start_dt, tweets_available, clamp, tweets_per_sample)
+        print("{}: keywords per day = {:,}".format(s, count))
+        tks.get_keywords(tk, start_dt, end_dt=end_dt, tweets_per_sample=10, tweets_to_download=30) # tweets_per_sample need to be between 10 - 500
+        tk.to_print()
+
 def main():
     # exercise_get_counts()
-    exercise_get_keyword_tweets()
+    # exercise_get_keyword_tweets()
+    exercise_sample_keywords_one_day()
 
 
 

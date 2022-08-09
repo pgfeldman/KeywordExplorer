@@ -131,7 +131,7 @@ class TweetDownloader(AppBase):
 
     def build_twitter_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
-        self.samples_field = DataField(lf, row, 'Samples:', text_width, label_width=label_width)
+        self.samples_field = DataField(lf, row, 'Sample (10-500):', text_width, label_width=label_width)
         self.samples_field.set_text(TweetKeywords.max_tweets_per_sample)
         ToolTip(self.samples_field.tk_entry, "The sample size (10 - 500)")
         row = self.samples_field.get_next_row()
@@ -260,7 +260,7 @@ class TweetDownloader(AppBase):
                 day_offset = random.random() * (1.0 - 2*ratio)
                 cur_start = cur_dt + timedelta(days=day_offset)
                 cur_end = max_end #cur_start + timedelta(days=ratio)
-                tweets_per_sample = min(tweets_to_download, TweetKeywords.max_tweets_per_sample)
+                tweets_per_sample = min(tweets_to_download, self.samples_field.get_as_int())
                 print("collect_percent_callback() tweets_per_sample = {:,} ".format(tweets_per_sample))
                 self.tkws.get_keywords(tk, cur_start, end_dt=cur_end, tweets_per_sample=tweets_per_sample,
                                        tweets_to_download=tweets_to_download, msi=self.msi, experiment_id=experiment_id)
@@ -278,6 +278,10 @@ class TweetDownloader(AppBase):
     # TODO: Add condition that exits when corpus size is reached
     def collect_balanced_callback(self):
         date_fmt = "%B %d, %Y (%H:%M:%S)"
+        # get the max number of samples that we want to get per day
+        clamp = self.clamp_field.get_as_int()
+        # get the sample size
+        tweets_per_sample = self.samples_field.get_as_int()
 
         # get the keywords
         key_list = self.keyword_text_field.get_list("\n")
@@ -309,19 +313,14 @@ class TweetDownloader(AppBase):
                 self.keyword_data_list.append(KeywordData(s, count))
             self.keyword_data_list.sort(key=lambda kd:kd.num_tweets)
 
-            #get the keyword with the lowest number of tweets
+            #get the keyword with the lowest number of tweets for today
             kd:KeywordData
             min_kd:KeywordData = self.keyword_data_list[0]
 
-            # If the lowest number of tweets is less than max_tweets_per_sample,
-            # then set max_tweets_per_sample to that value, or the minimum allowed
+            # If the lowest number of tweets is less than tweets_per_sample (10 - 500),
+            # then set tweets_per_sample to that value, or the minimum allowed
             # by the Twitter API
-            one_random_sample = self.randomize
-            # get the max number of samples that we want to get per day
-            max_tweets_per_sample = self.samples_field.get_as_int()
-            if min_kd.num_tweets <= max_tweets_per_sample:
-                max_tweets_per_sample = max(TweetKeywords.min_tweets_per_sample, min_kd.num_tweets)
-                one_random_sample = True
+            tweets_to_download = max(TweetKeywords.min_tweets_per_sample, min_kd.num_tweets)
 
             # For each keyword in the sorted list
             for kd in self.keyword_data_list:
@@ -333,11 +332,11 @@ class TweetDownloader(AppBase):
                     print("collect_balanced_callback(): {} already has more than {} tweets. Skipping...".format(kd.name, corpus_size))
                     continue
 
-                # The tweets per sample has to be >= the Twitter API
-                tweets_per_sample = min(self.tkws.max_tweets_per_sample, kd.num_tweets)
+                tweets_to_download = min(tweets_to_download, clamp)
 
-                # The sample size is within user specs
-                if kd.num_tweets <= max_tweets_per_sample:
+                # The download can be done in one sample, so we're going to offset randomly for one pull
+                # otherwise, we will step forward randomly through the day
+                if tweets_to_download <= tweets_per_sample:
                     # get the dates we're going to collect
                     cur_start = cur_dt
                     cur_end = max_end
@@ -357,19 +356,19 @@ class TweetDownloader(AppBase):
                         # Make one random sample in the day
                         ratio = min_kd.num_tweets / kd.num_tweets
                         if self.randomize:
-                            ratio = max_tweets_per_sample / kd.num_tweets
+                            ratio = tweets_per_sample / kd.num_tweets
                         day_offset = random.random() * (1.0 - 2*ratio)
                         cur_start = cur_dt + timedelta(days=day_offset)
                         cur_end = max_end #cur_start + timedelta(days=ratio)
-                        print("{}: Randomly choosing {}/{:,} from {} to {}".format(kd.name, max_tweets_per_sample, kd.num_tweets, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
+                        print("{}: Randomly choosing {}/{:,} from {} to {}".format(kd.name, tweets_per_sample, kd.num_tweets, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
                         self.tkws.get_keywords(tk, cur_start, end_dt=cur_end, tweets_per_sample=tweets_per_sample,
-                                               tweets_to_download=max_tweets_per_sample, msi=self.msi, experiment_id=experiment_id)
+                                               tweets_to_download=tweets_per_sample, msi=self.msi, experiment_id=experiment_id)
                         total_downloaded = tk.get_entries()
 
                     else:
                         total_downloaded = 0
                         # Make several samples across the day
-                        day_frac = max_tweets_per_sample / min_kd.num_tweets
+                        day_frac = tweets_per_sample / min_kd.num_tweets
 
                         #show the date we are collecting for
                         print("\n{} subsampling {:,} of {:,} tweets".format(kd.name, min_kd.num_tweets, kd.num_tweets))
@@ -394,7 +393,7 @@ class TweetDownloader(AppBase):
                     # we may not have pulled as many tweets as we thought, so change the amount for the next as needed
                     old_mkd = min_kd.num_tweets
                     min_kd.num_tweets = min(min_kd.num_tweets, total_downloaded)
-                    print("max_tweets_per_sample set from {} to {}".format(old_mkd, min_kd.num_tweets))
+                    print("tweets_per_sample set from {} to {}".format(old_mkd, min_kd.num_tweets))
 
                     print("collect_balanced_callback() - done")
 
