@@ -32,10 +32,10 @@ class WikiPageviewExplorer(AppBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        print("WikiPageviewExplorer")
+        print("WikiPageviewExplorer.md")
 
     def setup_app(self):
-        self.app_name = "WikiPageviewExplorer"
+        self.app_name = "WikiPageviewExplorer.md"
         self.app_version = "9.2.22"
         self.geom = (850, 650)
 
