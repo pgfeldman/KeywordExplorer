@@ -325,6 +325,7 @@ class TweetDownloader(AppBase):
             # For each keyword in the sorted list
             for kd in self.keyword_data_list:
                 tk:TweetKeyword = TweetKeyword(kd.name)
+                tweets_available = kd.num_tweets
 
                 corpus_kd:KeywordData = corpus_size_dict[kd.name]
                 corpus_size = self.corpus_size_field.get_as_int()
@@ -332,70 +333,9 @@ class TweetDownloader(AppBase):
                     print("collect_balanced_callback(): {} already has more than {} tweets. Skipping...".format(kd.name, corpus_size))
                     continue
 
-                tweets_to_download = min(tweets_to_download, clamp)
 
-                # The download can be done in one sample, so we're going to offset randomly for one pull
-                # otherwise, we will step forward randomly through the day
-                if tweets_to_download <= tweets_per_sample:
-                    # get the dates we're going to collect
-                    cur_start = cur_dt
-                    cur_end = max_end
-
-
-                    #show the date we are collecting for
-                    print("\n{} collecting all of {:,} tweets".format(kd.name, kd.num_tweets))
-                    print("\tcollecting all from {} to {}".format(cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
-
-                    # collect all the tweets for this keyword.
-                    self.tkws.get_keywords(tk, cur_start, end_dt=cur_end, tweets_per_sample=tweets_per_sample,
-                                           tweets_to_download=kd.num_tweets, msi=self.msi, experiment_id=experiment_id)
-
-                # if there are more tweets than the user spec
-                else:
-                    if one_random_sample:
-                        # Make one random sample in the day
-                        ratio = min_kd.num_tweets / kd.num_tweets
-                        if self.randomize:
-                            ratio = tweets_per_sample / kd.num_tweets
-                        day_offset = random.random() * (1.0 - 2*ratio)
-                        cur_start = cur_dt + timedelta(days=day_offset)
-                        cur_end = max_end #cur_start + timedelta(days=ratio)
-                        print("{}: Randomly choosing {}/{:,} from {} to {}".format(kd.name, tweets_per_sample, kd.num_tweets, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
-                        self.tkws.get_keywords(tk, cur_start, end_dt=cur_end, tweets_per_sample=tweets_per_sample,
-                                               tweets_to_download=tweets_per_sample, msi=self.msi, experiment_id=experiment_id)
-                        total_downloaded = tk.get_entries()
-
-                    else:
-                        total_downloaded = 0
-                        # Make several samples across the day
-                        day_frac = tweets_per_sample / min_kd.num_tweets
-
-                        #show the date we are collecting for
-                        print("\n{} subsampling {:,} of {:,} tweets".format(kd.name, min_kd.num_tweets, kd.num_tweets))
-
-                        total_frac = 0
-                        count = 0
-                        while total_frac < 1.0:
-                            sample_size = min(TweetKeywords.max_tweets_per_sample, min_kd.num_tweets - (count * TweetKeywords.max_tweets_per_sample))
-                            # get the dates we're going to collect
-                            cur_start = cur_dt + timedelta(days=(count * day_frac))
-                            total_frac = min(1.0, (count+1) * day_frac)
-                            cur_end = cur_dt + timedelta(days=total_frac)
-                            print("\tsubsampling {} from {} to {}".format(sample_size, cur_start.strftime(date_fmt), cur_end.strftime(date_fmt)))
-                            self.tkws.get_keywords(tk, cur_start, end_dt=cur_end, tweets_per_sample=tweets_per_sample,
-                                                   tweets_to_download=kd.num_tweets, msi=self.msi, experiment_id=experiment_id)
-                            total_downloaded += tk.get_entries()
-                            print("\t[{}]: got {} out of a max of {}".format(kd.name, total_downloaded, kd.num_tweets))
-                            if total_downloaded > kd.num_tweets:
-                                print("\t[{}]: got {} out of a max of {} for the day, breaking loop".format(kd.name, total_downloaded, kd.num_tweets))
-                                break
-                            count += 1
-                    # we may not have pulled as many tweets as we thought, so change the amount for the next as needed
-                    old_mkd = min_kd.num_tweets
-                    min_kd.num_tweets = min(min_kd.num_tweets, total_downloaded)
-                    print("tweets_per_sample set from {} to {}".format(old_mkd, min_kd.num_tweets))
-
-                    print("collect_balanced_callback() - done")
+                self.tkws.sample_keywords_one_day(tk, start_dt=cur_dt, tweets_available=tweets_available, clamp=clamp,
+                                                  tweets_per_sample=tweets_per_sample, msi=self.msi, experiment_id=experiment_id)
 
                 # add to the full counts
                 corpus_kd:KeywordData = corpus_size_dict[kd.name]

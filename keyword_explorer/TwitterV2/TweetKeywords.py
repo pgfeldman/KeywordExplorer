@@ -161,9 +161,10 @@ class TweetKeywords(TwitterV2Base):
 
         return None
 
-    # The meat of a twitter query and processing 
+    # The meat of a twitter query and processing
     def run_query(self, tk:TweetKeyword, query:str, tweets_per_sample:int, tweets_to_download:int,
                   start_dt:datetime, end_dt:datetime, next_token:str = None, experiment_id:int = -1, msi:MySqlInterface = None) -> str:
+        query_id = -1
         end_time_str = end_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
         start_time_str = start_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
         time_str = "start_time={}&end_time={}".format(start_time_str, end_time_str)
@@ -204,41 +205,21 @@ class TweetKeywords(TwitterV2Base):
         end_time_str = end_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
         start_time_str = start_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
         # print("TweetKeywords.get_keywords() query: '{}', start_time: {}, end_time: {}".format(query, start_time_str, end_time_str))
-
-        end_time_str = end_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
-        start_time_str = start_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
-        time_str = "start_time={}&end_time={}".format(start_time_str, end_time_str)
-        # print("\t{}".format(time_str))
-        url = self.create_keywords_url(query, max_result=min(tweets_per_sample, tweets_to_download), time_str=time_str)
-        if msi != None:
-            sql = "insert into table_query (experiment_id, date_executed, query, keyword, start_time, end_time) VALUES (%s, %s, %s, %s, %s, %s)"
-            vals = (experiment_id, datetime.now(), url, tk.keyword, start_dt, end_dt)
-            query_id = msi.write_sql_values_get_row(sql, vals)
-        # print("query_id = {}, url = {}".format(query_id, url))
-        # next_token = None
-        json_response = self.connect_to_endpoint(url)
-        tk.parse_json(json_response, query_id=query_id, clamp=tweets_per_sample)
-        next_token = self.parse_json(json_response, tweets_to_download)
+        next_token = self.run_query(tk, query, tweets_per_sample, tweets_to_download, start_dt, end_dt, None, experiment_id, msi)
         # self.print_response("Get tk tweets [1] ", json_response)
 
         count = 2
         max_result = min(tweets_per_sample, tweets_to_download)
         while next_token != None and tk.get_entries() < max_result:
-            url = self. create_keywords_url(query, max_result=tweets_per_sample, time_str=time_str, next_token=next_token)
-            if msi != None:
-                sql = "insert into table_query (experiment_id, date_executed, query, keyword, start_time, end_time) VALUES (%s, %s, %s, %s, %s, %s)"
-                vals = (experiment_id, datetime.now(), url, tk.keyword, start_dt, end_dt)
-                query_id = msi.write_sql_values_get_row(sql, vals)
-            json_response = self.connect_to_endpoint(url)
-            tk.parse_json(json_response, query_id=query_id, clamp=tweets_per_sample)
-            next_token = self.parse_json(json_response, tweets_to_download)
+            next_token = self.run_query(tk, query, tweets_per_sample, tweets_to_download, start_dt, end_dt, None, experiment_id, msi)
             print("\ttk.get_entries() = {}, max_result = {}".format(tk.get_entries(), max_result))
             # self.print_response("Get tk tweets [{}] ".format(count), json_response)
             count += 1
         if msi != None:
             tk.to_db(msi, end_dt)
 
-    def sample_keywords_one_day(self, tk:TweetKeyword, start_dt:datetime, tweets_available:int, clamp:int, tweets_per_sample:int, msi:MySqlInterface = None, experiment_id:int = -1):
+    def sample_keywords_one_day(self, tk:TweetKeyword, start_dt:datetime, tweets_available:int, clamp:int, tweets_per_sample:int,
+                                msi:MySqlInterface = None, experiment_id:int = -1):
         date_fmt = "%B %d, %Y (%H:%M:%S)"
         twitter_fmt = '%Y-%m-%dT%H:%M:%SZ'
 
@@ -270,22 +251,7 @@ class TweetKeywords(TwitterV2Base):
 
                 print("\tStart date = {}".format(start_dt.strftime(date_fmt)))
                 print("\tEnd date = {}".format(stop_dt.strftime(date_fmt)))
-                end_time_str = stop_dt.strftime(twitter_fmt)
-                start_time_str = start_dt.strftime(twitter_fmt)
-                time_str = "start_time={}&end_time={}".format(start_time_str, end_time_str)
-                pull = min(remaining, tweets_per_sample)
-                pull = max(self.min_tweets_per_sample, pull) # don
-                print("\tDownloading {} tweets".format(pull))
-
-                url = self.create_keywords_url(query, max_result=pull, time_str=time_str)
-                if msi != None:
-                    sql = "insert into table_query (experiment_id, date_executed, query, keyword, start_time, end_time) VALUES (%s, %s, %s, %s, %s, %s)"
-                    vals = (experiment_id, datetime.now(), url, tk.keyword, start_dt, stop_dt)
-                    query_id = msi.write_sql_values_get_row(sql, vals)
-
-                json_response = self.connect_to_endpoint(url)
-                tk.parse_json(json_response, query_id=query_id, clamp=tweets_per_sample)
-                next_token = self.parse_json(json_response, tweets_to_download)
+                next_token = self.run_query(tk, query, tweets_per_sample, tweets_to_download, start_dt, stop_dt, None, experiment_id, msi)
                 remaining -= tweets_per_sample
                 start_dt = stop_dt
 
@@ -295,18 +261,7 @@ class TweetKeywords(TwitterV2Base):
             stop_dt = start_dt + timedelta(days=0.9999)
             print("Start date = {}".format(start_dt.strftime(date_fmt)))
             print("End date = {}".format(stop_dt.strftime(date_fmt)))
-            end_time_str = stop_dt.strftime(twitter_fmt)
-            start_time_str = start_dt.strftime(twitter_fmt)
-            time_str = "start_time={}&end_time={}".format(start_time_str, end_time_str)
-            url = self.create_keywords_url(query, max_result=tweets_to_download, time_str=time_str)
-            if msi != None:
-                sql = "insert into table_query (experiment_id, date_executed, query, keyword, start_time, end_time) VALUES (%s, %s, %s, %s, %s, %s)"
-                vals = (experiment_id, datetime.now(), url, tk.keyword, start_dt, stop_dt)
-                query_id = msi.write_sql_values_get_row(sql, vals)
-            # print("query_id = {}, url = {}".format(query_id, url))
-            # next_token = None
-            json_response = self.connect_to_endpoint(url)
-            tk.parse_json(json_response, query_id=query_id, clamp=clamp)
+            next_token = self.run_query(tk, query, tweets_per_sample, tweets_to_download, start_dt, stop_dt, None, experiment_id, msi)
 
         if msi != None:
             tk.to_db(msi, stop_dt)
