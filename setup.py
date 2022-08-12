@@ -15,8 +15,8 @@ setup(
     license='MIT',
     author='Philip Feldman',
     author_email='phil@philfeldman.com',
-    description='A tool for producing and exploring keywords',
-    long_description='A tool for producing and exploring keywords',
+    description='A set of tools for producing and exploring keywords on Twitter and the Wikipedia',
+    long_description='A set of tools for producing and exploring keywords on Twitter and the Wikipedia',
     install_requires=[
         'pandas~=1.3.5',
         'matplotlib~=3.2.2',
