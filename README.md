@@ -36,3 +36,5 @@ In this case, BEARER_TOKEN_2 id for the Twitter V2 account, OPENAI_KEY is for th
 To load the file click on the "File" menu and select "Load IDs". Then navigate to the json file and select it. After the ids are loaded, any application that depends on them will run. If you try using an app that doesn't have an active ID, it will complain.
 
 ![LoadID](./images/load_id.png)
+
+You should be good to use the apps!
