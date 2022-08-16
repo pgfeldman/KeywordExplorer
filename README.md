@@ -1,6 +1,10 @@
 Explorer Apps
 ====================================
-There are four applications in this project, _KeywordExplorer_, _TweetsCountExplorer_, _TweetDownloader_, and _WikiPageviewExplorer_. A brief overview of each can be reached using the links below. 
+There are four applications in this project, _KeywordExplorer_, _TweetsCountExplorer_, _TweetDownloader_, and _WikiPageviewExplorer_. They can be installed with pip:
+
+    pip install keyword-explorer
+
+A brief overview of each can be reached using the links below. 
 
 [KeywordExplorer](./markup/KeywordExplorer.md) is a Python desktop app that lets you use the GPT-3 to search for keywords and Twitter to see if those keywords are any good.
 
@@ -10,7 +14,7 @@ There are four applications in this project, _KeywordExplorer_, _TweetsCountExpl
 
 [WikiPageviewExplorer](./markup/WikiPageviewExplorer.md)
 
-## Before using!!
+## Before using!
 _KeywordExplorer_ **requires** that you have an OpenAI account and a Twitter developer account. _TweetCountExplorer_ requires a Twitter developer account, and _WikiPageviewExplorer_ requires a user agent. _TweetDownloader_ requres additional elements such as a database, which will be descussed in its section but not here.
 
 OpenAI: https://openai.com/api/
