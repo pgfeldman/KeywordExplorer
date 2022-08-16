@@ -38,6 +38,8 @@ Clicking on 'New Prompt' will send that prompt to the GPT-3. You'll see that it 
 
 Clicking on 'Parse Response' will apply the regex in the 'Parse Regex' field to each line in the resonse text that is longer than _Max Chars and place the parsed results in the 'Test Keyords' area in the Twitter section (described [Twitter](#twitter-region) below). You can edit or try new regexes if you have a different form of output. I highly recommend (https://regex101.com) as a place to test out regexes on text. You can copy the text from the Response field into their playground.
 
+Clicking on 'Extend Prompt' will use the current prompt, plus the text that has already been returned to create a new prompt. The result will be appended to the current response.
+
 ### GPT Params <span id="gpt-params-region"/>
 ![GPT params region](../images/gpt_params_region.png)
 
@@ -51,6 +53,8 @@ The second part of this section lets you choose the GPT-3 [model](https://beta.o
 This panel lets you explore counts of keywords and hashtags for the period of time that you're interested in. You set your start and end dates in the date fields (Be careful with the format, the parser is brittle). You can adjust the sampling rate in the [Twitter Params] panel. 
 
 The algorithm for getting keyword counts has two elements - the keyword, and the span of days. Twitter breaks the response into several pieces. Each piece counts as a resuest of the Twitter V2 API, and it only allows so many requests, so don't try to pull in a full year of daily Tweets for a large set of keywords. 
+
+TODO: Add descriptions of what the buttons do
 
 ### Twitter Params <span id="twitter-params-region"/>
 ![Twitter params region](../images/twitter_params_region.png)
