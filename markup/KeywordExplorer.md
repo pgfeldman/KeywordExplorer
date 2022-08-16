@@ -48,6 +48,11 @@ The second part of this section lets you choose the GPT-3 [model](https://beta.o
 
 ### Twitter <span id="twitter-region"/>
 ![Twitter region](../images/twitter_region.png)
+This panel lets you explore counts of keywords and hashtags for the period of time that you're interested in. You set your start and end dates in the date fields (Be careful with the format, the parser is brittle). You can adjust the sampling rate in the [Twitter Params] panel. 
+
+The algorithm for getting keyword counts has two elements - the keyword, and the span of days. Twitter breaks the response into several pieces. Each piece counts as a resuest of the Twitter V2 API, and it only allows so many requests, so don't try to pull in a full year of daily Tweets for a large set of keywords. 
 
 ### Twitter Params <span id="twitter-params-region"/>
 ![Twitter params region](../images/twitter_params_region.png)
+
+If your request spans too much time, you can subsample across weeks or months. Unlike the "day" option, these are not complete counts. Instead they subsample a week or month (Hey [@TwitterDev](https://twitter.com/TwitterDev)! Could you add these as options?). As such they are not accurate counts, but are still good for determining realative trends between keywords.
