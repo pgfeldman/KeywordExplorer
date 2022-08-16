@@ -38,8 +38,8 @@ class KeywordExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "KeywordExplorer"
-        self.app_version = "4.5.22"
-        self.geom = (850, 670)
+        self.app_version = "8.15.22"
+        self.geom = (850, 790)
         self.oai = OpenAIComms()
         self.tvc = TwitterV2Counts()
 
@@ -82,7 +82,7 @@ class KeywordExplorer(AppBase):
         self.response_text_field = TextField(lf, row, 'Response', text_width, height=10, label_width=label_width)
         row = self.response_text_field.get_next_row()
         self.max_chars_field = DataField(lf, row, 'Max chars:', text_width, label_width=label_width)
-        self.max_chars_field.set_text('20')
+        self.max_chars_field.set_text('30')
         row = self.max_chars_field.get_next_row()
         self.regex_field = DataField(lf, row, 'Parse regex', text_width, label_width=label_width)
         self.regex_field.set_text(r"\n[0-9]+\)|\n[0-9]+|[0-9]+\)")
@@ -110,7 +110,7 @@ class KeywordExplorer(AppBase):
 
     def build_twitter(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
-        self.keyword_text_field = TextField(lf, row, 'Test Keyword(s)', text_width, height=1, label_width=label_width)
+        self.keyword_text_field = TextField(lf, row, 'Test Keyword(s)', text_width, height=10, label_width=label_width)
         row = self.keyword_text_field.get_next_row()
         self.start_date_field = DateEntryField(lf, row, 'Start Date', text_width, label_width=label_width)
         row = self.start_date_field.get_next_row()

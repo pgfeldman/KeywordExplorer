@@ -9,3 +9,14 @@ There are four applications in this project, _KeywordExplorer_, _TweetsCountExpl
 [TweetDownloader](./markup/TweetDownloader.md)
 
 [WikiPageviewExplorer](./markup/WikiPageviewExplorer.md)
+
+## Before using!!
+KeywordExplorer *requires* that you have an OpenAI account and a Twitter developer account.
+
+OpenAI: https://openai.com/api/
+
+Twitter: https://developer.twitter.com/en
+
+In each case you'll have to get an ID and set it as an environment variable. The names must be OPENAI_KEY for your GPT-3 account and BEARER_TOKEN_2 for your Twitter account, as shown below for a Windows environment:
+
+![Environment variables](./images/environment_vars.png)

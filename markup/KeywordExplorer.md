@@ -8,17 +8,6 @@ And this is an example of the Twitter results:
 
 ![Tweets for pets](../images/example_plot.png)
 
-## Before using!!
-KeywordExplorer *requires* that you have an OpenAI account and a Twitter developer account.
-
-OpenAI: https://openai.com/api/
-
-Twitter: https://developer.twitter.com/en
-
-In each case you'll have to get an ID and set it as an environment variable. The names must be OPENAI_KEY for your GPT-3 account and BEARER_TOKEN_2 for your Twitter account, as shown below for a Windows environment:
-
-![Environment variables](../images/environment_vars.png)
-
 ## How to use
 
 Using the tool is pretty straightforward. That being said, it's possible to break it. If you are running it in the console, then you will get additional information that might help you figure out things. Most often, it is a poorly-formed keyword that gets sent off to Twitter. Also, setting up your twitter account properly is tricky, so make sure that you have that working for counts. See
