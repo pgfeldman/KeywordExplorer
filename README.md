@@ -23,11 +23,11 @@ Twitter: https://developer.twitter.com/en
 
 In each case you'll have to get an ID and set it as an environment variable. The names must be OPENAI_KEY for your GPT-3 account and BEARER_TOKEN_2 for your Twitter account, as shown below for a Windows environment:
 
-![Environment variables](./images/environment_vars.png)
+>![Environment variables](./images/environment_vars.png)
 
 If you don't have permissions to set up environment variables or just don't want to, you can set up a json file and load that instead:
 
-```angular2html
+```
 {
   "BEARER_TOKEN_2": "AAAAAAAAAAAAAAAAAAAAAC-----------------------",
   "OPENAI_KEY": "sk-s------------------------------------",
@@ -39,6 +39,6 @@ In this case, BEARER_TOKEN_2 id for the Twitter V2 account, OPENAI_KEY is for th
 
 To load the file click on the "File" menu and select "Load IDs". Then navigate to the json file and select it. After the ids are loaded, any application that depends on them will run. If you try using an app that doesn't have an active ID, it will complain.
 
-![LoadID](./images/load_id.png)
+>![LoadID](./images/load_id.png)
 
 You should be good to use the apps!

@@ -17,14 +17,17 @@ https://developer.twitter.com/en/docs/twitter-api/tweets/counts/introduction
 if you run into trouble.
 
 The screen is divided into 5 panels:
-- [GPT](gpt-panel)
-- [GPT Params](gpt-params-panel)
-- [Twitter](twitter-panel)
-- [Twitter Params](twitter-params-panel)
-- [Console](console-panel)
+- [Experiment name](#experiment-name-panel)
+- [GPT](#gpt-panel)
+- [GPT Params](#gpt-params-panel)
+- [Twitter](#twitter-panel)
+- [Twitter Params](#twitter-params-panel)
+- [Console](#console-panel)
 
 ### Experiment Name <span id="experiment-name-panel"/>
 >![Experiment name](../images/experiment_name_panel.png)
+
+The experiment name is used by the application to provide a default name for output such as Excel files or entries in databases. Editing the name here will change the default suggestion in the file explorer when saving a file.
 
 ### GPT <span id="gpt-panel"/>
 >![GPT panel](../images/gpt_panel.png)
@@ -54,7 +57,8 @@ The second part of this section lets you choose the GPT-3 [model](https://beta.o
 
 ### Twitter <span id="twitter-panel"/>
 >![Twitter panel](../images/twitter_panel.png)
-This panel lets you explore counts of keywords and hashtags for the period of time that you're interested in. You set your start and end dates in the date fields (Be careful with the format, the parser is brittle). You can adjust the sampling rate in the [Twitter Params] panel. 
+
+This panel lets you explore counts of keywords and hashtags for the period of time that you're interested in. You set your start and end dates in the date fields (Be careful with the format, the parser is brittle). You can adjust the sampling rate in the [Twitter Params](#twitter-params-panel) panel. 
 
 The algorithm for getting keyword counts has two elements - the keyword, and the span of days. Twitter breaks the response into several pieces. Each piece counts as a resuest of the Twitter V2 API, and it only allows so many requests, so don't try to pull in a full year of daily Tweets for a large set of keywords. 
 
