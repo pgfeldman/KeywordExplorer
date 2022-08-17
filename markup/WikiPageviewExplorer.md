@@ -1,4 +1,4 @@
-#WikiPageviewExplorer
+# WikiPageviewExplorer
 
 Don't have a Twitter or OpenAI account? Not to worry! _WikiPageviewExplorer_ is a Python desktop app that lets you interactively search for (English) entries using keywords. Pages that contain or relate to the keywords are presented in a list that can then be quueried for the number of daily pageviews within a date range.
 
@@ -21,10 +21,10 @@ The screen is divided into 5 panels:
 - [Page View Params](#page-view-params-panel)
 - Console - see description in [KeywordExplorer](../markup/KeywordExplorer.md)
 
-##Topic Search <span id="topic-search-panel"/>
+## Topic Search <span id="topic-search-panel"/>
 >![WikiTopicSearch](../images/wiki_topic_panel.png)
 
-##Page Views <span id="page-views-panel"/>
+## Page Views <span id="page-views-panel"/>
 >![WikiPageViews](../images/wiki_page_views_panel.png)
 
 ## Page View Params <span id="page-view-params-panel"/>
