@@ -95,6 +95,8 @@ class WikiPageviewExplorer(AppBase):
         self.end_date_field = DateEntryField(lf, row, 'End Date', text_width, label_width=label_width)
         row = self.end_date_field.get_next_row()
         buttons = Buttons(lf, row, "Actions", label_width=label_width)
+        b = buttons.add_button("Clear", self.clear_pageviews_callback)
+        ToolTip(b, "Clears the topics from the Views text area")
         b = buttons.add_button("Test Pages", self.test_pages_callback)
         ToolTip(b, "Query page views between Start Date and End Date and plot results")
         b = buttons.add_button("Plot", self.plot_callback)
@@ -128,7 +130,11 @@ class WikiPageviewExplorer(AppBase):
 
     def copy_selected_callback(self):
         s = self.response_text_field.get_selected()
-        self.wiki_pages_text_field.set_text(s)
+        self.wiki_pages_text_field.add_text(s+"\n")
+        #self.wiki_pages_text_field.set_text(s)
+
+    def clear_pageviews_callback(self):
+        self.wiki_pages_text_field.clear()
 
     def search_wiki_callback(self):
         key_list = self.topic_text_field.get_list("\n")
