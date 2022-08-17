@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 from datetime import datetime, timedelta
 from typing import Dict, List, Union
 
@@ -142,6 +143,9 @@ class TwitterV2Counts (TwitterV2Base):
     def plot(self):
         count_list:List
         plt.title("query = '{}', {:,} tweets".format(self.query_list, self.total_tweets))
+        # TODO: Fix the indexing so that colors and title use the repeating colors and text
+        ci = 0
+        # l1 = list(mcolors.TABLEAU_COLORS.values())
         for count_list in self.multi_count_list:
             y_vals = []
             dates = []
@@ -150,6 +154,7 @@ class TwitterV2Counts (TwitterV2Base):
                 y_vals.append(tvc.count+1)
                 dates.append(tvc.start_time)
             plt.plot(dates, y_vals)
+            ci += 1
         plt.yscale("log")
         # plt.gca().legend(self.query_list)
         plt.gca().legend(["{}: {:,}".format(k, v) for k, v in self.totals_dict.items()])
@@ -191,7 +196,7 @@ def exercise_get_sampled_counts():
     date_str = "January 1, 2020 (00:00:00)"
     start_dt = datetime.strptime(date_str, "%B %d, %Y (%H:%M:%S)")
     print("dt = {}".format(start_dt))
-    date_str = "January 1, 2021 (00:00:00)"
+    date_str = "February 1, 2020 (00:00:00)"
     end_dt = datetime.strptime(date_str, "%B %d, %Y (%H:%M:%S)")
     for s in l:
         tc.get_sampled_counts(s, start_dt, end_time=end_dt, skip_days=30)
