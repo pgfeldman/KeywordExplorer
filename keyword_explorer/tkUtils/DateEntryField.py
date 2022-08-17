@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from datetime import datetime, timedelta
+from dateutil.parser import parse
 from typing import List, Any
 
 class DateEntryField:
@@ -8,6 +9,7 @@ class DateEntryField:
     value = None
     tk_label = None
     tk_entry = None
+    strict:bool = False
     row = 0
 
     def __init__(self, parent:'ttk.Frame', row:int, label:str, width:int = 20, label_width:int = 20):
@@ -41,6 +43,10 @@ class DateEntryField:
 
     def get_date(self) -> datetime:
         s = self.tk_entry.get()
+        d:datetime
+        if self.strict == False:
+            d = parse(s)
+            return d
         d = datetime.strptime(s, "%B %d, %Y")
         return d
 

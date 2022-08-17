@@ -36,8 +36,8 @@ class WikiPageviewExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "WikiPageviewExplorer.md"
-        self.app_version = "9.2.22"
-        self.geom = (850, 650)
+        self.app_version = "8.17.22"
+        self.geom = (850, 700)
 
         self.multi_count_list = []
         self.totals_dict = {}
@@ -87,7 +87,7 @@ class WikiPageviewExplorer(AppBase):
 
     def build_page_views(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
-        self.wiki_pages_text_field = TextField(lf, row, 'Pages', text_width, height=1, label_width=label_width)
+        self.wiki_pages_text_field = TextField(lf, row, 'Pages', text_width, height=7, label_width=label_width)
         ToolTip(self.wiki_pages_text_field.tk_text, "The list of topics to get page views for")
         row = self.wiki_pages_text_field.get_next_row()
         self.start_date_field = DateEntryField(lf, row, 'Start Date', text_width, label_width=label_width)

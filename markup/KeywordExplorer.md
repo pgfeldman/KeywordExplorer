@@ -16,7 +16,7 @@ https://developer.twitter.com/en/docs/twitter-api/tweets/counts/introduction
 
 if you run into trouble.
 
-The screen is divided into 5 panels:
+The screen is divided into 6 panels:
 - [Experiment name](#experiment-name-panel)
 - [GPT](#gpt-panel)
 - [GPT Params](#gpt-params-panel)
@@ -58,11 +58,11 @@ The second part of this section lets you choose the GPT-3 [model](https://beta.o
 ### Twitter <span id="twitter-panel"/>
 >![Twitter panel](../images/twitter_panel.png)
 
-This panel lets you explore counts of keywords and hashtags for the period of time that you're interested in. You set your start and end dates in the date fields (Be careful with the format, the parser is brittle). You can adjust the sampling rate in the [Twitter Params](#twitter-params-panel) panel. 
+This panel lets you explore counts of keywords and hashtags for the period of time that you're interested in. You set your start and end dates in the date fields. You can adjust the sampling rate in the [Twitter Params](#twitter-params-panel) panel. 
 
 The algorithm for getting keyword counts has two elements - the keyword, and the span of days. Twitter breaks the response into several pieces. Each piece counts as a resuest of the Twitter V2 API, and it only allows so many requests, so don't try to pull in a full year of daily Tweets for a large set of keywords. 
 
-Keywords can be edited in the **Test Keyword(s)** window. Using 'OR' allows you to combine keywords. For example, "Hampsters OR Rabbits"
+Keywords can be edited in the **Test Keyword(s)** window. Using 'OR' allows you to combine keywords. For example, "Hampsters OR Rabbits". They can also be loaded using the **File->Load Experiment** menu. If you make changes to the keywords and you want to save the results, use the **File->Save Experiment** menu. Examples are in the data directory.
 
 Pressing the **Test Keyword** button will send a series of qaueries to Twitter that gets the number of tweets per day over a given time range. It will also open a window with a plot showing the values for each keyword over time. If you close the plot, you can reopen it by clicking **Plot**. Clicking **Save** will open a dialog that lets you save the data in the chart as an excel file.
 

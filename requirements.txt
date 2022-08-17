@@ -11,3 +11,4 @@ openai~=0.11.5
 networkx~=2.6.2
 tkinterweb~=3.12.2
 PyMySQL~=0.9.3
+python-dateutil~=2.8.0
