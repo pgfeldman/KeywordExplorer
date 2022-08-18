@@ -1,4 +1,3 @@
-from keyword_explorer.Apps.AppBase import AppBase
+import keyword_explorer.Apps.KeywordExplorer as app
 
-app = AppBase()
-app.mainloop()
+app.main()
