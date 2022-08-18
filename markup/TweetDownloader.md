@@ -1,10 +1,10 @@
-#TweetDownloader
+# TweetDownloader
 
-_TweetDownloader_ is a standalone Python application that managed balanced and proportional downloading of tweets based on keywords over a specified time range.
+_TweetDownloader_ is a standalone Python application that manages balanced and proportional downloading of tweets based on keywords over a specified time range.
 
 ![TweetDownloader](../images/TweetDownloader.png)
 
-##Before Starting
+## Before Starting
 The app **requires** that you have a Twitter developer account:
 
 See Twitter for how to get an account and bearer token: https://developer.twitter.com/en
@@ -49,11 +49,11 @@ The screen is divided into 4 panels:
 - [Console](#console)
 
 ### Twitter <span id="twitter-region"/>
->![Twitter region](../images/downloader_twitter.png)
+![Twitter region](../images/downloader_twitter.png)
 
-This panel is for organizing the retrieval of tweets containing keywords as separate entries in the database. The example query:
+This panel is for organizing the retrieval of tweets containing keywords as separate entries in the database. For example, the query:
 
-> <span style="font-family:Courier;">select name, keyword, text from keyword_tweet_view limit 10;</span>
+```select name, keyword, text from keyword_tweet_view limit 10;```
 
 returns the following in my dataset:
 
@@ -62,11 +62,19 @@ returns the following in my dataset:
 The controls and their functions are described below:
 
 #### Test Keywords
+This area contains the keywords and hashtags that you wish to download. Each line represents a sigle term (like "chlorine dioxide"), but you can connect multiple terms by using "OR" (e.g. "hydroxychloroquine PR HCq"), which will return both terms. 
 #### Start Date
+Sets the start date for a pull
 #### End Date
+Sets the last possible date for a pull. If the corpora size is reached before the last day, then the pull will stop early
 #### Duration
+The number of days for a query to iterate over. Clicking the **set start** will set the start date to be the end date minus the duration. Likewise, clicking the **set end** will set the end date to be the start date plus the duration.
 #### Collect
+Launches the set of request to Twitter to pull down tweets and store them in the database. Clicking **Balanced** will cause the number of tweets doanloaded for each keyword to be approximately equal to the smallest number of keywords for that day. Clicking **Percent** will download the same percentage of tweets for each keyword.
 #### Analytics
+Clicking the **Calc Rates** button will calculate the number of tweets for each keyword on **Start Date**. Based on this it will estimate the number of days needed to reach the corpora size desired. The results are printed to the [console](#console). You can see an example at the bottom of this document. The highest and lowest values are copied to the **Lowest/Day** and **Highest/Day** fields in the [Twitter Params](#twitter-params-region).
+
+Clicking **Browser** will launch the default browser with a tab for each keyword during the time period specified by **Start Date** and **End Date**
 
 ### Twitter Params <span id="twitter-params-region"/>
 >![Twitter params region](../images/downloader_twitter_params.png)
