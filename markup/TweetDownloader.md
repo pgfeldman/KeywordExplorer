@@ -53,7 +53,7 @@ The screen is divided into 4 panels:
 
 This panel is for organizing the retrieval of tweets containing keywords as separate entries in the database. The example query:
 
-> select name, keyword, text from keyword_tweet_view limit 10;
+> <span style="font-family:Courier;">select name, keyword, text from keyword_tweet_view limit 10;</span>
 
 returns the following in my dataset:
 
