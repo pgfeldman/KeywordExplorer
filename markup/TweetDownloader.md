@@ -82,16 +82,25 @@ Clicking **Browser** will launch the default browser with a tab for each keyword
 This panel adjusts the parameters that control how many tweets are doawnloaded per day and overall.
 
 #### Sample (10-500)
-
+Twitter has a range of tweets that it will download in one pull, that ranges between 10-500. Pulls that are greater than this value are broken down into multiple requests. _TweetDownloader_ samples across a day using requests of size **Sample**. Smaller samples mean more requests, but also more samples across the day.
 #### Clamp
+The maximum number of tweets that will be pulled per day in the date range
 #### Percent
+The percentage of all tweets per day for a keyword to be sampled. If there are 1,000 tweets on the day being sampled, and **Percent** is set to 10, then 100 tweets will be pulled. If **Sample** is set to 10, then there will be 10 pulls of 10 tweets each.
 #### Options
+Currently disabled. 
 #### Corpus Size
+The maximum number of tweets to download per keyword. If this is reached before the **End Date**, the query will stop
 #### Lowest/Day
+Generated when **Calc rates** is clicked in the [Twitter](#twitter-region) is clicked. It will show the keyword with the fewest number of tweets for the **Start Date**. In the screenshot, the keyword is "chlorine dioxide", and the number of tweets is 12.
 #### Highest/Day
+Generated when **Calc rates** is clicked in the [Twitter](#twitter-region) panel. It will show the keyword with the largest number of tweets for the **Start Date**. In the screenshot, the keyword is "paxlovid", and the number of tweets is 21,161.
 #### Cur Date
+The date that is being queried as the request is running
 
 ### Console <span id="console"/>
 >![Console](../images/downloader_console.png)
 
-Lorem ipsum
+The console window is where much of the logging output of the app goes. If you launch the app from the command line, more information will be available there.
+
+The newest output is inserted at the top of the list. The console is only for output. Typing text here has no effect. In this example, the console is showing the results of **Calc rates**, clicked in the [Twitter](#twitter-region) panel. For each keyword, the selected percentage (100% in this case), the number of keywords per day, and the number of days needed to reach the corpus size are all shown.
