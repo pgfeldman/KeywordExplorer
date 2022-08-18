@@ -14,7 +14,7 @@ A brief overview of each can be reached using the links below.
 
 [**WikiPageviewExplorer**](./markup/WikiPageviewExplorer.md) is a Python desktop app that lets you explore keywords that appear as articles in the Wikipedia, and chart their relative page views.
 
-## Before using!
+## Before using! <span id = "before-using"/>
 _KeywordExplorer_ **requires** that you have an OpenAI account and a Twitter developer account. _TweetCountExplorer_ requires a Twitter developer account, and _WikiPageviewExplorer_ requires a user agent. _TweetDownloader_ requres additional elements such as a database, which will be descussed in its section but not here.
 
 OpenAI: https://openai.com/api/

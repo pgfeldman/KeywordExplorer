@@ -1,11 +1,11 @@
 #TweetDownloader
 
-_TweetDownloader_ is a standalone Python application that managed balanced and proportional downloading of tweets based on keywords over a specified time range. 
+_TweetDownloader_ is a standalone Python application that managed balanced and proportional downloading of tweets based on keywords over a specified time range.
 
-The app **requires** that you have a Twitter developer account. _TweetDownloader_ requres additional elements such as a database, which will be discussed later.
+![TweetDownloader](../images/TweetDownloader.png)
 
-OpenAI: https://openai.com/api/
+The app **requires** that you have a Twitter developer account:
 
 Twitter: https://developer.twitter.com/en
 
-![TweetDownloader](../images/TweetDownloader.png)
+See the [README](../README.md#before-using) _TweetDownloader_ requres additional elements such as a database, which will be discussed below.
