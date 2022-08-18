@@ -79,6 +79,8 @@ Clicking **Browser** will launch the default browser with a tab for each keyword
 ### Twitter Params <span id="twitter-params-region"/>
 >![Twitter params region](../images/downloader_twitter_params.png)
 
+This panel adjusts the parameters that control how many tweets are doawnloaded per day and overall.
+
 #### Sample (10-500)
 
 #### Clamp
