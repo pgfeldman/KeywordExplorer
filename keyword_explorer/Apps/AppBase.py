@@ -3,6 +3,7 @@ import inspect
 import re
 import tkinter as tk
 from tkinter import filedialog
+from tkinter.font import Font
 from datetime import datetime
 from pathlib import Path
 from typing import Tuple, Dict, List
@@ -24,9 +25,11 @@ class AppBase(tk.Tk):
     console_lines:int
     text_width:int
     label_width:int
+    default_font:Font
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.default_font = Font(family='courier', size = 10)
         self.console_lines = 5
         self.text_width = 53
         self.label_width = 15
