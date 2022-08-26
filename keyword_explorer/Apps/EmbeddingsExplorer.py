@@ -1,4 +1,5 @@
 import tkinter.messagebox as message
+import tkinter as tk
 from tkinter import ttk
 
 from keyword_explorer.Apps.AppBase import AppBase
@@ -24,7 +25,7 @@ class EmbeddingsExplorer(AppBase):
     def setup_app(self):
         self.app_name = "EmbeddingsExplorer"
         self.app_version = "8.26.22"
-        self.geom = (600, 500)
+        self.geom = (600, 550)
         self.oai = OpenAIComms()
         self.msi = MySqlInterface(user_name ="root", db_name ="twitter_v2")
 
@@ -79,7 +80,18 @@ class EmbeddingsExplorer(AppBase):
 
     def build_graph_tab(self, tab: ttk.Frame):
         row = 0
-        self.canvas_frame = CanvasFrame(tab, row, "Graph", self.dp, width=550, height=250)
+        lf = tk.LabelFrame(tab, text="Embedding Params")
+        lf.grid(row=row, column=0, columnspan = 1, sticky="nsew", padx=5, pady=2)
+        experiment_combo = TopicComboExt(lf, row, "experiment", self.dp, entry_width=20, combo_width=20)
+        row = experiment_combo.get_next_row()
+        keyword_combo = TopicComboExt(lf, row, "keywords", self.dp, entry_width=20, combo_width=20)
+        row = keyword_combo.get_next_row()
+
+
+        f = tk.Frame(tab)
+        f.grid(row=row, column=0, columnspan = 1, sticky="nsew", padx=1, pady=1)
+        row = 0
+        self.canvas_frame = CanvasFrame(f, row, "Graph", self.dp, width=550, height=250)
 
 
 def main():

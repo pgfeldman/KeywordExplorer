@@ -121,6 +121,9 @@ class TweetDownloader(AppBase):
         b = buttons.add_button("Percent", self.collect_percent_callback)
         ToolTip(b, "Collect a proportional (Percent) sample with\nan upper clamp (Samples/Clamp) per day for all terms\nMinimum of 10 samples per day")
         row = buttons.get_next_row()
+        b = buttons.add_button("Threads", self.collect_thread_callback)
+        ToolTip(b, "Collect all the treads that are associated with the downloaded tweets. \nReliably works for the past 7 days but *may also* work over longer times")
+        row = buttons.get_next_row()
 
         buttons = Buttons(lf, row, "Analytics:", label_width=label_width)
         b = buttons.add_button("Calc rates", self.calc_rates_callback)
@@ -202,6 +205,12 @@ class TweetDownloader(AppBase):
         start_dt = self.start_date_field.get_date()
         end_dt = start_dt + timedelta(days = duration)
         self.end_date_field.set_date(end_dt)
+
+    def collect_thread_callback(self):
+        print("collect_thread_callback")
+        # query the db foe all rows with a conversation_id != -1
+        # create a list of all tweet ids that also have a conversation_id
+        # collect all tweets with the conversation_id but only save the ones that do not match the tweet_id list
 
     # TODO: Add condition that exits when corpus size is reached
     def collect_percent_callback(self):

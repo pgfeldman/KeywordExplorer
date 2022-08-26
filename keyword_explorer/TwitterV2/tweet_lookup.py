@@ -42,9 +42,14 @@ def create_historical_url(query:str, max_result:int = 10, time_str:str = None, n
     return url
 
 def create_recent_conversation_url(conversation_id:str) -> str:
-    conversation_id = "1484131517878181891"
     tweet_fields = "tweet.fields=lang,author_id,in_reply_to_user_id,created_at,conversation_id"
     url = "https://api.twitter.com/2/tweets/search/recent?query=conversation_id:{}&{}".format(conversation_id, tweet_fields)
+    print(url)
+    return url
+
+def create_historical_conversation_url(conversation_id:str, max_result:int = 10) -> str:
+    tweet_fields = "tweet.fields=lang,author_id,in_reply_to_user_id,created_at,conversation_id"
+    url = "https://api.twitter.com/2/tweets/search/all?max_results={}&query=conversation_id:{}&{}".format(max_result, conversation_id, tweet_fields)
     print(url)
     return url
 
@@ -102,9 +107,9 @@ def print_response(title:str, j:json):
     json_str = json.dumps(j, indent=4, sort_keys=True)
     print("\n------------ Begin '{}':\nresponse:\n{}\n------------ End '{}'\n".format(title, json_str, title))
 
-def tweet_id_query_example():
-    url = create_tweets_url("1484131517878181891")
-    url = create_tweets_url("1531844023459008512")
+def tweet_id_query_example(id: str = "1484131517878181891"):
+    url = create_tweets_url(id)
+    #url = create_tweets_url("1561906311125680138")
     json_response = connect_to_endpoint(url)
     print_response("Get tweet", json_response)
 
@@ -150,10 +155,16 @@ def counts_query_example():
 def main():
     print("BEARER_TOKEN = {}".format(bearer_token))
 
-    tweet_id_query_example()
-    # url = create_recent_conversation_url("1484131517878181891")
+    my_old_thread = "1484131517878181891"
+    test_conversation = "1561906311125680138"
+    tweet_id_query_example(test_conversation)
+    # url = create_recent_conversation_url(test_conversation)
     # json_response = connect_to_endpoint(url)
     # print_response("Get recent conversation", json_response)
+
+    url = create_historical_conversation_url(test_conversation, max_result=100)
+    json_response = connect_to_endpoint(url)
+    print_response("Get historical conversation", json_response)
     # historical_query_example()
     # counts_query_example()
 
