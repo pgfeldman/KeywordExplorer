@@ -297,9 +297,7 @@ def main():
     button_wrapper = tk.LabelFrame(wrapper, text="Buttons")
     button_wrapper.grid(row=1, column=0, columnspan = 2, sticky="nsew", padx=5, pady=2)
     b = Buttons(button_wrapper, 0, "Commands:", label_width=10, sticky="e")
-    b.add_button("Random Target", lambda : set_random_target(cf))
     b.add_button("Print Node Data", lambda : print_data(cf))
-    b.add_button("Change Random Node", lambda: change_random_node(cf))
 
     dp.create_tk_console(wrapper, 2, char_width=50)
 

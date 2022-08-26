@@ -75,8 +75,8 @@ class OpenAIComms:
 def main():
     oai = OpenAIComms()
     # oai.list_engines()
-    # result = oai.get_embedding('hello, world', 'text-similarity-ada-001')
-    # print(result)
+    result = oai.get_embedding('hello, world', 'text-similarity-ada-001')
+    print(result)
     for name in oai.engines:
         oai.set_engine(name=name)
         print("engine = {}".format(oai.get_engine()))

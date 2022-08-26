@@ -99,3 +99,5 @@ class TopicComboExt():
             self.callback_fn(event)
         else:
             print("TopicCombo().on_combobox_selected: selected: {}".format(self.tk_combo.get()))
+            self.clear()
+            self.set_text(self.tk_combo.get())
