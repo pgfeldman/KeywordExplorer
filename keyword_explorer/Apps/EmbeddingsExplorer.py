@@ -86,6 +86,7 @@ class EmbeddingsExplorer(AppBase):
         row = experiment_combo.get_next_row()
         keyword_combo = TopicComboExt(lf, row, "keywords", self.dp, entry_width=20, combo_width=20)
         row = keyword_combo.get_next_row()
+        # add "select clusters" field and "export corpus" button
 
 
         f = tk.Frame(tab)
