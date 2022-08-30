@@ -25,7 +25,7 @@ class EmbeddingsExplorer(AppBase):
     def setup_app(self):
         self.app_name = "EmbeddingsExplorer"
         self.app_version = "8.26.22"
-        self.geom = (600, 550)
+        self.geom = (600, 600)
         self.oai = OpenAIComms()
         self.msi = MySqlInterface(user_name ="root", db_name ="twitter_v2")
 
@@ -82,11 +82,15 @@ class EmbeddingsExplorer(AppBase):
         row = 0
         lf = tk.LabelFrame(tab, text="Embedding Params")
         lf.grid(row=row, column=0, columnspan = 1, sticky="nsew", padx=5, pady=2)
-        experiment_combo = TopicComboExt(lf, row, "experiment", self.dp, entry_width=20, combo_width=20)
+        experiment_combo = TopicComboExt(lf, row, "Experiment:", self.dp, entry_width=20, combo_width=20)
         row = experiment_combo.get_next_row()
-        keyword_combo = TopicComboExt(lf, row, "keywords", self.dp, entry_width=20, combo_width=20)
+        keyword_combo = TopicComboExt(lf, row, "Keywords:", self.dp, entry_width=20, combo_width=20)
         row = keyword_combo.get_next_row()
         # add "select clusters" field and "export corpus" button
+        cluster_size_field = DataField(lf, row, "Clusters:")
+        b = cluster_size_field.add_button("Set size", self.implement_me)
+        b = cluster_size_field.add_button("Label topics", self.implement_me)
+        b = cluster_size_field.add_button("Update DB", self.implement_me)
 
 
         f = tk.Frame(tab)
