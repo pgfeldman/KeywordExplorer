@@ -71,11 +71,11 @@ class MovableNode:
         self.set_dprint(dprint)
         self.font = font.Font(family='Helvetica', size=10)
 
-        self.id = self.cd.canvas.create_rectangle(
+        self.id = self.cd.canvas.create_oval(
             (self.x, self.y),
             (self.x + self.adjust_size(size), self.y + self.adjust_size(size)),
             fill=color)
-        self.text_id = self.cd.canvas.create_text(self.x, self.y-10, text=self.name, font=self.font)
+        self.text_id = self.cd.canvas.create_text(self.x, self.y, text=self.name, font=self.font)
 
     def set_dprint(self, con:ConsoleDprint):
         self.dp = con
