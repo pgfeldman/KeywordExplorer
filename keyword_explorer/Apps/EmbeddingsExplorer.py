@@ -98,9 +98,14 @@ class EmbeddingsExplorer(AppBase):
         row = 0
         self.canvas_frame = CanvasFrame(f, row, "Graph", self.dp, width=550, height=250)
 
+    def setup(self):
+        self.canvas_frame.setup(debug=True, show_names=False)
+
+
 
 def main():
     app = EmbeddingsExplorer()
+    app.setup()
     app.mainloop()
 
 

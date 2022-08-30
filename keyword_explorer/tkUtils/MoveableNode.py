@@ -36,6 +36,7 @@ class MovableNode:
     speed:float
     elapsed:float
     selected:bool
+    show_name:bool
     selected_color = "red"
     size:float
     clamed_size:float
@@ -44,13 +45,14 @@ class MovableNode:
     all_nodes_list:list
 
     def __init__(self, name:str, canvas:CanvasData, dprint:ConsoleDprint, color:str, size:float,
-                 x:float, y:float, dx:float=0, dy:float=0):
+                 x:float, y:float, dx:float=0, dy:float=0, show_name:bool = True):
         self.type = NODE_TYPE.MOVEABLE
         self.name = name
         self.cd = canvas
         self.selected = False
         self.color = color
         self.size = size
+        self.show_name = show_name
         # canvas transformations
         self.canvas_scalar = 1.0
         self.canvas_x = 0
@@ -75,7 +77,8 @@ class MovableNode:
             (self.x, self.y),
             (self.x + self.adjust_size(size), self.y + self.adjust_size(size)),
             fill=color)
-        self.text_id = self.cd.canvas.create_text(self.x, self.y, text=self.name, font=self.font)
+        if self.show_name:
+            self.text_id = self.cd.canvas.create_text(self.x, self.y, text=self.name, font=self.font)
 
     def set_dprint(self, con:ConsoleDprint):
         self.dp = con
@@ -173,7 +176,8 @@ class MovableNode:
         #print("{} = ({}, {}".format(self.name, self.x, self.y))
     def move(self, dx:float, dy:float):
         self.cd.canvas.move(self.id, dx, dy)
-        self.cd.canvas.move(self.text_id, dx, dy)
+        if self.show_name:
+            self.cd.canvas.move(self.text_id, dx, dy)
         self.set_screen_coords()
 
         for n, l in self.neighbor_dict.items():

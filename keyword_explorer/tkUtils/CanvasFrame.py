@@ -142,53 +142,47 @@ class CanvasFrame():
         #self.stop_button = ttk.Button(f, text="Stop", command=self.stop_animate)
         #self.stop_button.grid(column=1, row=self.row, sticky="w", padx=5, pady=5)
 
-    def setup(self, debug:bool = False):
+    def setup(self, debug:bool = False, show_names:bool = True):
         self.dp.dprint("Setting up")
         self.cd = CanvasData(self.canvas)
         self.clear_Nodes()
 
         if debug:
             # create some nodes
-            num_nodes = 20
+            num_nodes = 200
             for i in range(num_nodes):
-                n = self.create_MoveableNode("node_{}".format(i))
+                color = "red"
+                if i < num_nodes/3:
+                    color = "blue"
+                elif i > num_nodes *2/3:
+                    color = "green"
+                n = self.create_MoveableNode("{}_{}".format(color, i), color=color, size = 4, show_name=show_names)
 
             # connect some nodes
-            if num_nodes > 1:
+            connect = False
+            if connect and num_nodes > 1:
                 for i in range(int(num_nodes*1.5)):
                     n1:MovableNode = self.node_list[random.randrange(0, num_nodes - 1)]
                     n2:MovableNode = self.node_list[random.randrange(0, num_nodes - 1)]
                     self.connect_Nodes(n1, n2)
 
-            self.test_node = self.create_MoveableNode("TEST", size=30, color="#00CD00")
-            self.test_node.set_target(self.node_list[0])
+            #self.test_node = self.create_MoveableNode("TEST", size=30, color="#00CD00", show_name=show_names)
+            #self.test_node.set_target(self.node_list[0])
 
         self.run_animate = False
-        self.stop_button.state([self.DISABLED])
-        self.animate()
 
-    def create_ForceNode(self, name:str, size=20, color:str="random", border:int = 50, x:float=0, y:float=0) -> MovableNode:
+
+    def create_MoveableNode(self, name:str, size=20, color:str="random", border:int = 50, x:float=0, y:float=0, dx:float=0, dy:float=0, show_name:bool = True) -> MovableNode:
         if x == 0 and y == 0:
             x = random.randrange(border, self.cd.right - border)
             y = random.randrange(border, self.cd.bottom - border)
         if color == "random":
             color = self.rand_color()
-        n = MovableNode(name, self.cd, self.dp, color, size, x, y)
-
+        n = MovableNode(name, self.cd, self.dp, color, size, x, y, dx, dy, show_name=show_name)
         self.add_Node(n)
         return n
 
-    def create_MoveableNode(self, name:str, size=20, color:str="random", border:int = 50, x:float=0, y:float=0, dx:float=0, dy:float=0) -> MovableNode:
-        if x == 0 and y == 0:
-            x = random.randrange(border, self.cd.right - border)
-            y = random.randrange(border, self.cd.bottom - border)
-        if color == "random":
-            color = self.rand_color()
-        n = MovableNode(name, self.cd, self.dp, color, size, x, y, dx, dy)
-        self.add_Node(n)
-        return n
-
-    def add_Node(self, n:Union[MovableNode, MovableNode]):
+    def add_Node(self, n:MovableNode):
         # go through the node list and lift all the MovableNodes
         mn:MovableNode
         for mn in self.node_list:
@@ -290,6 +284,9 @@ class CanvasFrame():
             self.handle_node_select(-1, "No node clicked on")
             self.canvas.itemconfig(self.selected_node.id, fill=self.selected_node.color)
             self.selected_node = None
+        else:
+            self.dp.dprint("selected node = [{}]".format(self.selected_node.name))
+
 
     def button_1_released(self, event:tk.Event):
         self.dp.dprint("B1 released at ({}, {})".format(event.x, event.y))
@@ -364,7 +361,7 @@ def main():
 
     dp.create_tk_console(wrapper, 2, char_width=50)
 
-    cf.setup(debug=True)
+    cf.setup(debug=True, show_names=False)
 
     window.mainloop()
 
