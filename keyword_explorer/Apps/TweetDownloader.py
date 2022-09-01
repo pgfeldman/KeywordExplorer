@@ -1,11 +1,8 @@
 import random
-import time
 import tkinter as tk
 import tkinter.messagebox as message
 from datetime import datetime, timedelta
-from tkinter import filedialog
-
-import pandas as pd
+from typing import List
 
 from keyword_explorer.Apps.AppBase import AppBase
 from keyword_explorer.TwitterV2.TweetKeywords import TweetKeywords, TweetKeyword
@@ -13,13 +10,12 @@ from keyword_explorer.tkUtils.Buttons import Buttons
 from keyword_explorer.tkUtils.Checkboxes import Checkboxes, DIR
 from keyword_explorer.tkUtils.DataField import DataField
 from keyword_explorer.tkUtils.DateEntryField import DateEntryField
-from keyword_explorer.tkUtils.ToolTip import ToolTip
 from keyword_explorer.tkUtils.TextField import TextField
-
+from keyword_explorer.tkUtils.ToolTip import ToolTip
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
 
-from typing import Dict, List, Callable
-
+# General TODO:
+# Implement threads, and make sure that the extended queries work
 class KeywordData:
     num_tweets:int
     name:str

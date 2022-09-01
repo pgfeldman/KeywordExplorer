@@ -7,16 +7,23 @@ from keyword_explorer.OpenAI.OpenAIComms import OpenAIComms
 from keyword_explorer.tkUtils.CanvasFrame import CanvasFrame
 from keyword_explorer.tkUtils.TopicComboExt import TopicComboExt
 from keyword_explorer.tkUtils.DataField import DataField
+from keyword_explorer.tkUtils.ToolTip import ToolTip
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
 
-
+# General TODO:
+# Move "selected experiment" and "keyword" out of the tabs
+# Add a "Create Corpora" tab
+# Implement calls to GPT embeddings and verify on small dataset. I could even try Aaron's Wikipedia cats vs computers idea but use tweets
 class EmbeddingsExplorer(AppBase):
     oai: OpenAIComms
     msi: MySqlInterface
     canvas_frame: CanvasFrame
     engine_combo: TopicComboExt
-    keyword_combo: TopicComboExt
+    get_store_keyword_combo: TopicComboExt
+    graph_keyword_combo: TopicComboExt
+    experiment_combo: TopicComboExt
     keyword_count_field: DataField
+    cluster_size_field: DataField
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -27,7 +34,7 @@ class EmbeddingsExplorer(AppBase):
         self.app_version = "8.26.22"
         self.geom = (600, 600)
         self.oai = OpenAIComms()
-        self.msi = MySqlInterface(user_name ="root", db_name ="twitter_v2")
+        self.msi = MySqlInterface(user_name="root", db_name="twitter_v2")
 
         if not self.oai.key_exists():
             message.showwarning("Key Error", "Could not find Environment key 'OPENAI_KEY'")
@@ -64,43 +71,45 @@ class EmbeddingsExplorer(AppBase):
                        'text-similarity-curie-001',
                        'text-similarity-davinci-001']
         row = 0
-        self.engine_combo = TopicComboExt(tab, row, "engine", self.dp, entry_width=20, combo_width=20)
+        self.engine_combo = TopicComboExt(tab, row, "Engine:", self.dp, entry_width=20, combo_width=20)
         self.engine_combo.set_combo_list(engine_list)
         self.engine_combo.set_text(engine_list[0])
         row = self.engine_combo.get_next_row()
-        self.keyword_combo = TopicComboExt(tab, row, "keyword", self.dp, entry_width=20, combo_width=20)
-        self.keyword_combo.set_combo_list(["foo", "bar", "baz"])
-        b = self.keyword_combo.add_button("Num Entries", command= lambda: self.get_keyword_entries(self.keyword_combo.get_text()))
-        row =self.keyword_combo.get_next_row()
+        self.get_store_keyword_combo = TopicComboExt(tab, row, "Keyword:", self.dp, entry_width=20, combo_width=20)
+        self.get_store_keyword_combo.set_combo_list(["foo", "bar", "baz"])
+        b = self.get_store_keyword_combo.add_button("Num Entries:", command=lambda: self.get_keyword_entries(
+            self.get_store_keyword_combo.get_text()))
+        ToolTip(b, "Query the DB to see how many entries there are\nResults go in 'Num Rows:'")
+        row = self.get_store_keyword_combo.get_next_row()
         self.keyword_count_field = DataField(tab, row, "Num rows")
         self.keyword_count_field.add_button("Get Embeddings", self.get_embeddings)
         row = self.keyword_count_field.get_next_row()
 
-
-
     def build_graph_tab(self, tab: ttk.Frame):
+        experiments = ["exp_1", "exp_2", "exp_3"]
+        keywords = ["foo", "bar", "bas"]
         row = 0
         lf = tk.LabelFrame(tab, text="Embedding Params")
-        lf.grid(row=row, column=0, columnspan = 1, sticky="nsew", padx=5, pady=2)
-        experiment_combo = TopicComboExt(lf, row, "Experiment:", self.dp, entry_width=20, combo_width=20)
-        row = experiment_combo.get_next_row()
-        keyword_combo = TopicComboExt(lf, row, "Keywords:", self.dp, entry_width=20, combo_width=20)
-        row = keyword_combo.get_next_row()
+        lf.grid(row=row, column=0, columnspan=1, sticky="nsew", padx=5, pady=2)
+        self.experiment_combo = TopicComboExt(lf, row, "Experiment:", self.dp, entry_width=20, combo_width=20)
+        self.experiment_combo.set_combo_list(experiments)
+        row = self.experiment_combo.get_next_row()
+        self.graph_keyword_combo = TopicComboExt(lf, row, "Keywords:", self.dp, entry_width=20, combo_width=20)
+        self.graph_keyword_combo.set_combo_list(keywords)
+        row = self.graph_keyword_combo.get_next_row()
         # add "select clusters" field and "export corpus" button
-        cluster_size_field = DataField(lf, row, "Clusters:")
-        b = cluster_size_field.add_button("Set size", self.implement_me)
-        b = cluster_size_field.add_button("Label topics", self.implement_me)
-        b = cluster_size_field.add_button("Update DB", self.implement_me)
-
+        self.cluster_size_field = DataField(lf, row, "Clusters:")
+        b = self.cluster_size_field.add_button("Set size", self.implement_me)
+        b = self.cluster_size_field.add_button("Label topics", self.implement_me)
+        b = self.cluster_size_field.add_button("Update DB", self.implement_me)
 
         f = tk.Frame(tab)
-        f.grid(row=row, column=0, columnspan = 1, sticky="nsew", padx=1, pady=1)
+        f.grid(row=row, column=0, columnspan=1, sticky="nsew", padx=1, pady=1)
         row = 0
         self.canvas_frame = CanvasFrame(f, row, "Graph", self.dp, width=550, height=250)
 
     def setup(self):
         self.canvas_frame.setup(debug=True, show_names=False)
-
 
 
 def main():

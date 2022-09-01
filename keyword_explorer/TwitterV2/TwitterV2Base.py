@@ -5,6 +5,7 @@ import urllib.parse
 import webbrowser
 from datetime import datetime
 import time
+import re
 from typing import List, Dict
 
 class TwitterV2Base:
@@ -24,17 +25,28 @@ class TwitterV2Base:
         return r
 
     def prep_query(self, query:str) -> str:
+        split_regex = re.compile(r" OR | AND ")
         #clean up the query so it works with the api
-        query_list = query.split(" OR ")
-        or_list = []
-        for query in query_list:
-            query = query.strip()
-            if query[0] != '"' and len(query.split()) > 1:
+        query_list = split_regex.split(query)
+        split_list = split_regex.findall(query)
+        print(split_list)
+        print(query_list)
+        to_return_list = []
+        and_list = []
+        for i in range(len(query_list)):
+            split = "NONE"
+            if i < len(split_list):
+                split = split_list[i].strip()
+            query = query_list[i].strip()
+            if query[0] != '"' and len(query) > 1:
                 query = '\"{}\"'.format(query)
-            or_list.append(query)
-        if len(or_list) > 1:
-            return " OR ".join(or_list)
-        return or_list[0]
+            if split == "OR":
+                to_return_list.append("{} {} ".format(query, split))
+            else:
+                to_return_list.append("{} ".format(query))
+        if len(query_list) > 1:
+            return "".join(to_return_list)
+        return to_return_list[0]
 
     def launch_twitter(self, key_list:List, start_dt:datetime, end_dt:datetime):
         since = start_dt.strftime("%Y-%m-%d")
@@ -87,7 +99,8 @@ def main():
     tc = TwitterV2Base()
     print("Key exists = {}".format(tc.key_exists()))
 
-    raw = "china virus OR chinavirus OR foo bar"
+    raw = "china virus OR chinavirus OR foo AND bar"
+    raw = "china virus"
     cooked = tc.prep_query(raw)
     print(cooked)
 
