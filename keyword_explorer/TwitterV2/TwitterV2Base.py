@@ -39,7 +39,12 @@ class TwitterV2Base:
                 split = split_list[i].strip()
             query = query_list[i].strip()
             if query[0] != '"' and len(query) > 1:
-                query = '\"{}\"'.format(query)
+                if query[0] == '(' and query[1] != '"':
+                    query  = '(\"{}\"'.format(query[1:])
+                elif query[-1] == ')' and query[-2] != '"':
+                    query  = '\"{}\")'.format(query[:-1])
+                else:
+                    query = '\"{}\"'.format(query)
             if split == "OR":
                 to_return_list.append("{} {} ".format(query, split))
             else:
@@ -99,8 +104,8 @@ def main():
     tc = TwitterV2Base()
     print("Key exists = {}".format(tc.key_exists()))
 
-    raw = "china virus OR chinavirus OR foo AND bar"
-    raw = "china virus"
+    raw = "china virus OR chinavirus OR (foo AND bar) OR something else"
+    # raw = "china virus"
     cooked = tc.prep_query(raw)
     print(cooked)
 
