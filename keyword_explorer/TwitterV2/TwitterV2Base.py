@@ -29,8 +29,8 @@ class TwitterV2Base:
         #clean up the query so it works with the api
         query_list = split_regex.split(query)
         split_list = split_regex.findall(query)
-        print(split_list)
-        print(query_list)
+        # print(split_list)
+        # print(query_list)
         to_return_list = []
         and_list = []
         for i in range(len(query_list)):
@@ -65,6 +65,7 @@ class TwitterV2Base:
             #print(url_str)
 
     def connect_to_endpoint(self, url, time_to_wait:float = 0) -> json:
+        time.sleep(0.5) # always sleep a bit?
         response = requests.request("GET", url, auth=self.bearer_oauth)
         if response.status_code == 200:
             return response.json()
@@ -73,9 +74,9 @@ class TwitterV2Base:
             throttle_end_timestamp = int(response.headers.get('x-rate-limit-reset'))
             throttle_end_time = datetime.strftime(datetime.fromtimestamp(throttle_end_timestamp), "%H:%M:%S")
             if time_to_wait == 0:
-                time_to_wait = 0.5
+                time_to_wait = 1.0
             else:
-                time_to_wait = 15 #int(throttle_end_timestamp - datetime.now().timestamp()) + 5
+                time_to_wait = 5 #int(throttle_end_timestamp - datetime.now().timestamp()) + 5
             print('connect_to_endpoint(429): lets sleep for', time_to_wait, 'seconds')
             time.sleep(time_to_wait)
             return self.connect_to_endpoint(url, time_to_wait)

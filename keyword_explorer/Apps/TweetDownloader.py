@@ -2,7 +2,7 @@ import random
 import tkinter as tk
 import tkinter.messagebox as message
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Dict
 
 from keyword_explorer.Apps.AppBase import AppBase
 from keyword_explorer.TwitterV2.TweetKeywords import TweetKeywords, TweetKeyword
@@ -31,7 +31,7 @@ class KeywordData:
         self.num_tweets += val
 
     def to_string(self) -> str:
-        return "{}: {:,}".format(self.name, self.num_tweets)
+        return "keyword = {}: tweets = {:,}".format(self.name, self.num_tweets)
 
 class TweetDownloader(AppBase):
     msi:MySqlInterface
@@ -53,6 +53,7 @@ class TweetDownloader(AppBase):
     keyword_data_list:List
     randomize:bool
     hour_offset:int
+    experiment_id:int
 
 
     def __init__(self, *args, **kwargs):
@@ -60,6 +61,7 @@ class TweetDownloader(AppBase):
         self.keyword_data_list = []
         self.randomize = False
         self.hour_offset = 0 # offset from zulu
+        self.experiment_id = -1
         print("TweetDownloader.init()")
 
     def setup_app(self):
@@ -86,11 +88,11 @@ class TweetDownloader(AppBase):
         lf.grid(row=row, column=2, columnspan = 2, sticky="nsew", padx=5, pady=2)
         self.build_twitter_params(lf, param_text_width, param_label_width)
 
-        self.end_date_field.set_date()
+        self.end_date_field.set_date(datetime.utcnow() - timedelta(days=1))
         day_delta = 3
-        self.start_date_field.set_date(d = (datetime.utcnow() - timedelta(days=day_delta)))
-        self.cur_date_field.set_date(d = (datetime.utcnow() - timedelta(days=day_delta)))
-        self.duration_field.set_text(day_delta)
+        self.start_date_field.set_date(d = (self.end_date_field.get_date() - timedelta(days=day_delta)))
+        self.cur_date_field.set_date(d = (self.end_date_field.get_date() - timedelta(days=day_delta)))
+        self.duration_field.set_text(str(day_delta))
 
         return row+1
 
@@ -141,7 +143,7 @@ class TweetDownloader(AppBase):
         row = self.clamp_field.get_next_row()
 
         self.percent_field = DataField(lf, row, 'Percent:', text_width, label_width=label_width)
-        self.percent_field.set_text('10')
+        self.percent_field.set_text('100')
         ToolTip(self.percent_field.tk_entry, "The percent of the total tweets for an item")
         row = self.percent_field.get_next_row()
 
@@ -203,8 +205,28 @@ class TweetDownloader(AppBase):
         self.end_date_field.set_date(end_dt)
 
     def collect_thread_callback(self):
-        print("collect_thread_callback")
+        row_dict:Dict
+        tk:TweetKeyword
+        tk_list = []
+
+        self.experiment_id = 1
+        print("collect_thread_callback with experiment_id = {}".format(self.experiment_id))
+        # get the keywords in this experiment so we can create TweetKeyword objects
+        query = "select distinct keyword from keyword_tweet_view where experiment_id = {}".format(self.experiment_id)
+        result = self.msi.read_data(query)
+        for row_dict in result:
+            tk = TweetKeyword(row_dict['keyword'])
+            tk_list.append(tk)
+            tk.to_print()
+
         # query the db foe all rows with a conversation_id != -1
+        for tk in tk_list:
+            keyword = tk.keyword
+            query = "select distinct tweet_id, conversation_id from keyword_tweet_view where tweet_id != keyword_tweet_view.conversation_id and experiment_id = {} and keyword = {}".format(self.experiment_id, keyword)
+            result = self.msi.read_data(query)
+
+            for row_dict in result:
+                print(row_dict)
         # create a list of all tweet ids that also have a conversation_id
         # collect all tweets with the conversation_id but only save the ones that do not match the tweet_id list
 
@@ -227,8 +249,8 @@ class TweetDownloader(AppBase):
         # save this experiment to the database
         sql = "insert into table_experiment (name, date, sample_start, sample_end, keywords) values (%s, %s, %s, %s, %s)"
         values = (self.experiment_field.get_text(), datetime.now(), cur_dt, end_dt, ", ".join(key_list))
-        experiment_id = -1
-        experiment_id = self.msi.write_sql_values_get_row(sql, values)
+        self.experiment_id = -1
+        self.experiment_id = self.msi.write_sql_values_get_row(sql, values)
 
         # starting with the start date, step towards the end date one day at a time
         while cur_dt < end_dt:
@@ -268,7 +290,7 @@ class TweetDownloader(AppBase):
                 tweets_per_sample = min(tweets_to_download, self.samples_field.get_as_int())
                 print("collect_percent_callback() tweets_per_sample = {:,} ".format(tweets_per_sample))
                 self.tkws.get_keywords(tk, cur_start, end_dt=cur_end, tweets_per_sample=tweets_per_sample,
-                                       tweets_to_download=tweets_to_download, msi=self.msi, experiment_id=experiment_id)
+                                       tweets_to_download=tweets_to_download, msi=self.msi, experiment_id=self.experiment_id)
                 corpus_kd:KeywordData = corpus_size_dict[s]
                 corpus_kd.add_to_num_tweets(tk.num_entries)
 
@@ -302,7 +324,7 @@ class TweetDownloader(AppBase):
         # save this experiment to the database
         sql = "insert into table_experiment (name, date, sample_start, sample_end, keywords) values (%s, %s, %s, %s, %s)"
         values = (self.experiment_field.get_text(), datetime.now(), cur_dt, end_dt, ", ".join(key_list))
-        experiment_id = self.msi.write_sql_values_get_row(sql, values)
+        self.experiment_id = self.msi.write_sql_values_get_row(sql, values)
 
         # starting with the start date, step towards the end date one day at a time
         while cur_dt < end_dt:
@@ -321,6 +343,7 @@ class TweetDownloader(AppBase):
             #get the keyword with the lowest number of tweets for today
             kd:KeywordData
             min_kd:KeywordData = self.keyword_data_list[0]
+            print("Minimum count for keyword {} = {}".format(min_kd.name, min_kd.num_tweets))
 
             # If the lowest number of tweets is less than tweets_per_sample (10 - 500),
             # then set tweets_per_sample to that value, or the minimum allowed
@@ -329,6 +352,7 @@ class TweetDownloader(AppBase):
 
             # For each keyword in the sorted list
             for kd in self.keyword_data_list:
+                print("\n---------\nEvaluating {}".format(kd.to_string()))
                 tk:TweetKeyword = TweetKeyword(kd.name)
                 tweets_available = kd.num_tweets
 
@@ -340,7 +364,7 @@ class TweetDownloader(AppBase):
 
 
                 self.tkws.sample_keywords_one_day(tk, start_dt=cur_dt, tweets_available=tweets_available, clamp=clamp,
-                                                  tweets_per_sample=tweets_per_sample, msi=self.msi, experiment_id=experiment_id)
+                                                  tweets_per_sample=tweets_per_sample, msi=self.msi, experiment_id=self.experiment_id)
 
                 # add to the full counts
                 corpus_kd:KeywordData = corpus_size_dict[kd.name]

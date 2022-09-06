@@ -19,7 +19,7 @@ class EmbeddingsExplorer(AppBase):
     msi: MySqlInterface
     canvas_frame: CanvasFrame
     engine_combo: TopicComboExt
-    get_store_keyword_combo: TopicComboExt
+    keyword_combo: TopicComboExt
     graph_keyword_combo: TopicComboExt
     experiment_combo: TopicComboExt
     keyword_count_field: DataField
@@ -40,7 +40,20 @@ class EmbeddingsExplorer(AppBase):
             message.showwarning("Key Error", "Could not find Environment key 'OPENAI_KEY'")
 
     def build_app_view(self, row: int, text_width: int, label_width: int) -> int:
+        experiments = ["exp_1", "exp_2", "exp_3"]
+        keywords = ["foo", "bar", "bas"]
         print("build_app_view")
+
+        self.experiment_combo = TopicComboExt(self, row, "Experiment:", self.dp, entry_width=20, combo_width=20)
+        self.experiment_combo.set_combo_list(experiments)
+        row = self.experiment_combo.get_next_row()
+        self.keyword_combo = TopicComboExt(self, row, "Keyword:", self.dp, entry_width=20, combo_width=20)
+        self.keyword_combo.set_combo_list(["foo", "bar", "baz"])
+        b = self.keyword_combo.add_button("Num Entries:", command=lambda: self.get_keyword_entries(
+            self.keyword_combo.get_text()))
+        ToolTip(b, "Query the DB to see how many entries there are\nResults go in 'Num Rows:'")
+        row = self.keyword_combo.get_next_row()
+
         s = ttk.Style()
         s.configure('TNotebook.Tab', font=self.default_font)
 
@@ -54,6 +67,10 @@ class EmbeddingsExplorer(AppBase):
         canvas_tab = ttk.Frame(tab_control)
         tab_control.add(canvas_tab, text='Canvas')
         self.build_graph_tab(canvas_tab)
+
+        corpora_tab = ttk.Frame(tab_control)
+        tab_control.add(corpora_tab, text='Corpora')
+        self.build_create_corpora_tab(corpora_tab)
         row += 1
 
         return row
@@ -65,6 +82,9 @@ class EmbeddingsExplorer(AppBase):
     def get_embeddings(self):
         print("get_embeddings")
 
+    def build_create_corpora_tab(self, tab: ttk.Frame):
+        pass
+
     def build_get_store_tab(self, tab: ttk.Frame):
         engine_list = ['text-similarity-ada-001',
                        'text-similarity-babbage-001',
@@ -75,28 +95,14 @@ class EmbeddingsExplorer(AppBase):
         self.engine_combo.set_combo_list(engine_list)
         self.engine_combo.set_text(engine_list[0])
         row = self.engine_combo.get_next_row()
-        self.get_store_keyword_combo = TopicComboExt(tab, row, "Keyword:", self.dp, entry_width=20, combo_width=20)
-        self.get_store_keyword_combo.set_combo_list(["foo", "bar", "baz"])
-        b = self.get_store_keyword_combo.add_button("Num Entries:", command=lambda: self.get_keyword_entries(
-            self.get_store_keyword_combo.get_text()))
-        ToolTip(b, "Query the DB to see how many entries there are\nResults go in 'Num Rows:'")
-        row = self.get_store_keyword_combo.get_next_row()
         self.keyword_count_field = DataField(tab, row, "Num rows")
         self.keyword_count_field.add_button("Get Embeddings", self.get_embeddings)
         row = self.keyword_count_field.get_next_row()
 
     def build_graph_tab(self, tab: ttk.Frame):
-        experiments = ["exp_1", "exp_2", "exp_3"]
-        keywords = ["foo", "bar", "bas"]
         row = 0
         lf = tk.LabelFrame(tab, text="Embedding Params")
         lf.grid(row=row, column=0, columnspan=1, sticky="nsew", padx=5, pady=2)
-        self.experiment_combo = TopicComboExt(lf, row, "Experiment:", self.dp, entry_width=20, combo_width=20)
-        self.experiment_combo.set_combo_list(experiments)
-        row = self.experiment_combo.get_next_row()
-        self.graph_keyword_combo = TopicComboExt(lf, row, "Keywords:", self.dp, entry_width=20, combo_width=20)
-        self.graph_keyword_combo.set_combo_list(keywords)
-        row = self.graph_keyword_combo.get_next_row()
         # add "select clusters" field and "export corpus" button
         self.cluster_size_field = DataField(lf, row, "Clusters:")
         b = self.cluster_size_field.add_button("Set size", self.implement_me)

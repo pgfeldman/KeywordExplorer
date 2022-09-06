@@ -2,6 +2,7 @@ import math
 from datetime import datetime, timedelta
 import random
 import pprint
+import time
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
 
 from typing import Dict, List, Union
@@ -77,7 +78,7 @@ class TweetKeyword():
                 query_id = self.force_dict_value(d, 'query_id', -1)
                 text = self.force_dict_value(d, 'text', 'NO TEXT')
 
-                sql = "insert into table_tweet (query_id, author_id, conversation_id, created_at, in_reply_to_user_id, lang, id, text) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+                sql = "replace into table_tweet (query_id, author_id, conversation_id, created_at, in_reply_to_user_id, lang, id, text) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
                 vals = (query_id, author_id, conversation_id, created_at, in_reply_to_user_id, lang, id, text)
                 msi.write_sql_values_get_row(sql, vals)
 
@@ -98,6 +99,7 @@ class TweetKeyword():
         count = 1
         for d in self.data_list:
             if pretty:
+                print("\n-----------\nTweet [{}], keyword = {}".format(count, self.keyword))
                 pp.pprint(d)
             else:
                 print("\t[{}]: {}".format(count, d))
@@ -151,6 +153,14 @@ class TweetKeywords(TwitterV2Base):
         # print("\tTweetKeywords.create_keywords_url(): url = {}".format(url))
         return url
 
+    def create_historical_conversation_url(self, conversation_id:str, max_result:int = 10, next_token:str = None) -> str:
+        tweet_fields = "tweet.fields=lang,author_id,in_reply_to_user_id,created_at,conversation_id"
+        url = "https://api.twitter.com/2/tweets/search/all?max_results={}&query=conversation_id:{}&{}".format(max_result, conversation_id, tweet_fields)
+        # print(url)
+        if next_token != None:
+            url = "{}&next_token={}".format(url, next_token)
+        return url
+
     def parse_json(self, json_response, num_responses:int) -> Union[str, None]:
         meta:Dict = json_response['meta']
         data:Dict = json_response['data']
@@ -160,6 +170,22 @@ class TweetKeywords(TwitterV2Base):
             return meta['next_token']
 
         return None
+
+        # The meat of a twitter query and processing
+    def run_thread_query(self, tk:TweetKeyword, conversation_id:str, tweets_per_sample:int, tweets_to_download:int,
+                  next_token:str = None, experiment_id:int = -1, msi:MySqlInterface = None) -> str:
+        query_id = -1
+        url = self. create_historical_conversation_url(conversation_id, max_result=tweets_per_sample, next_token=next_token)
+        if msi != None:
+            sql = "insert into table_query (experiment_id, date_executed, query, keyword) VALUES (%s, %s, %s, %s)"
+            vals = (experiment_id, datetime.now(), url, tk.keyword)
+            query_id = msi.write_sql_values_get_row(sql, vals)
+        json_response = self.connect_to_endpoint(url)
+        tk.parse_json(json_response, query_id=query_id, clamp=tweets_per_sample)
+        next_token = self.parse_json(json_response, tweets_to_download)
+        if tk.get_entries() > tweets_to_download:
+            return None
+        return next_token
 
     # The meat of a twitter query and processing
     def run_query(self, tk:TweetKeyword, query:str, tweets_per_sample:int, tweets_to_download:int,
@@ -247,7 +273,8 @@ class TweetKeywords(TwitterV2Base):
 
                 start_offset = span * random.random()
                 start_dt = start_dt + timedelta(days = start_offset)
-                stop_dt = start_dt + timedelta(days=ratio)
+                # stop_dt = start_dt + timedelta(days=ratio)
+                stop_dt = start_dt + timedelta(days=.9999)
 
                 print("\tStart date = {}".format(start_dt.strftime(date_fmt)))
                 print("\tEnd date = {}".format(stop_dt.strftime(date_fmt)))
@@ -302,10 +329,28 @@ def exercise_sample_keywords_one_day():
         tks.get_keywords(tk, start_dt, end_dt=end_dt, tweets_per_sample=10, tweets_to_download=30) # tweets_per_sample need to be between 10 - 500
         tk.to_print()
 
+def exercise_get_threads():
+    test_conversation = "1561906311125680138"
+    print("conversation_id = [{}]".format("1561906311125680138"))
+    tks = TweetKeywords()
+    tk = TweetKeyword(keyword="foo") # we'd get this from the database along with conversation_id
+    next_token = tks.run_thread_query(tk, conversation_id=test_conversation, tweets_per_sample=10, tweets_to_download=100)
+    count = 0
+    while next_token != None:
+        print("next_token = {}".format(next_token))
+        next_token = tks.run_thread_query(tk, conversation_id=test_conversation, tweets_per_sample=10, tweets_to_download=100, next_token=next_token)
+        count += 1
+        if count > 20:
+            break
+    tk.to_print()
+
+
+
 def main():
     # exercise_get_counts()
     # exercise_get_keyword_tweets()
-    exercise_sample_keywords_one_day()
+    # exercise_sample_keywords_one_day()
+    exercise_get_threads()
 
 
 
