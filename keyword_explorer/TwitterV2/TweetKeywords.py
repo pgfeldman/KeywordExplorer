@@ -62,13 +62,16 @@ class TweetKeyword():
             return d[name]
         return force
 
-    def to_db(self, msi:MySqlInterface, max_dt:datetime):
+    def to_db(self, msi:MySqlInterface, max_dt:datetime = None):
         print("\tTweetKeyword.to_db() [{}] writing {:,} items to db".format(self.keyword, len(self.data_list)))
         d:Dict
         count = 1
         for d in self.data_list:
             created_at = datetime.strptime(d['created_at'], '%Y-%m-%dT%H:%M:%S.000Z')
-            if created_at < max_dt:
+            if max_dt == None or created_at < max_dt:
+                is_thread = False
+                if max_dt == None:
+                    is_thread = True
                 self.last_stored_dt = created_at
                 author_id = self.force_dict_value(d, 'author_id', -1)
                 conversation_id = self.force_dict_value(d, 'conversation_id', -1)
@@ -78,8 +81,8 @@ class TweetKeyword():
                 query_id = self.force_dict_value(d, 'query_id', -1)
                 text = self.force_dict_value(d, 'text', 'NO TEXT')
 
-                sql = "replace into table_tweet (query_id, author_id, conversation_id, created_at, in_reply_to_user_id, lang, id, text) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
-                vals = (query_id, author_id, conversation_id, created_at, in_reply_to_user_id, lang, id, text)
+                sql = "replace into table_tweet (query_id, author_id, conversation_id, created_at, in_reply_to_user_id, lang, id, text, is_thread) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                vals = (query_id, author_id, conversation_id, created_at, in_reply_to_user_id, lang, id, text, is_thread)
                 msi.write_sql_values_get_row(sql, vals)
 
                 # print("\t[{}]: {}".format(count, d))
@@ -180,9 +183,13 @@ class TweetKeywords(TwitterV2Base):
             sql = "insert into table_query (experiment_id, date_executed, query, keyword) VALUES (%s, %s, %s, %s)"
             vals = (experiment_id, datetime.now(), url, tk.keyword)
             query_id = msi.write_sql_values_get_row(sql, vals)
+            print("run_thread_query() INSERT response = {}".format(query_id))
         json_response = self.connect_to_endpoint(url)
         tk.parse_json(json_response, query_id=query_id, clamp=tweets_per_sample)
         next_token = self.parse_json(json_response, tweets_to_download)
+
+        if msi != None:
+            tk.to_db(msi)
         if tk.get_entries() > tweets_to_download:
             return None
         return next_token

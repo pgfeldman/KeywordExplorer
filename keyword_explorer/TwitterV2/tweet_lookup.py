@@ -162,7 +162,7 @@ def main():
     # json_response = connect_to_endpoint(url)
     # print_response("Get recent conversation", json_response)
 
-    url = create_historical_conversation_url(test_conversation, max_result=100)
+    url = create_historical_conversation_url(test_conversation, max_result=10)
     json_response = connect_to_endpoint(url)
     print_response("Get historical conversation", json_response)
     # historical_query_example()

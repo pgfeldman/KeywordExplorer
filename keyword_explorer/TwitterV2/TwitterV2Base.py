@@ -76,8 +76,16 @@ class TwitterV2Base:
             if time_to_wait == 0:
                 time_to_wait = 1.0
             else:
-                time_to_wait = 5 #int(throttle_end_timestamp - datetime.now().timestamp()) + 5
+                time_to_wait = 60 #int(throttle_end_timestamp - datetime.now().timestamp()) + 5
             print('connect_to_endpoint(429): lets sleep for', time_to_wait, 'seconds')
+            time.sleep(time_to_wait)
+            return self.connect_to_endpoint(url, time_to_wait)
+        elif response.status_code == 503: # Service Unavailabl
+            if time_to_wait == 0:
+                time_to_wait = 60.0
+            else:
+                time_to_wait = 120.0 #int(throttle_end_timestamp - datetime.now().timestamp()) + 5
+            print('connect_to_endpoint(503): lets REALLY sleep for', time_to_wait, 'seconds')
             time.sleep(time_to_wait)
             return self.connect_to_endpoint(url, time_to_wait)
         else:

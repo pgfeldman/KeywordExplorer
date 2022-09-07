@@ -1,3 +1,4 @@
+import re
 import tkinter.messagebox as message
 import tkinter as tk
 from tkinter import ttk
@@ -9,6 +10,8 @@ from keyword_explorer.tkUtils.TopicComboExt import TopicComboExt
 from keyword_explorer.tkUtils.DataField import DataField
 from keyword_explorer.tkUtils.ToolTip import ToolTip
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
+
+from typing import Dict
 
 # General TODO:
 # Move "selected experiment" and "keyword" out of the tabs
@@ -24,6 +27,7 @@ class EmbeddingsExplorer(AppBase):
     experiment_combo: TopicComboExt
     keyword_count_field: DataField
     cluster_size_field: DataField
+    expeiment_id: int
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -38,6 +42,8 @@ class EmbeddingsExplorer(AppBase):
 
         if not self.oai.key_exists():
             message.showwarning("Key Error", "Could not find Environment key 'OPENAI_KEY'")
+        self.expeiment_id = -1
+
 
     def build_app_view(self, row: int, text_width: int, label_width: int) -> int:
         experiments = ["exp_1", "exp_2", "exp_3"]
@@ -46,10 +52,11 @@ class EmbeddingsExplorer(AppBase):
 
         self.experiment_combo = TopicComboExt(self, row, "Experiment:", self.dp, entry_width=20, combo_width=20)
         self.experiment_combo.set_combo_list(experiments)
+        self.experiment_combo.set_callback(self.keyword_callback)
         row = self.experiment_combo.get_next_row()
         self.keyword_combo = TopicComboExt(self, row, "Keyword:", self.dp, entry_width=20, combo_width=20)
-        self.keyword_combo.set_combo_list(["foo", "bar", "baz"])
-        b = self.keyword_combo.add_button("Num Entries:", command=lambda: self.get_keyword_entries(
+        self.keyword_combo.set_combo_list(keywords)
+        b = self.keyword_combo.add_button("Num Entries:", command=lambda: self.get_keyword_entries_callback(
             self.keyword_combo.get_text()))
         ToolTip(b, "Query the DB to see how many entries there are\nResults go in 'Num Rows:'")
         row = self.keyword_combo.get_next_row()
@@ -75,13 +82,6 @@ class EmbeddingsExplorer(AppBase):
 
         return row
 
-    def get_keyword_entries(self, keyword: str):
-        print("get_keyword_entries: {}".format(keyword))
-        self.keyword_count_field.set_text("12345")
-
-    def get_embeddings(self):
-        print("get_embeddings")
-
     def build_create_corpora_tab(self, tab: ttk.Frame):
         pass
 
@@ -94,9 +94,10 @@ class EmbeddingsExplorer(AppBase):
         self.engine_combo = TopicComboExt(tab, row, "Engine:", self.dp, entry_width=20, combo_width=20)
         self.engine_combo.set_combo_list(engine_list)
         self.engine_combo.set_text(engine_list[0])
+        self.engine_combo.tk_combo.current(0)
         row = self.engine_combo.get_next_row()
         self.keyword_count_field = DataField(tab, row, "Num rows")
-        self.keyword_count_field.add_button("Get Embeddings", self.get_embeddings)
+        self.keyword_count_field.add_button("Get Embeddings", self.get_embeddings_callback)
         row = self.keyword_count_field.get_next_row()
 
     def build_graph_tab(self, tab: ttk.Frame):
@@ -114,8 +115,48 @@ class EmbeddingsExplorer(AppBase):
         row = 0
         self.canvas_frame = CanvasFrame(f, row, "Graph", self.dp, width=550, height=250)
 
+    def get_embeddings_callback(self):
+        print("get_embeddings")
+
+    def get_keyword_entries_callback(self, keyword: str):
+        print("get_keyword_entries: keyword = {}, experiment_id = {}".format(keyword, self.experiment_id))
+        query = "select count(*) from keyword_tweet_view where experiment_id = %s and keyword = %s"
+        values = (self.experiment_id, keyword)
+        result:Dict = self.msi.read_data(query, values)[0]
+        count = result['count(*)']
+
+        self.keyword_count_field.set_text(count)
+
+    def keyword_callback(self, event:tk.Event):
+        print("keyword_callback: event = {}".format(event))
+        num_regex = re.compile(r"\d+")
+        s = self.experiment_combo.tk_combo.get()
+        self.experiment_combo.set_text(s)
+        self.experiment_id = num_regex.findall(s)[0]
+        print("keyword_callback: experiment_id = {}".format(self.experiment_id))
+        query = "select distinct keyword from table_query where experiment_id = %s"
+        values = (self.experiment_id,)
+        result = self.msi.read_data(query, values)
+        l = []
+        row_dict:Dict
+        for row_dict in result:
+            l.append(row_dict['keyword'])
+        self.keyword_combo.set_combo_list(l)
+
+
     def setup(self):
+        # set up the canvas
         self.canvas_frame.setup(debug=True, show_names=False)
+
+        # set up the selections that come from the db
+        l = []
+        row_dict:Dict
+        query = "select * from table_experiment"
+        result = self.msi.read_data(query)
+        for row_dict in result:
+            s = "{}: {}".format(row_dict['id'], row_dict['keywords'])
+            l.append(s)
+        self.experiment_combo.set_combo_list(l)
 
 
 def main():

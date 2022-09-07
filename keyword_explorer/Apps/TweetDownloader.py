@@ -147,6 +147,11 @@ class TweetDownloader(AppBase):
         ToolTip(self.percent_field.tk_entry, "The percent of the total tweets for an item")
         row = self.percent_field.get_next_row()
 
+        self.thread_length = DataField(lf, row, 'Thread Length:', text_width, label_width=label_width)
+        self.thread_length.set_text('10')
+        ToolTip(self.thread_length.tk_entry, "The number of threads to pull with a single conversation_id")
+        row = self.thread_length.get_next_row()
+
         self.option_checkboxes = Checkboxes(lf, row, "Options", label_width=label_width)
         cb = self.option_checkboxes.add_checkbox("Randomize", self.randomize_callback, dir=DIR.ROW)
         ToolTip(cb, "Randomly select the starting time for each day so that a full pull won't go into tomorrow")
@@ -208,8 +213,9 @@ class TweetDownloader(AppBase):
         row_dict:Dict
         tk:TweetKeyword
         tk_list = []
+        tweets_to_download = self.thread_length.get_as_int()
 
-        self.experiment_id = 1
+        self.experiment_id = 1 # TODO: REMOVE THIS AFTER EVERYTHING WORKS
         print("collect_thread_callback with experiment_id = {}".format(self.experiment_id))
         # get the keywords in this experiment so we can create TweetKeyword objects
         query = "select distinct keyword from keyword_tweet_view where experiment_id = {}".format(self.experiment_id)
@@ -222,13 +228,17 @@ class TweetDownloader(AppBase):
         # query the db foe all rows with a conversation_id != -1
         for tk in tk_list:
             keyword = tk.keyword
-            query = "select distinct tweet_id, conversation_id from keyword_tweet_view where tweet_id != keyword_tweet_view.conversation_id and experiment_id = {} and keyword = {}".format(self.experiment_id, keyword)
-            result = self.msi.read_data(query)
+            query = "select distinct tweet_id, conversation_id from keyword_tweet_view where tweet_id != conversation_id and experiment_id = %s and keyword = %s"
+            values = (self.experiment_id, keyword)
+            result = self.msi.read_data(query, values, True)
+            print("results = {}".format(len(result)))
 
             for row_dict in result:
-                print(row_dict)
-        # create a list of all tweet ids that also have a conversation_id
-        # collect all tweets with the conversation_id but only save the ones that do not match the tweet_id list
+                conversation_id = row_dict['conversation_id']
+                print("pulling {} tweets with conversation_id {}".format(tweets_to_download, conversation_id))
+                self.tkws.run_thread_query(tk, conversation_id=conversation_id, tweets_per_sample=tweets_to_download,
+                                           tweets_to_download=tweets_to_download, msi=self.msi)
+
 
     # TODO: Add condition that exits when corpus size is reached
     def collect_percent_callback(self):

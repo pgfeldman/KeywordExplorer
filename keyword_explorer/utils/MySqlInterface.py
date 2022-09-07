@@ -20,13 +20,18 @@ class MySqlInterface:
             cursorclass=pymysql.cursors.DictCursor, charset='utf8mb4')
         self.connection.autocommit(True)
 
-    def read_data(self, sql_str: str, values:Tuple = None) -> List:
+    def read_data(self, sql_str: str, tvals:Tuple = None, debug:bool = False) -> List:
+
         self.last_query = sql_str
         with self.connection.cursor() as cursor:
-            if values == None:
+            if tvals == None:
+                if debug:
+                    print("MySqlInterface:\n\tquery = {}",format(sql_str))
                 cursor.execute(sql_str)
             else:
-                cursor.execute(sql_str, values)
+                if debug:
+                    print("MySqlInterface:\n\tquery = {}\n\tdata = {}".format(sql_str, tvals))
+                cursor.execute(sql_str, tvals)
             result = cursor.fetchall()
             return result
 
