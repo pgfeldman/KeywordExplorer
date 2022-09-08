@@ -7,10 +7,11 @@ from typing import List, Dict
 from keyword_explorer.Apps.AppBase import AppBase
 from keyword_explorer.TwitterV2.TweetKeywords import TweetKeywords, TweetKeyword
 from keyword_explorer.tkUtils.Buttons import Buttons
-from keyword_explorer.tkUtils.Checkboxes import Checkboxes, DIR
+from keyword_explorer.tkUtils.Checkboxes import Checkboxes
 from keyword_explorer.tkUtils.DataField import DataField
 from keyword_explorer.tkUtils.DateEntryField import DateEntryField
 from keyword_explorer.tkUtils.TextField import TextField
+from keyword_explorer.tkUtils.TopicComboExt import TopicComboExt
 from keyword_explorer.tkUtils.ToolTip import ToolTip
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
 
@@ -49,7 +50,8 @@ class TweetDownloader(AppBase):
     lowest_count_field:DataField
     highest_count_field:DataField
     percent_field:DataField
-    option_checkboxes:Checkboxes
+    # option_checkboxes:Checkboxes
+    experiment_combo: TopicComboExt
     keyword_data_list:List
     randomize:bool
     hour_offset:int
@@ -61,12 +63,12 @@ class TweetDownloader(AppBase):
         self.keyword_data_list = []
         self.randomize = False
         self.hour_offset = 0 # offset from zulu
-        self.experiment_id = -1
+        self.set_experiment_id(-1)
         print("TweetDownloader.init()")
 
     def setup_app(self):
         self.app_name = "TweetDownloader"
-        self.app_version = "9.2.22"
+        self.app_version = "9.8.22"
         self.geom = (1000, 560)
         self.console_lines = 10
         self.text_width = 70
@@ -152,14 +154,20 @@ class TweetDownloader(AppBase):
         ToolTip(self.thread_length.tk_entry, "The number of threads to pull with a single conversation_id")
         row = self.thread_length.get_next_row()
 
-        self.option_checkboxes = Checkboxes(lf, row, "Options", label_width=label_width)
-        cb = self.option_checkboxes.add_checkbox("Randomize", self.randomize_callback, dir=DIR.ROW)
-        ToolTip(cb, "Randomly select the starting time for each day so that a full pull won't go into tomorrow")
-        cb = self.option_checkboxes.add_checkbox("Stream to DB", self.implement_me, dir=DIR.ROW)
-        ToolTip(cb, "Stream to DB: Default at this point. ")
-        cb = self.option_checkboxes.add_checkbox("Stream to CSV", self.implement_me, dir=DIR.ROW)
-        ToolTip(cb, "Stream to CSV: Not implemented")
-        row = self.option_checkboxes.get_next_row()
+        self.experiment_combo = TopicComboExt(lf, row, "Experiment:", self.dp, entry_width=6, combo_width=6)
+        self.experiment_combo.set_callback(self.set_experiment_callback)
+        ToolTip(self.experiment_combo.tk_combo, "Sets the experiment to get threads on. Threads are a post-process\nbased on the initial download of keyword-based tweets")
+        ToolTip(self.experiment_combo.tk_entry, "Shows the experiment to get threads on.")
+        row = self.experiment_combo.get_next_row()
+
+        # self.option_checkboxes = Checkboxes(lf, row, "Options", label_width=label_width)
+        # # cb = self.option_checkboxes.add_checkbox("Randomize", self.randomize_callback, dir=DIR.ROW)
+        # # ToolTip(cb, "Randomly select the starting time for each day so that a full pull won't go into tomorrow")
+        # cb = self.option_checkboxes.add_checkbox("Stream to DB", self.implement_me, dir=DIR.ROW)
+        # ToolTip(cb, "Stream to DB: Default at this point. ")
+        # cb = self.option_checkboxes.add_checkbox("Stream to CSV", self.implement_me, dir=DIR.ROW)
+        # ToolTip(cb, "Stream to CSV: Not implemented")
+        # row = self.option_checkboxes.get_next_row()
 
         self.corpus_size_field = DataField(lf, row, 'Corpus Size:', text_width, label_width=label_width)
         self.corpus_size_field.set_text('2000')
@@ -192,6 +200,41 @@ class TweetDownloader(AppBase):
         with open(filename, mode="w", encoding="utf8") as f:
             f.write(s)
 
+    def get_experiment_id_list(self):
+        # set up the selections that come from the db
+        l = []
+        row_dict:Dict
+        query = "select * from table_experiment"
+        result = self.msi.read_data(query)
+        for row_dict in result:
+            s = "{}".format(row_dict['id'])
+            l.append(s)
+        self.experiment_combo.set_combo_list(l)
+
+    def set_experiment_callback(self, event:tk.Event):
+        id = self.experiment_combo.tk_combo.get()
+        self.experiment_combo.clear()
+        self.experiment_combo.set_text(id)
+        self.set_experiment_id(id)
+
+    def set_experiment_id(self, id:int):
+        self.experiment_id = id
+        self.experiment_combo.set_label("Experiment ({}):".format(id))
+        query = "select name, keywords from twitter_v2.table_experiment where id = %s"
+        values = (id,)
+        result = self.msi.read_data(query, values)
+        for row in result:
+            self.dp.dprint("set experiment to id[{}], keywords[{}]".format(id, row['keywords']))
+
+        query = "select count(*) from keyword_tweet_view where is_thread = TRUE and experiment_id = %s"
+        values = (id,)
+        result = self.msi.read_data(query, values)
+        threads = -1
+        for row in result:
+            threads = row['count(*)']
+            self.dp.dprint("Experiment[{}] has {:,} threads".format(id, row['count(*)']))
+        self.experiment_combo.set_label("ID {:,} Threads:".format(threads))
+
     def randomize_callback(self):
         self.randomize = not self.randomize
         # print("self.randomize = {}".format(self.randomize))
@@ -215,7 +258,6 @@ class TweetDownloader(AppBase):
         tk_list = []
         tweets_to_download = self.thread_length.get_as_int()
 
-        self.experiment_id = 1 # TODO: REMOVE THIS AFTER EVERYTHING WORKS
         print("collect_thread_callback with experiment_id = {}".format(self.experiment_id))
         # get the keywords in this experiment so we can create TweetKeyword objects
         query = "select distinct keyword from keyword_tweet_view where experiment_id = {}".format(self.experiment_id)
@@ -259,8 +301,8 @@ class TweetDownloader(AppBase):
         # save this experiment to the database
         sql = "insert into table_experiment (name, date, sample_start, sample_end, keywords) values (%s, %s, %s, %s, %s)"
         values = (self.experiment_field.get_text(), datetime.now(), cur_dt, end_dt, ", ".join(key_list))
-        self.experiment_id = -1
-        self.experiment_id = self.msi.write_sql_values_get_row(sql, values)
+        id = self.msi.write_sql_values_get_row(sql, values)
+        self.set_experiment_id(id)
 
         # starting with the start date, step towards the end date one day at a time
         while cur_dt < end_dt:
@@ -334,7 +376,8 @@ class TweetDownloader(AppBase):
         # save this experiment to the database
         sql = "insert into table_experiment (name, date, sample_start, sample_end, keywords) values (%s, %s, %s, %s, %s)"
         values = (self.experiment_field.get_text(), datetime.now(), cur_dt, end_dt, ", ".join(key_list))
-        self.experiment_id = self.msi.write_sql_values_get_row(sql, values)
+        id = self.msi.write_sql_values_get_row(sql, values)
+        self.set_experiment_id(id)
 
         # starting with the start date, step towards the end date one day at a time
         while cur_dt < end_dt:
@@ -454,9 +497,13 @@ class TweetDownloader(AppBase):
                 par = "{}\n{}".format(par, s)
         return par.strip()
 
+    def setup(self):
+        self.get_experiment_id_list()
+
 
 def main():
     app = TweetDownloader()
+    app.setup()
     app.mainloop()
 
 if __name__ == "__main__":

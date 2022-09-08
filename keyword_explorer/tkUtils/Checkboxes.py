@@ -10,10 +10,12 @@ class DIR(Enum):
 class Checkbox():
     bvar:tk.BooleanVar
     cb:ttk.Checkbutton
+    name:str
 
     def __init__(self, wrapper:tk.Frame, name:str, command:Callable):
         self.bvar = tk.BooleanVar()
         self.bvar.set(False)
+        self.name = name
         self.cb = ttk.Checkbutton(wrapper, text=name, command=command, variable=self.bvar)
 
 class Checkboxes():
@@ -48,6 +50,13 @@ class Checkboxes():
         elif dir == DIR.ROW:
             self.btn_row += 1
         return cb.cb
+
+    def set_checkbox(self, name:str, val:bool):
+        cb:Checkbox
+        for cb in self.check_list:
+            if cb.name == name:
+                cb.bvar = val
+                break
 
     def get_next_row(self):
         return self.row + 1 + self.btn_row

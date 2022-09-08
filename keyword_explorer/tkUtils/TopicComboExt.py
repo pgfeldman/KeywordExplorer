@@ -55,6 +55,9 @@ class TopicComboExt():
         self.col += 1
         return b
 
+    def set_label(self, s:str):
+        self.tk_label.config(text = s)
+
     def set_callback(self, fn:Callable):
         self.callback_fn = fn
 
