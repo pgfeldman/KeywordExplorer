@@ -237,7 +237,7 @@ class TweetDownloader(AppBase):
                 conversation_id = row_dict['conversation_id']
                 print("pulling {} tweets with conversation_id {}".format(tweets_to_download, conversation_id))
                 self.tkws.run_thread_query(tk, conversation_id=conversation_id, tweets_per_sample=tweets_to_download,
-                                           tweets_to_download=tweets_to_download, msi=self.msi)
+                                           tweets_to_download=tweets_to_download, experiment_id=self.experiment_id, msi=self.msi)
 
 
     # TODO: Add condition that exits when corpus size is reached

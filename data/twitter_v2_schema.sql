@@ -34,7 +34,8 @@ SET character_set_client = utf8;
   `author_id` tinyint NOT NULL,
   `conversation_id` tinyint NOT NULL,
   `tweet_id` tinyint NOT NULL,
-  `text` tinyint NOT NULL
+  `text` tinyint NOT NULL,
+  `is_thread` tinyint NOT NULL
 ) ENGINE=MyISAM */;
 SET character_set_client = @saved_cs_client;
 
@@ -72,7 +73,7 @@ CREATE TABLE `table_query` (
   `end_time` datetime DEFAULT NULL,
   `date_executed` datetime DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=2737 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -93,8 +94,10 @@ CREATE TABLE `table_tweet` (
   `text` text DEFAULT NULL,
   `conversation_id` bigint(20) DEFAULT NULL,
   `topic_name` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`row_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3662 DEFAULT CHARSET=utf8mb4;
+  `is_thread` tinyint(1) DEFAULT 0,
+  PRIMARY KEY (`row_id`),
+  UNIQUE KEY `value` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=30050 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -111,7 +114,7 @@ CREATE TABLE `table_tweet` (
 /*!50001 SET collation_connection      = utf8mb4_unicode_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `keyword_tweet_view` AS select `te`.`name` AS `name`,`te`.`id` AS `experiment_id`,`te`.`sample_start` AS `start`,`te`.`sample_end` AS `end`,`te`.`keywords` AS `keywords`,`tq`.`query` AS `query`,`tq`.`keyword` AS `keyword`,`tt`.`author_id` AS `author_id`,`tt`.`conversation_id` AS `conversation_id`,`tt`.`id` AS `tweet_id`,`tt`.`text` AS `text` from ((`table_experiment` `te` join `table_query` `tq` on(`te`.`id` = `tq`.`experiment_id`)) join `table_tweet` `tt` on(`tq`.`id` = `tt`.`query_id`)) */;
+/*!50001 VIEW `keyword_tweet_view` AS select `te`.`name` AS `name`,`te`.`id` AS `experiment_id`,`te`.`sample_start` AS `start`,`te`.`sample_end` AS `end`,`te`.`keywords` AS `keywords`,`tq`.`query` AS `query`,`tq`.`keyword` AS `keyword`,`tt`.`author_id` AS `author_id`,`tt`.`conversation_id` AS `conversation_id`,`tt`.`id` AS `tweet_id`,`tt`.`text` AS `text`,`tt`.`is_thread` AS `is_thread` from ((`table_experiment` `te` join `table_query` `tq` on(`te`.`id` = `tq`.`experiment_id`)) join `table_tweet` `tt` on(`tq`.`id` = `tt`.`query_id`)) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -125,4 +128,4 @@ CREATE TABLE `table_tweet` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2022-09-06 12:41:10
+-- Dump completed on 2022-09-08  9:00:29
