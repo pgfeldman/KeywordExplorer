@@ -27,7 +27,7 @@ class EmbeddingsExplorer(AppBase):
     experiment_combo: TopicComboExt
     keyword_count_field: DataField
     cluster_size_field: DataField
-    expeiment_id: int
+    experiment_id: int
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -42,7 +42,7 @@ class EmbeddingsExplorer(AppBase):
 
         if not self.oai.key_exists():
             message.showwarning("Key Error", "Could not find Environment key 'OPENAI_KEY'")
-        self.expeiment_id = -1
+        self.experiment_id = -1
 
 
     def build_app_view(self, row: int, text_width: int, label_width: int) -> int:
@@ -117,11 +117,42 @@ class EmbeddingsExplorer(AppBase):
 
     def get_embeddings_callback(self):
         print("get_embeddings")
+        keyword = self.keyword_combo.get_text()
+
+        if self.experiment_id == -1 or len(keyword) < 2:
+            message.showwarning("DB Error", "get_embeddings_callback(): Please set database or keyword")
+            return
+
+        query = "select tweet_id, text from keyword_tweet_view where experiment_id = %s and embedding is NULL LIMIT 10"
+        values = (self.experiment_id,)
+        if keyword != 'all_keywords':
+            query = "select tweet_id, text from keyword_tweet_view where experiment_id = %s and keyword = %s and embedding is NULL LIMIT 10"
+            values = (self.experiment_id, keyword)
+
+        engine = self.engine_combo.get_text()
+        print("get_embeddings_callback() Experiment id = {}, Keyword = {}, Engine = {}".format(self.experiment_id, keyword, engine))
+        result = self.msi.read_data(query, values)
+        row_dict:Dict
+        for row_dict in result:
+            id = row_dict['tweet_id']
+            tweet = row_dict['text']
+            embd = self.oai.get_embedding(tweet, engine)
+            print("id: {} text: {} embed: {}".format(id, tweet, embd))
+            query = "update table_tweet set embedding = %s where id = %s"
+            values = ("{}:{}".format(engine, embd), id)
+            self.msi.write_sql_values_get_row(query, values)
+
+
+
+
 
     def get_keyword_entries_callback(self, keyword: str):
         print("get_keyword_entries: keyword = {}, experiment_id = {}".format(keyword, self.experiment_id))
-        query = "select count(*) from keyword_tweet_view where experiment_id = %s and keyword = %s"
-        values = (self.experiment_id, keyword)
+        query = "select count(*) from keyword_tweet_view where experiment_id = %s"
+        values = (self.experiment_id)
+        if keyword != 'all_keywords':
+            query = "select count(*) from keyword_tweet_view where experiment_id = %s and keyword = %s"
+            values = (self.experiment_id, keyword)
         result:Dict = self.msi.read_data(query, values)[0]
         count = result['count(*)']
 
@@ -137,7 +168,7 @@ class EmbeddingsExplorer(AppBase):
         query = "select distinct keyword from table_query where experiment_id = %s"
         values = (self.experiment_id,)
         result = self.msi.read_data(query, values)
-        l = []
+        l = ['all_keywords']
         row_dict:Dict
         for row_dict in result:
             l.append(row_dict['keyword'])

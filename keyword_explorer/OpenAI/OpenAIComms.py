@@ -50,7 +50,8 @@ class OpenAIComms:
         # from https://beta.openai.com/docs/guides/embeddings/what-are-embeddings
         # replace newlines, which can negatively affect performance.
         text = text.replace("\n", " ")
-        return openai.Engine(id=engine).embeddings(input = [text])['data'][0]['embedding']
+        #return openai.Engine(id=engine).embeddings(input = [text])['data'][0]['embedding']
+        return openai.Embedding.create(input = [text], model=engine)['data'][0]['embedding']
 
     def set_engine(self, id:int = -1, name:str = None):
         if id != -1:
