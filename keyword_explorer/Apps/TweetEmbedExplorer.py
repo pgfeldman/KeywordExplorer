@@ -35,7 +35,7 @@ class EmbeddingsExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "EmbeddingsExplorer"
-        self.app_version = "8.26.22"
+        self.app_version = "9.9.22"
         self.geom = (600, 600)
         self.oai = OpenAIComms()
         self.msi = MySqlInterface(user_name="root", db_name="twitter_v2")
