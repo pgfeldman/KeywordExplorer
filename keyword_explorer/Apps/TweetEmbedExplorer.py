@@ -123,10 +123,10 @@ class EmbeddingsExplorer(AppBase):
             message.showwarning("DB Error", "get_embeddings_callback(): Please set database or keyword")
             return
 
-        query = "select tweet_id, text from keyword_tweet_view where experiment_id = %s and embedding is NULL LIMIT 10"
+        query = "select tweet_id, text from keyword_tweet_view where experiment_id = %s and embedding is NULL"
         values = (self.experiment_id,)
         if keyword != 'all_keywords':
-            query = "select tweet_id, text from keyword_tweet_view where experiment_id = %s and keyword = %s and embedding is NULL LIMIT 10"
+            query = "select tweet_id, text from keyword_tweet_view where experiment_id = %s and keyword = %s and embedding is NULL"
             values = (self.experiment_id, keyword)
 
         engine = self.engine_combo.get_text()

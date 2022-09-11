@@ -158,7 +158,10 @@ class TweetKeywords(TwitterV2Base):
 
     def create_historical_conversation_url(self, conversation_id:str, max_result:int = 10, next_token:str = None) -> str:
         tweet_fields = "tweet.fields=lang,author_id,in_reply_to_user_id,created_at,conversation_id"
-        url = "https://api.twitter.com/2/tweets/search/all?max_results={}&query=conversation_id:{}&{}".format(max_result, conversation_id, tweet_fields)
+        tweet_options = "lang:en -is:retweet"
+        url = "https://api.twitter.com/2/tweets/search/all?max_results={}&query=conversation_id:{} " \
+              "{}&{}".format(
+            max_result, conversation_id, tweet_options, tweet_fields)
         # print(url)
         if next_token != None:
             url = "{}&next_token={}".format(url, next_token)
@@ -347,7 +350,7 @@ def exercise_get_threads():
         print("next_token = {}".format(next_token))
         next_token = tks.run_thread_query(tk, conversation_id=test_conversation, tweets_per_sample=10, tweets_to_download=100, next_token=next_token)
         count += 1
-        if count > 20:
+        if count > 5:
             break
     tk.to_print()
 
