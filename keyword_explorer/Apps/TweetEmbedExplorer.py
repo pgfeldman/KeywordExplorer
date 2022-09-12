@@ -26,6 +26,7 @@ class EmbeddingsExplorer(AppBase):
     graph_keyword_combo: TopicComboExt
     experiment_combo: TopicComboExt
     keyword_count_field: DataField
+    embedding_db_field: DataField
     cluster_size_field: DataField
     experiment_id: int
 
@@ -97,30 +98,55 @@ class EmbeddingsExplorer(AppBase):
         self.engine_combo.tk_combo.current(0)
         row = self.engine_combo.get_next_row()
         self.keyword_count_field = DataField(tab, row, "Num rows")
-        self.keyword_count_field.add_button("Get Embeddings", self.get_embeddings_callback)
+        self.keyword_count_field.add_button("Get Embeddings", self.get_oai_embeddings_callback)
         row = self.keyword_count_field.get_next_row()
 
     def build_graph_tab(self, tab: ttk.Frame):
         row = 0
-        lf = tk.LabelFrame(tab, text="Embedding Params")
-        lf.grid(row=row, column=0, columnspan=1, sticky="nsew", padx=5, pady=2)
         # add "select clusters" field and "export corpus" button
-        self.cluster_size_field = DataField(lf, row, "Clusters:")
+        self.embedding_db_field = DataField(tab, row, "Dimensions")
+        b = self.embedding_db_field.add_button("Get", self.get_db_embeddings_callback)
+        ToolTip(b, "Get the high-dimensional embeddings from the DB")
+        self.embedding_db_field.set_text('7')
+        b = self.embedding_db_field.add_button("Set", self.implement_me)
+        ToolTip(b, "Set the projection and cluster data")
+        row = self.embedding_db_field.get_next_row()
+
+        self.cluster_size_field = DataField(tab, row, "Clusters:")
         b = self.cluster_size_field.add_button("Set size", self.implement_me)
         b = self.cluster_size_field.add_button("Label topics", self.implement_me)
-        b = self.cluster_size_field.add_button("Update DB", self.implement_me)
+
+        row = self.cluster_size_field.get_next_row()
 
         f = tk.Frame(tab)
-        f.grid(row=row, column=0, columnspan=1, sticky="nsew", padx=1, pady=1)
+        f.grid(row=row, column=0, columnspan=2, sticky="nsew", padx=1, pady=1)
         row = 0
         self.canvas_frame = CanvasFrame(f, row, "Graph", self.dp, width=550, height=250)
 
-    def get_embeddings_callback(self):
-        print("get_embeddings")
+    def get_db_embeddings_callback(self):
+        print("get_db_embeddings_callback")
         keyword = self.keyword_combo.get_text()
 
         if self.experiment_id == -1 or len(keyword) < 2:
-            message.showwarning("DB Error", "get_embeddings_callback(): Please set database or keyword")
+            message.showwarning("DB Error", "get_db_embeddings_callback(): Please set database and/or keyword")
+            return
+
+        query = "select tweet_id, embedding from keyword_tweet_view where experiment_id = %s limit 10"
+        values = (self.experiment_id,)
+        if keyword != 'all_keywords':
+            query = "select tweet_id, embedding from keyword_tweet_view where experiment_id = %s and keyword = %s LIMIT 10"
+            values = (self.experiment_id, keyword)
+        result = self.msi.read_data(query, values, True)
+        row_dict:Dict
+        for row_dict in result:
+            print(row_dict)
+
+    def get_oai_embeddings_callback(self):
+        print("get_oai_embeddings_callback")
+        keyword = self.keyword_combo.get_text()
+
+        if self.experiment_id == -1 or len(keyword) < 2:
+            message.showwarning("DB Error", "get_oai_embeddings_callback(): Please set database and/or keyword")
             return
 
         query = "select tweet_id, text from keyword_tweet_view where experiment_id = %s and embedding is NULL"
