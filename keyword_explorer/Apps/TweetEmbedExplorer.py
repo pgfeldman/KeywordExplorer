@@ -2,6 +2,7 @@ import re
 import tkinter.messagebox as message
 import tkinter as tk
 from tkinter import ttk
+from matplotlib import pyplot as plt
 
 from keyword_explorer.Apps.AppBase import AppBase
 from keyword_explorer.OpenAI.OpenAIComms import OpenAIComms
@@ -10,6 +11,7 @@ from keyword_explorer.tkUtils.TopicComboExt import TopicComboExt
 from keyword_explorer.tkUtils.DataField import DataField
 from keyword_explorer.tkUtils.ToolTip import ToolTip
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
+from keyword_explorer.utils.ManifoldReduction import ManifoldReduction
 
 from typing import Dict
 
@@ -131,15 +133,30 @@ class EmbeddingsExplorer(AppBase):
             message.showwarning("DB Error", "get_db_embeddings_callback(): Please set database and/or keyword")
             return
 
-        query = "select tweet_id, embedding from keyword_tweet_view where experiment_id = %s limit 10"
+        query = "select tweet_id, embedding from keyword_tweet_view where experiment_id = %s"
         values = (self.experiment_id,)
         if keyword != 'all_keywords':
-            query = "select tweet_id, embedding from keyword_tweet_view where experiment_id = %s and keyword = %s LIMIT 10"
+            query = "select tweet_id, embedding from keyword_tweet_view where experiment_id = %s and keyword = %s"
             values = (self.experiment_id, keyword)
         result = self.msi.read_data(query, values, True)
         row_dict:Dict
+
+        mr:ManifoldReduction = ManifoldReduction(2)
+        print("Loading")
         for row_dict in result:
-            print(row_dict)
+            mr.load_row(row_dict['embedding'])
+
+        fig, axs = plt.subplots(2, 3)
+        i = 0
+        for perplexity in [5, 10, 15, 20, 40, 60]:
+            print("Calculating perplexity = {}".format(perplexity))
+            mr.calc_embeding(perplexity=perplexity)
+            print("Plotting")
+            row = int(i/3)
+            col = i%3
+            mr.plot_reduced(axs[row][col], "perplex = {}".format(perplexity))
+            i += 1
+        plt.show()
 
     def get_oai_embeddings_callback(self):
         print("get_oai_embeddings_callback")
