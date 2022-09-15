@@ -1,3 +1,4 @@
+#import umap
 import re
 import ast
 import numpy as np

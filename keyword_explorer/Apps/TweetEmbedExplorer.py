@@ -149,7 +149,7 @@ class EmbeddingsExplorer(AppBase):
         fig, axs = plt.subplots(2, 3)
         i = 0
         for perplexity in [5, 10, 15, 20, 40, 60]:
-            print("Calculating perplexity = {}".format(perplexity))
+            print("Calculating  perplexity = {}".format(perplexity))
             mr.calc_embeding(perplexity=perplexity)
             print("Plotting")
             row = int(i/3)
