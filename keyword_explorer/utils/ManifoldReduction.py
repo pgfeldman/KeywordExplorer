@@ -4,6 +4,7 @@ import ast
 import numpy as np
 from sklearn.manifold import TSNE
 from sklearn.cluster import DBSCAN
+from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from typing import List, Dict
@@ -50,11 +51,15 @@ class ManifoldReduction:
         self.embedding_list.append(et)
         return et
 
-    def calc_embeding(self, perplexity:int = 15):
+    def calc_embeding(self, perplexity:int = 15, pca_components:int = 0):
         mat = []
         et:EmbeddedText
         for et in self.embedding_list:
             mat.append(et.original)
+        if pca_components > 0:
+            print("ManifoldReduction.calc_embedding: Intermediate PCA reduction to {} dimensions".format(pca_components))
+            pca = PCA(n_components=pca_components)
+            mat = pca.fit(mat).transform(mat)
         tsne = TSNE(n_components=self.target_dim, perplexity=perplexity, random_state=42, init='random', learning_rate=200)
         reduced_list = tsne.fit_transform(mat)
         for i in range(len(reduced_list)):
@@ -82,8 +87,6 @@ class ManifoldReduction:
             et.cluster_id = labels[i]
             et.cluster_name = "cluster_{}".format(et.cluster_id)
         print("Clusters for eps = {}, min_samples = {}: {}".format(eps, min_samples, set(clustering.labels_)))
-
-
 
     def plot_reduced(self, axs, title:str = None):
         et:EmbeddedText
@@ -139,7 +142,7 @@ def main():
     fig, axs = plt.subplots(2, 3)
     i = 0
     for perplexity in [5, 10, 15, 20, 40, 60]:
-        mr.calc_embeding(perplexity=perplexity)
+        mr.calc_embeding(perplexity=perplexity, pca_components=10)
         mr.dbscan(eps=8, min_samples=8)
         #print("run_{} = {}".format(i, mr.reduced_to_str()))
 
