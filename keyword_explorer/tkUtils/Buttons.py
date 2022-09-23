@@ -14,10 +14,10 @@ class Buttons():
     def __init__(self, parent:'tk.Frame', row:int, label:str, label_width:int=20, sticky="nsew"):
         self.parent = parent
         self.row = row
-        self.tk_label = tk.Label(parent, text=label, width=label_width, anchor="w")
-
-        self.wrapper = tk.Frame(parent)
+        self.tk_label = tk.Label(parent, text=label, width=label_width, anchor="w")#, background="pink")
         self.tk_label.grid(column=0, row=row, sticky="w", padx=5)
+
+        self.wrapper = tk.Frame(parent)#, background="pink")
         self.wrapper.grid(column=1, row=row, sticky=sticky)
 
         self.col = 0

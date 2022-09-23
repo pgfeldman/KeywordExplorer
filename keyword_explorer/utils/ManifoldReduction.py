@@ -23,6 +23,8 @@ class EmbeddedText:
         self.raw_str = raw_str
         self.source_regex = re.compile(r"\w+-\w+-\w+-\d+:")
         self.parse()
+        self.cluster_id = -1
+        self.cluster_name = "unset"
 
     def parse(self):
         # print("parsing {}".format(self.raw_str))
@@ -88,6 +90,33 @@ class ManifoldReduction:
             et.cluster_name = "cluster_{}".format(et.cluster_id)
         print("Clusters for eps = {}, min_samples = {}: {}".format(eps, min_samples, set(clustering.labels_)))
 
+    def plot(self, title:str = None):
+        et:EmbeddedText
+        cluster_dict = {}
+        for et in self.embedding_list:
+            d:Dict
+            if et.cluster_name not in cluster_dict:
+                d = {'x':[], 'y':[]}
+                cluster_dict[et.cluster_name] = d
+            else:
+                d = cluster_dict[et.cluster_name]
+
+            d['x'].append(et.reduced[0])
+            d['y'].append(et.reduced[1])
+        if title != None:
+            plt.title(title)
+
+        l1 = list(mcolors.TABLEAU_COLORS.values())
+        c_index = 0
+        for name, d in cluster_dict.items():
+            x = d['x']
+            y = d['y']
+            c = l1[c_index]
+            plt.scatter(x, y, s=2, c=c)
+            c_index += 1
+            if c_index > len(l1)-1:
+                c_index = 0
+
     def plot_reduced(self, axs, title:str = None):
         et:EmbeddedText
         cluster_dict = {}
@@ -139,6 +168,9 @@ def main():
             et.cluster_name = "cluster {}".format(1)
 
     print("Calculating new manifolds")
+    # mr.calc_embeding(perplexity=80, pca_components=10)
+    # mr.dbscan(eps=8, min_samples=8)
+    # mr.plot("perplex = {}".format(80))
     fig, axs = plt.subplots(2, 3)
     i = 0
     for perplexity in [5, 10, 15, 20, 40, 60]:

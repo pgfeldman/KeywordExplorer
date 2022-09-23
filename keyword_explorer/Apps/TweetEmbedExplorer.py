@@ -9,6 +9,8 @@ from keyword_explorer.OpenAI.OpenAIComms import OpenAIComms
 from keyword_explorer.tkUtils.CanvasFrame import CanvasFrame
 from keyword_explorer.tkUtils.TopicComboExt import TopicComboExt
 from keyword_explorer.tkUtils.DataField import DataField
+from keyword_explorer.tkUtils.LabeledParam import LabeledParam
+from keyword_explorer.tkUtils.Buttons import Buttons
 from keyword_explorer.tkUtils.ToolTip import ToolTip
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
 from keyword_explorer.utils.ManifoldReduction import ManifoldReduction
@@ -28,8 +30,10 @@ class EmbeddingsExplorer(AppBase):
     graph_keyword_combo: TopicComboExt
     experiment_combo: TopicComboExt
     keyword_count_field: DataField
-    embedding_db_field: DataField
-    cluster_size_field: DataField
+    pca_dim_param: LabeledParam
+    eps_param: LabeledParam
+    min_samples_param: LabeledParam
+    perplexity_param: LabeledParam
     experiment_id: int
 
     def __init__(self, *args, **kwargs):
@@ -39,7 +43,7 @@ class EmbeddingsExplorer(AppBase):
     def setup_app(self):
         self.app_name = "EmbeddingsExplorer"
         self.app_version = "9.9.22"
-        self.geom = (600, 600)
+        self.geom = (600, 620)
         self.oai = OpenAIComms()
         self.msi = MySqlInterface(user_name="root", db_name="twitter_v2")
 
@@ -103,22 +107,33 @@ class EmbeddingsExplorer(AppBase):
         self.keyword_count_field.add_button("Get Embeddings", self.get_oai_embeddings_callback)
         row = self.keyword_count_field.get_next_row()
 
+    def build_param_row(self, parent:tk.Frame, row:int) -> int:
+        f = tk.Frame(parent)
+        f.grid(row=row, column=0, columnspan=2, sticky="nsew", padx=1, pady=1)
+        self.pca_dim_param = LabeledParam(f, 0, "PCA Dim:")
+        self.pca_dim_param.set_text('10')
+        self.eps_param = LabeledParam(f, 2, "EPS:")
+        self.eps_param.set_text('8')
+        self.min_samples_param = LabeledParam(f, 4, "Min Samples:")
+        self.min_samples_param.set_text('5')
+        self.perplexity_param = LabeledParam(f, 6, "Perplex:")
+        self.perplexity_param.set_text('80')
+        return row + 1
+
     def build_graph_tab(self, tab: ttk.Frame):
         row = 0
+        row = self.build_param_row(tab, row)
+        f = tk.Frame(tab)
         # add "select clusters" field and "export corpus" button
-        self.embedding_db_field = DataField(tab, row, "Dimensions")
-        b = self.embedding_db_field.add_button("Get", self.get_db_embeddings_callback)
+        buttons = Buttons(tab, row, "Commands", label_width=10)
+        b = buttons.add_button("Retreive", self.get_db_embeddings_callback)
         ToolTip(b, "Get the high-dimensional embeddings from the DB")
-        self.embedding_db_field.set_text('7')
-        b = self.embedding_db_field.add_button("Set", self.implement_me)
+        b = buttons.add_button("Reduce", self.implement_me)
+        b = buttons.add_button("Cluster", self.implement_me)
         ToolTip(b, "Set the projection and cluster data")
-        row = self.embedding_db_field.get_next_row()
-
-        self.cluster_size_field = DataField(tab, row, "Clusters:")
-        b = self.cluster_size_field.add_button("Set size", self.implement_me)
-        b = self.cluster_size_field.add_button("Label topics", self.implement_me)
-
-        row = self.cluster_size_field.get_next_row()
+        b = buttons.add_button("PyPlot", self.implement_me)
+        b = buttons.add_button("Label topics", self.implement_me)
+        row = buttons.get_next_row()
 
         f = tk.Frame(tab)
         f.grid(row=row, column=0, columnspan=2, sticky="nsew", padx=1, pady=1)
@@ -142,20 +157,22 @@ class EmbeddingsExplorer(AppBase):
         row_dict:Dict
 
         mr:ManifoldReduction = ManifoldReduction(2)
-        print("Loading")
+        print("Loading {} rows".format(len(result)))
         for row_dict in result:
             mr.load_row(row_dict['embedding'])
 
-        fig, axs = plt.subplots(2, 3)
-        i = 0
-        for perplexity in [5, 10, 15, 20, 40, 60]:
-            print("Calculating  perplexity = {}".format(perplexity))
-            mr.calc_embeding(perplexity=perplexity)
-            print("Plotting")
-            row = int(i/3)
-            col = i%3
-            mr.plot_reduced(axs[row][col], "perplex = {}".format(perplexity))
-            i += 1
+        fig, axs = plt.subplots(1, 1)
+        pca_dim = self.pca_dim_param.get_as_int()
+        eps = self.eps_param.get_as_int()
+        min_namples = self.min_samples_param.get_as_int()
+        perplexity = self.perplexity_param.get_as_int()
+
+        print("Calculating  perplexity = {}".format(perplexity))
+        mr.calc_embeding(perplexity=perplexity, pca_components=pca_dim)
+        mr.dbscan(eps=eps, min_samples=min_namples)
+
+        print("Plotting")
+        mr.plot("perplex = {}".format(perplexity))
         plt.show()
 
     def get_oai_embeddings_callback(self):
@@ -184,9 +201,6 @@ class EmbeddingsExplorer(AppBase):
             query = "update table_tweet set embedding = %s where id = %s"
             values = ("{}:{}".format(engine, embd), id)
             self.msi.write_sql_values_get_row(query, values)
-
-
-
 
 
     def get_keyword_entries_callback(self, keyword: str):
