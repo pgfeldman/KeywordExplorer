@@ -134,7 +134,7 @@ class EmbeddingsExplorer(AppBase):
         ToolTip(b, "Reduce to 2 dimensions with PCS and TSNE")
         b = buttons.add_button("Cluster", self.cluster_callback)
         ToolTip(b, "Compute clusters on reduced data")
-        b = buttons.add_button("PyPlot", self.plot_calloback)
+        b = buttons.add_button("PyPlot", self.plot_callback)
         ToolTip(b, "Plot the clustered points using PyPlot")
         b = buttons.add_button("Label topics", self.label_clusters_callback)
         ToolTip(b, "Use GPT to guess at topic names for clusters")
@@ -183,10 +183,15 @@ class EmbeddingsExplorer(AppBase):
         self.mr.dbscan(eps=eps, min_samples=min_samples)
         print("\tFinished clustering")
 
-    def plot_calloback(self):
+    def plot_callback(self):
         print("Plotting")
+        keyword = self.keyword_combo.get_text()
         perplexity = self.perplexity_param.get_as_int()
-        self.mr.plot("perplex = {}".format(perplexity))
+        eps = self.eps_param.get_as_int()
+        min_samples = self.min_samples_param.get_as_int()
+        pca_dim = self.pca_dim_param.get_as_int()
+        self.mr.plot("{}\ndim: {}, eps: {}, min_sample: {}, perplex = {}".format(
+            keyword, pca_dim, eps, min_samples, perplexity))
         plt.show()
 
     def label_clusters_callback(self):
