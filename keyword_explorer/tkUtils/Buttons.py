@@ -22,8 +22,10 @@ class Buttons():
 
         self.col = 0
 
-    def add_button(self, name:str, command:Callable, sticky:Any = (tk.N, tk.W)) -> ttk.Button:
-        b = ttk.Button(self.wrapper, text=name, command=command)
+    def add_button(self, name:str,  command:Callable, width:int = 10, sticky:Any = (tk.N, tk.W)) -> ttk.Button:
+        if width < 0:
+            width = len(name)+1
+        b = ttk.Button(self.wrapper, text=name, width=width, command=command)
         b.grid(column=self.col, row=0, sticky=sticky, pady=2, padx=5)
         self.col += 1
         return b

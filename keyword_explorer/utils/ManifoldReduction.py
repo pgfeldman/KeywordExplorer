@@ -7,7 +7,9 @@ from sklearn.cluster import DBSCAN
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
-from typing import List, Dict
+
+from keyword_explorer.tkUtils.MoveableNode import MovableNode
+from typing import List, Dict, Union
 
 class EmbeddedText:
     raw_str:str
@@ -18,6 +20,7 @@ class EmbeddedText:
     original:List
     reduced:List
     vis_dim:List
+    mnode:Union[None, MovableNode]
 
     def __init__(self, raw_str:str):
         self.raw_str = raw_str

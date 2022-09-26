@@ -3,6 +3,7 @@ import tkinter.messagebox as message
 import tkinter as tk
 from tkinter import ttk
 from matplotlib import pyplot as plt
+import matplotlib.colors as mcolors
 
 from keyword_explorer.Apps.AppBase import AppBase
 from keyword_explorer.OpenAI.OpenAIComms import OpenAIComms
@@ -12,10 +13,11 @@ from keyword_explorer.tkUtils.DataField import DataField
 from keyword_explorer.tkUtils.LabeledParam import LabeledParam
 from keyword_explorer.tkUtils.Buttons import Buttons
 from keyword_explorer.tkUtils.ToolTip import ToolTip
+from keyword_explorer.tkUtils.MoveableNode import MovableNode
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
 from keyword_explorer.utils.ManifoldReduction import ManifoldReduction, EmbeddedText
 
-from typing import Dict
+from typing import Dict, List
 
 # General TODO:
 # Move "selected experiment" and "keyword" out of the tabs
@@ -35,7 +37,9 @@ class EmbeddingsExplorer(AppBase):
     eps_param: LabeledParam
     min_samples_param: LabeledParam
     perplexity_param: LabeledParam
+    rows_param: LabeledParam
     experiment_id: int
+    et_list:List # list of ets with active moveableNodes
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -120,6 +124,7 @@ class EmbeddingsExplorer(AppBase):
         self.min_samples_param.set_text('5')
         self.perplexity_param = LabeledParam(f, 6, "Perplex:")
         self.perplexity_param.set_text('80')
+        self.rows_param = LabeledParam(f, 8, "Limit:")
         return row + 1
 
     def build_graph_tab(self, tab: ttk.Frame):
@@ -128,15 +133,17 @@ class EmbeddingsExplorer(AppBase):
         f = tk.Frame(tab)
         # add "select clusters" field and "export corpus" button
         buttons = Buttons(tab, row, "Commands", label_width=10)
-        b = buttons.add_button("Retreive", self.retreive_db_embeddings_callback)
+        b = buttons.add_button("Retreive", self.retreive_db_embeddings_callback, -1)
         ToolTip(b, "Get the high-dimensional embeddings from the DB")
-        b = buttons.add_button("Reduce", self.reduce_dimensions_callback)
+        b = buttons.add_button("Reduce", self.reduce_dimensions_callback, -1)
         ToolTip(b, "Reduce to 2 dimensions with PCS and TSNE")
-        b = buttons.add_button("Cluster", self.cluster_callback)
+        b = buttons.add_button("Cluster", self.cluster_callback, -1)
         ToolTip(b, "Compute clusters on reduced data")
-        b = buttons.add_button("PyPlot", self.plot_callback)
+        b = buttons.add_button("Plot", self.plot_callback, -1)
         ToolTip(b, "Plot the clustered points using PyPlot")
-        b = buttons.add_button("Label topics", self.label_clusters_callback)
+        b = buttons.add_button("Explore", self.explore_callback(), -1)
+        ToolTip(b, "Interactive graph of a subsample of points")
+        b = buttons.add_button("Topics", self.label_clusters_callback, -1)
         ToolTip(b, "Use GPT to guess at topic names for clusters")
         row = buttons.get_next_row()
 
@@ -190,21 +197,27 @@ class EmbeddingsExplorer(AppBase):
         eps = self.eps_param.get_as_int()
         min_samples = self.min_samples_param.get_as_int()
         pca_dim = self.pca_dim_param.get_as_int()
-        # self.mr.plot("{}\ndim: {}, eps: {}, min_sample: {}, perplex = {}".format(
-        #     keyword, pca_dim, eps, min_samples, perplexity))
-        # plt.show()
+        self.mr.plot("{}\ndim: {}, eps: {}, min_sample: {}, perplex = {}".format(
+            keyword, pca_dim, eps, min_samples, perplexity))
+        plt.show()
 
+    def explore_callback(self):
         et:EmbeddedText
+        n:MovableNode
+        color_list = list(mcolors.TABLEAU_COLORS.values())
         num_nodes = len(self.mr.embedding_list)
-        for i in range(num_nodes):
+        step = int(num_nodes / self.rows_param.get_as_int())
+        for i in range(0, num_nodes, step):
             et = self.mr.embedding_list[i]
+            c = self.mr.get_cluster_color(et.cluster_id, color_list)
+            x = et.reduced[0]
+            y = et.reduced[1]
+            if et.mnode == None:
+                n = self.canvas_frame.create_MoveableNode("{}_{}".format(c, i), x=x, y=y, color=c, size = 1, show_name=False)
+                et.mnode = n
+            else:
+                et.mnode.set_color(c)
 
-            color = "red"
-            if i < num_nodes/3:
-                color = "blue"
-            elif i > num_nodes *2/3:
-                color = "green"
-            n = self.canvas_frame.create_MoveableNode("{}_{}".format(color, i), color=color, size = 1, show_name=False)
 
     def label_clusters_callback(self):
         pass
@@ -248,6 +261,7 @@ class EmbeddingsExplorer(AppBase):
         count = result['count(*)']
 
         self.keyword_count_field.set_text(count)
+        self.rows_param.set_text(count)
 
     def keyword_callback(self, event:tk.Event):
         print("keyword_callback: event = {}".format(event))
