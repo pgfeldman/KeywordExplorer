@@ -125,6 +125,7 @@ class EmbeddingsExplorer(AppBase):
         self.perplexity_param = LabeledParam(f, 6, "Perplex:")
         self.perplexity_param.set_text('80')
         self.rows_param = LabeledParam(f, 8, "Limit:")
+        self.rows_param.set_text('1000')
         return row + 1
 
     def build_graph_tab(self, tab: ttk.Frame):
@@ -206,6 +207,8 @@ class EmbeddingsExplorer(AppBase):
         n:MovableNode
         color_list = list(mcolors.TABLEAU_COLORS.values())
         num_nodes = len(self.mr.embedding_list)
+        if num_nodes == 0:
+            return
         step = int(num_nodes / self.rows_param.get_as_int())
         for i in range(0, num_nodes, step):
             et = self.mr.embedding_list[i]
