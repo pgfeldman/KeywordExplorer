@@ -13,7 +13,7 @@ from keyword_explorer.tkUtils.LabeledParam import LabeledParam
 from keyword_explorer.tkUtils.Buttons import Buttons
 from keyword_explorer.tkUtils.ToolTip import ToolTip
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
-from keyword_explorer.utils.ManifoldReduction import ManifoldReduction
+from keyword_explorer.utils.ManifoldReduction import ManifoldReduction, EmbeddedText
 
 from typing import Dict
 
@@ -190,9 +190,21 @@ class EmbeddingsExplorer(AppBase):
         eps = self.eps_param.get_as_int()
         min_samples = self.min_samples_param.get_as_int()
         pca_dim = self.pca_dim_param.get_as_int()
-        self.mr.plot("{}\ndim: {}, eps: {}, min_sample: {}, perplex = {}".format(
-            keyword, pca_dim, eps, min_samples, perplexity))
-        plt.show()
+        # self.mr.plot("{}\ndim: {}, eps: {}, min_sample: {}, perplex = {}".format(
+        #     keyword, pca_dim, eps, min_samples, perplexity))
+        # plt.show()
+
+        et:EmbeddedText
+        num_nodes = len(self.mr.embedding_list)
+        for i in range(num_nodes):
+            et = self.mr.embedding_list[i]
+
+            color = "red"
+            if i < num_nodes/3:
+                color = "blue"
+            elif i > num_nodes *2/3:
+                color = "green"
+            n = self.canvas_frame.create_MoveableNode("{}_{}".format(color, i), color=color, size = 1, show_name=False)
 
     def label_clusters_callback(self):
         pass
@@ -256,7 +268,7 @@ class EmbeddingsExplorer(AppBase):
 
     def setup(self):
         # set up the canvas
-        self.canvas_frame.setup(debug=True, show_names=False)
+        self.canvas_frame.setup(debug=False, show_names=False)
 
         # set up the selections that come from the db
         l = []

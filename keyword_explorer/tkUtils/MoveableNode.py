@@ -39,7 +39,6 @@ class MovableNode:
     show_name:bool
     selected_color = "red"
     size:float
-    clamed_size:float
     color:str
     neighbor_dict:Dict
     all_nodes_list:list

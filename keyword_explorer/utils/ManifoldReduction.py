@@ -90,6 +90,10 @@ class ManifoldReduction:
             et.cluster_name = "cluster_{}".format(et.cluster_id)
         print("Clusters for eps = {}, min_samples = {}: {}".format(eps, min_samples, set(clustering.labels_)))
 
+    def get_cluster_color(self, i:int, cl:List) -> str:
+        c_index = i % len(cl)
+        return cl[c_index]
+
     def plot(self, title:str = None):
         et:EmbeddedText
         cluster_dict = {}
@@ -111,11 +115,9 @@ class ManifoldReduction:
         for name, d in cluster_dict.items():
             x = d['x']
             y = d['y']
-            c = l1[c_index]
+            c = self.get_cluster_color(c_index, l1)
             plt.scatter(x, y, s=2, c=c)
             c_index += 1
-            if c_index > len(l1)-1:
-                c_index = 0
 
     def plot_reduced(self, axs, title:str = None):
         et:EmbeddedText
@@ -138,11 +140,9 @@ class ManifoldReduction:
         for name, d in cluster_dict.items():
             x = d['x']
             y = d['y']
-            c = l1[c_index]
+            c = self.get_cluster_color(c_index, l1)
             axs.scatter(x, y, s=2, c=c)
             c_index += 1
-            if c_index > len(l1)-1:
-                c_index = 0
 
     def reduced_to_str(self) -> str:
         et:EmbeddedText
