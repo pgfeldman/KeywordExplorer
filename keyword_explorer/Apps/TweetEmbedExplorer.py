@@ -24,6 +24,7 @@ from typing import Dict
 class EmbeddingsExplorer(AppBase):
     oai: OpenAIComms
     msi: MySqlInterface
+    mr: ManifoldReduction
     canvas_frame: CanvasFrame
     engine_combo: TopicComboExt
     keyword_combo: TopicComboExt
@@ -42,10 +43,11 @@ class EmbeddingsExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "EmbeddingsExplorer"
-        self.app_version = "9.9.22"
+        self.app_version = "9.26.22"
         self.geom = (600, 620)
         self.oai = OpenAIComms()
         self.msi = MySqlInterface(user_name="root", db_name="twitter_v2")
+        self.mr = ManifoldReduction()
 
         if not self.oai.key_exists():
             message.showwarning("Key Error", "Could not find Environment key 'OPENAI_KEY'")
@@ -126,13 +128,16 @@ class EmbeddingsExplorer(AppBase):
         f = tk.Frame(tab)
         # add "select clusters" field and "export corpus" button
         buttons = Buttons(tab, row, "Commands", label_width=10)
-        b = buttons.add_button("Retreive", self.get_db_embeddings_callback)
+        b = buttons.add_button("Retreive", self.retreive_db_embeddings_callback)
         ToolTip(b, "Get the high-dimensional embeddings from the DB")
-        b = buttons.add_button("Reduce", self.implement_me)
-        b = buttons.add_button("Cluster", self.implement_me)
-        ToolTip(b, "Set the projection and cluster data")
-        b = buttons.add_button("PyPlot", self.implement_me)
-        b = buttons.add_button("Label topics", self.implement_me)
+        b = buttons.add_button("Reduce", self.reduce_dimensions_callback)
+        ToolTip(b, "Reduce to 2 dimensions with PCS and TSNE")
+        b = buttons.add_button("Cluster", self.cluster_callback)
+        ToolTip(b, "Compute clusters on reduced data")
+        b = buttons.add_button("PyPlot", self.plot_calloback)
+        ToolTip(b, "Plot the clustered points using PyPlot")
+        b = buttons.add_button("Label topics", self.label_clusters_callback)
+        ToolTip(b, "Use GPT to guess at topic names for clusters")
         row = buttons.get_next_row()
 
         f = tk.Frame(tab)
@@ -140,7 +145,7 @@ class EmbeddingsExplorer(AppBase):
         row = 0
         self.canvas_frame = CanvasFrame(f, row, "Graph", self.dp, width=550, height=250)
 
-    def get_db_embeddings_callback(self):
+    def retreive_db_embeddings_callback(self):
         print("get_db_embeddings_callback")
         keyword = self.keyword_combo.get_text()
 
@@ -148,6 +153,7 @@ class EmbeddingsExplorer(AppBase):
             message.showwarning("DB Error", "get_db_embeddings_callback(): Please set database and/or keyword")
             return
 
+        print("\t Loading from DB")
         query = "select tweet_id, embedding from keyword_tweet_view where experiment_id = %s"
         values = (self.experiment_id,)
         if keyword != 'all_keywords':
@@ -156,24 +162,35 @@ class EmbeddingsExplorer(AppBase):
         result = self.msi.read_data(query, values, True)
         row_dict:Dict
 
-        mr:ManifoldReduction = ManifoldReduction(2)
-        print("Loading {} rows".format(len(result)))
+        print("\tClearing ManifoldReduction")
+        self.mr.clear()
+        print("\tLoading {} rows".format(len(result)))
         for row_dict in result:
-            mr.load_row(row_dict['embedding'])
+            self.mr.load_row(row_dict['embedding'])
+        print("\tFinished loading")
 
-        fig, axs = plt.subplots(1, 1)
+    def reduce_dimensions_callback(self):
         pca_dim = self.pca_dim_param.get_as_int()
-        eps = self.eps_param.get_as_int()
-        min_namples = self.min_samples_param.get_as_int()
         perplexity = self.perplexity_param.get_as_int()
+        print("Reducing: PCA dim = {}  perplexity = {}".format(pca_dim, perplexity))
+        self.mr.calc_embeding(perplexity=perplexity, pca_components=pca_dim)
+        print("\tFinished dimension reduction")
 
-        print("Calculating  perplexity = {}".format(perplexity))
-        mr.calc_embeding(perplexity=perplexity, pca_components=pca_dim)
-        mr.dbscan(eps=eps, min_samples=min_namples)
+    def cluster_callback(self):
+        print("Clustering")
+        eps = self.eps_param.get_as_int()
+        min_samples = self.min_samples_param.get_as_int()
+        self.mr.dbscan(eps=eps, min_samples=min_samples)
+        print("\tFinished clustering")
 
+    def plot_calloback(self):
         print("Plotting")
-        mr.plot("perplex = {}".format(perplexity))
+        perplexity = self.perplexity_param.get_as_int()
+        self.mr.plot("perplex = {}".format(perplexity))
         plt.show()
+
+    def label_clusters_callback(self):
+        pass
 
     def get_oai_embeddings_callback(self):
         print("get_oai_embeddings_callback")
