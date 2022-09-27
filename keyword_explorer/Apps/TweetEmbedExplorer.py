@@ -39,7 +39,6 @@ class EmbeddingsExplorer(AppBase):
     perplexity_param: LabeledParam
     rows_param: LabeledParam
     experiment_id: int
-    et_list:List # list of ets with active moveableNodes
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -165,16 +164,23 @@ class EmbeddingsExplorer(AppBase):
         query = "select tweet_id, embedding from keyword_tweet_view where experiment_id = %s"
         values = (self.experiment_id,)
         if keyword != 'all_keywords':
-            query = "select tweet_id, embedding from keyword_tweet_view where experiment_id = %s and keyword = %s"
+            query = "select tweet_id, text, embedding from keyword_tweet_view where experiment_id = %s and keyword = %s"
             values = (self.experiment_id, keyword)
         result = self.msi.read_data(query, values, True)
         row_dict:Dict
 
         print("\tClearing ManifoldReduction")
         self.mr.clear()
+        self.canvas_frame.clear_Nodes()
         print("\tLoading {} rows".format(len(result)))
+        et:EmbeddedText
         for row_dict in result:
-            self.mr.load_row(row_dict['embedding'])
+            et = self.mr.load_row(row_dict['embedding'])
+            et.text = row_dict['text']
+
+        for i in range(10):
+            et = self.mr.embedding_list[i]
+            print(et.to_string())
         print("\tFinished loading")
 
     def reduce_dimensions_callback(self):
@@ -207,16 +213,18 @@ class EmbeddingsExplorer(AppBase):
         n:MovableNode
         color_list = list(mcolors.TABLEAU_COLORS.values())
         num_nodes = len(self.mr.embedding_list)
+        print("Explore: num_nordes = {}".format(num_nodes))
         if num_nodes == 0:
             return
         step = int(num_nodes / self.rows_param.get_as_int())
+        print("\tstep = {}".format(step))
         for i in range(0, num_nodes, step):
             et = self.mr.embedding_list[i]
             c = self.mr.get_cluster_color(et.cluster_id, color_list)
             x = et.reduced[0]
             y = et.reduced[1]
             if et.mnode == None:
-                n = self.canvas_frame.create_MoveableNode("{}_{}".format(c, i), x=x, y=y, color=c, size = 1, show_name=False)
+                n = self.canvas_frame.create_MoveableNode(et.text, x=x, y=y, color=c, size = 1, show_name=False)
                 et.mnode = n
             else:
                 et.mnode.set_color(c)

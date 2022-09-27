@@ -14,7 +14,7 @@ from typing import List, Dict, Union
 class EmbeddedText:
     raw_str:str
     source:str
-    text:str
+    text:Union[None, str]
     cluster_id:int
     cluster_name:str
     original:List
@@ -28,6 +28,7 @@ class EmbeddedText:
         self.parse()
         self.cluster_id = -1
         self.cluster_name = "unset"
+        self.text = "unset"
 
     def parse(self):
         # print("parsing {}".format(self.raw_str))
@@ -38,6 +39,9 @@ class EmbeddedText:
         self.original = ast.literal_eval(list_str)
         # for v in self.original:
         #     print(v)
+
+    def to_string(self) -> str:
+        return "Cluster = {}, Text = {}".format(self.cluster_id, self.text)
 
 class ManifoldReduction:
     target_dim:int
