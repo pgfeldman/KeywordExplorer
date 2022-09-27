@@ -29,6 +29,7 @@ class EmbeddedText:
         self.cluster_id = -1
         self.cluster_name = "unset"
         self.text = "unset"
+        self.mnode = None
 
     def parse(self):
         # print("parsing {}".format(self.raw_str))
@@ -46,11 +47,16 @@ class EmbeddedText:
 class ManifoldReduction:
     target_dim:int
     embedding_list:List
+    min_x: float
+    min_y: float
+    max_x:float
+    max_y: float
 
     def __init__(self, dim:int = 2):
         print("ManifoldReduction.__init__()")
         self.target_dim:int = min(dim, 3)
         self.clear()
+        self.min_x = self.min_y = self.max_x = self.max_y = 0
 
     def clear(self):
         self.embedding_list = []
@@ -71,9 +77,14 @@ class ManifoldReduction:
             mat = pca.fit(mat).transform(mat)
         tsne = TSNE(n_components=self.target_dim, perplexity=perplexity, random_state=42, init='random', learning_rate=200)
         reduced_list = tsne.fit_transform(mat)
+        self.min_x = self.min_y = self.max_x = self.max_y = 0
         for i in range(len(reduced_list)):
             et = self.embedding_list[i]
             et.reduced = reduced_list[i]
+            self.min_x = min(self.min_x, et.reduced[0])
+            self.min_y = min(self.min_y, et.reduced[1])
+            self.max_x = max(self.max_x, et.reduced[0])
+            self.max_y = max(self.max_y, et.reduced[1])
         print("ManifoldReduction.calc_embedding: Finished reduction to {} dimensions".format(self.target_dim))
 
         # tsne = TSNE(n_components=2, perplexity=15, random_state=42, init='random', learning_rate=200)

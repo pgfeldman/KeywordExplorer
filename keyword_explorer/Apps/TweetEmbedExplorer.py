@@ -141,7 +141,7 @@ class EmbeddingsExplorer(AppBase):
         ToolTip(b, "Compute clusters on reduced data")
         b = buttons.add_button("Plot", self.plot_callback, -1)
         ToolTip(b, "Plot the clustered points using PyPlot")
-        b = buttons.add_button("Explore", self.explore_callback(), -1)
+        b = buttons.add_button("Explore", self.explore_callback, -1)
         ToolTip(b, "Interactive graph of a subsample of points")
         b = buttons.add_button("Topics", self.label_clusters_callback, -1)
         ToolTip(b, "Use GPT to guess at topic names for clusters")
@@ -218,6 +218,7 @@ class EmbeddingsExplorer(AppBase):
             return
         step = int(num_nodes / self.rows_param.get_as_int())
         print("\tstep = {}".format(step))
+        #calculate the x, y scalar
         for i in range(0, num_nodes, step):
             et = self.mr.embedding_list[i]
             c = self.mr.get_cluster_color(et.cluster_id, color_list)
