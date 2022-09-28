@@ -181,6 +181,9 @@ class EmbeddingsExplorer(AppBase):
         for i in range(10):
             et = self.mr.embedding_list[i]
             print(et.to_string())
+
+        message.showinfo("get_db_embeddings_callback", "Finished loading {} rows".format(len(self.mr.embedding_list)))
+
         print("\tFinished loading")
 
     def reduce_dimensions_callback(self):
@@ -189,13 +192,14 @@ class EmbeddingsExplorer(AppBase):
         print("Reducing: PCA dim = {}  perplexity = {}".format(pca_dim, perplexity))
         self.mr.calc_embeding(perplexity=perplexity, pca_components=pca_dim)
         print("\tFinished dimension reduction")
+        message.showinfo("reduce_dimensions_callback", "Reduced to {} dimensions".format(pca_dim))
 
     def cluster_callback(self):
         print("Clustering")
         eps = self.eps_param.get_as_int()
         min_samples = self.min_samples_param.get_as_int()
         self.mr.dbscan(eps=eps, min_samples=min_samples)
-        print("\tFinished clustering")
+        self.dp.dprint("Finished clustering")
 
     def plot_callback(self):
         print("Plotting")
@@ -209,26 +213,32 @@ class EmbeddingsExplorer(AppBase):
         plt.show()
 
     def explore_callback(self):
+        print("Exploring")
         et:EmbeddedText
         n:MovableNode
         color_list = list(mcolors.TABLEAU_COLORS.values())
         num_nodes = len(self.mr.embedding_list)
-        print("Explore: num_nordes = {}".format(num_nodes))
+        print("\tExplore: num_nodes = {}".format(num_nodes))
         if num_nodes == 0:
             return
         step = int(num_nodes / self.rows_param.get_as_int())
         print("\tstep = {}".format(step))
         #calculate the x, y scalar
+        x_dist = self.mr.max_x - self.mr.min_x
+        y_dist = self.mr.max_y - self.mr.min_y
+        x_scale = self.canvas_frame.virtual_canvas_size / x_dist
+        y_scale = self.canvas_frame.virtual_canvas_size / y_dist
         for i in range(0, num_nodes, step):
             et = self.mr.embedding_list[i]
             c = self.mr.get_cluster_color(et.cluster_id, color_list)
-            x = et.reduced[0]
-            y = et.reduced[1]
+            x = et.reduced[0] * x_scale
+            y = et.reduced[1] * y_scale
             if et.mnode == None:
-                n = self.canvas_frame.create_MoveableNode(et.text, x=x, y=y, color=c, size = 1, show_name=False)
+                n = self.canvas_frame.create_MoveableNode(et.text, x=x, y=y, color=c, size = 2, show_name=False)
                 et.mnode = n
             else:
                 et.mnode.set_color(c)
+        print("\tFinished creating points")
 
 
     def label_clusters_callback(self):

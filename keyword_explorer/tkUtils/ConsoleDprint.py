@@ -2,17 +2,22 @@ import tkinter as tk
 from tkinter import ttk
 import tkinter.font as tkf
 import textwrap
+import re
+from typing import Pattern
 
 class ConsoleDprint:
     main_console:tk.Text
     dcount:int = 0
+    safe_regex:Pattern
     def __init__(self, console:tk.Text = None):
         self.set_console(console)
+        self.safe_regex = re.compile(r"[^\d^\w^\s^[:punct:]]")
 
     def set_console(self, console:tk.Text = None):
         self.main_console = console
 
     def dprint(self, text: str, max_chars:int = -1):
+        text = self.safe_regex.sub("?", text)
         if self.main_console:
             if max_chars > -1:
                 text = textwrap.shorten(text, width=max_chars)
