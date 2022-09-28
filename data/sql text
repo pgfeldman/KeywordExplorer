@@ -1,0 +1,16 @@
+mysqldump -u root -p --no-data twitter_v2 > twitter_v2_schema.sql
+
+select tweet_id, text, embedding  from keyword_tweet_view where experiment_id = 1 limit 10;
+
+cluster_id:int
+cluster_name:str
+original:List
+reduced:List
+
+CREATE or REPLACE view keyword_tweet_view as
+    select te.name, te.id as experiment_id, tq.start_time as start, tq.end_time as end, te.keywords,
+           tq.query, tq.keyword, tt.author_id, tt.conversation_id, tt.id as tweet_id, tt.text,
+           tt.is_thread, tt.embedding
+    from table_tweet tt
+    inner join table_query tq on tt.query_id = tq.id
+    inner join table_experiment te on tq.experiment_id = te.id;
