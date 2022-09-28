@@ -113,9 +113,9 @@ class EmbeddingsExplorer(AppBase):
         row = self.keyword_count_field.get_next_row()
         buttons = Buttons(tab, row, "Update DB")
         b = buttons.add_button("Everything", self.implement_me, -1)
-        b = buttons.add_button("GPT Embeddings", self.implement_me, -1)
         b = buttons.add_button("Reduced Embeddings", self.implement_me, -1)
         b = buttons.add_button("Clusters", self.implement_me, -1)
+        b = buttons.add_button("Topic Names", self.implement_me, -1)
         row = buttons.get_next_row()
 
     def build_param_row(self, parent:tk.Frame, row:int) -> int:
@@ -139,7 +139,7 @@ class EmbeddingsExplorer(AppBase):
         f = tk.Frame(tab)
         # add "select clusters" field and "export corpus" button
         buttons = Buttons(tab, row, "Commands", label_width=10)
-        b = buttons.add_button("Retreive", self.retreive_db_embeddings_callback, -1)
+        b = buttons.add_button("Retreive", self.retreive_tweet_data_callback, -1)
         ToolTip(b, "Get the high-dimensional embeddings from the DB")
         b = buttons.add_button("Reduce", self.reduce_dimensions_callback, -1)
         ToolTip(b, "Reduce to 2 dimensions with PCS and TSNE")
@@ -158,7 +158,7 @@ class EmbeddingsExplorer(AppBase):
         row = 0
         self.canvas_frame = CanvasFrame(f, row, "Graph", self.dp, width=550, height=250)
 
-    def retreive_db_embeddings_callback(self):
+    def retreive_tweet_data_callback(self):
         print("get_db_embeddings_callback")
         keyword = self.keyword_combo.get_text()
 
