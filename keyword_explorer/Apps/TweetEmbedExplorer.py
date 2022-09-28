@@ -17,7 +17,7 @@ from keyword_explorer.tkUtils.MoveableNode import MovableNode
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
 from keyword_explorer.utils.ManifoldReduction import ManifoldReduction, EmbeddedText
 
-from typing import Dict, List
+from typing import Dict, List, Any
 
 # General TODO:
 # Move "selected experiment" and "keyword" out of the tabs
@@ -158,6 +158,17 @@ class EmbeddingsExplorer(AppBase):
         row = 0
         self.canvas_frame = CanvasFrame(f, row, "Graph", self.dp, width=550, height=250)
 
+    def safe_dict(self, d:Dict, name:str, default:Any) -> Any:
+        if name in d:
+            return d[name]
+        return default
+
+    def store_all_tweet_data_callback(self):
+        et:EmbeddedText
+        for et in self.mr.embedding_list:
+            sql = "update table_tweet set cluster_id = %s, cluster_name = %s, reduced = %s where row_id = %s;"
+            vals = (et.cluster_id, et.cluster_name, "{}".format(et.reduced))
+            self.msi.write_sql_values_get_row(sql, vals)
     def retreive_tweet_data_callback(self):
         print("get_db_embeddings_callback")
         keyword = self.keyword_combo.get_text()
@@ -170,7 +181,7 @@ class EmbeddingsExplorer(AppBase):
         query = "select tweet_id, embedding from keyword_tweet_view where experiment_id = %s"
         values = (self.experiment_id,)
         if keyword != 'all_keywords':
-            query = "select tweet_id, text, embedding from keyword_tweet_view where experiment_id = %s and keyword = %s"
+            query = "select tweet_row, tweet_id, text, embedding from keyword_tweet_view where experiment_id = %s and keyword = %s"
             values = (self.experiment_id, keyword)
         result = self.msi.read_data(query, values, True)
         row_dict:Dict
@@ -181,8 +192,12 @@ class EmbeddingsExplorer(AppBase):
         print("\tLoading {} rows".format(len(result)))
         et:EmbeddedText
         for row_dict in result:
-            et = self.mr.load_row(row_dict['embedding'])
+            et = self.mr.load_row(row_dict['tweet_row'], row_dict['embedding'])
             et.text = row_dict['text']
+            reduced = self.safe_dict(row_dict, 'reduced', None)
+            cluster_id = self.safe_dict(row_dict, 'cluster_id', None)
+            cluster_name = self.safe_dict(row_dict, 'cluster_name', None)
+            et.set_optional(reduced, cluster_id, cluster_name)
 
         for i in range(10):
             et = self.mr.embedding_list[i]

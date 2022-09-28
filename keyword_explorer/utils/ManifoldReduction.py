@@ -9,9 +9,10 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
 from keyword_explorer.tkUtils.MoveableNode import MovableNode
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Any
 
 class EmbeddedText:
+    row_id:int
     raw_str:str
     source:str
     text:Union[None, str]
@@ -22,10 +23,12 @@ class EmbeddedText:
     vis_dim:List
     mnode:Union[None, MovableNode]
 
-    def __init__(self, raw_str:str):
+    def __init__(self, row_id:int, raw_str:str):
+        self.row_id = row_id
         self.raw_str = raw_str
         self.source_regex = re.compile(r"\w+-\w+-\w+-\d+:")
         self.parse()
+        self.reduced = [0, 0]
         self.cluster_id = -1
         self.cluster_name = "unset"
         self.text = "unset"
@@ -41,8 +44,24 @@ class EmbeddedText:
         # for v in self.original:
         #     print(v)
 
+    def safe_assign(self, val:Any, default:Any) -> Any:
+        if val != None:
+            return val
+        return default
+    def set_optional(self, reduced_str:str, cluster_id:int, cluster_name:str):
+        if reduced_str != None:
+            self.reduced = ast.literal_eval(reduced_str)
+
+        if cluster_id != None:
+            self.cluster_id = cluster_id
+
+        if cluster_name != None:
+            self.cluster_name = cluster_name
+
+
     def to_string(self) -> str:
-        return "Cluster = {}, Text = {}".format(self.cluster_id, self.text)
+        return "Tweet row = {}, Cluster ID = {}, Cluster Name = {}, Reduced = {}, Text = {}".format(
+            self.row_id, self.cluster_id, self.cluster_name, self.reduced, self.text)
 
 class ManifoldReduction:
     target_dim:int
@@ -61,8 +80,8 @@ class ManifoldReduction:
     def clear(self):
         self.embedding_list = []
 
-    def load_row(self, row_str:str) -> EmbeddedText:
-        et = EmbeddedText(row_str)
+    def load_row(self, tweet_row:int, row_str:str) -> EmbeddedText:
+        et = EmbeddedText(int(tweet_row), row_str)
         self.embedding_list.append(et)
         return et
 
@@ -75,6 +94,7 @@ class ManifoldReduction:
             print("ManifoldReduction.calc_embedding: Intermediate PCA reduction to {} dimensions".format(pca_components))
             pca = PCA(n_components=pca_components)
             mat = pca.fit(mat).transform(mat)
+        print("\tTSNE step")
         tsne = TSNE(n_components=self.target_dim, perplexity=perplexity, random_state=42, init='random', learning_rate=200)
         reduced_list = tsne.fit_transform(mat)
         self.min_x = self.min_y = self.max_x = self.max_y = 0
