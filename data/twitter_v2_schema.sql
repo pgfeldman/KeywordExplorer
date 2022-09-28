@@ -97,6 +97,9 @@ CREATE TABLE `table_tweet` (
   `text` text,
   `topic_name` varchar(255) DEFAULT NULL,
   `embedding` text,
+  `reduced` varchar(255) DEFAULT NULL,
+  `cluster_id` int(11) DEFAULT NULL,
+  `cluster_name` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`row_id`),
   UNIQUE KEY `value` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=30050 DEFAULT CHARSET=utf8mb4;
@@ -130,4 +133,4 @@ CREATE TABLE `table_tweet` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2022-09-28  8:55:13
+-- Dump completed on 2022-09-28 10:52:31
