@@ -46,7 +46,7 @@ class EmbeddingsExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "EmbeddingsExplorer"
-        self.app_version = "9.26.22"
+        self.app_version = "9.28.22"
         self.geom = (600, 620)
         self.oai = OpenAIComms()
         self.msi = MySqlInterface(user_name="root", db_name="twitter_v2")
@@ -111,6 +111,12 @@ class EmbeddingsExplorer(AppBase):
         self.keyword_count_field = DataField(tab, row, "Num rows")
         self.keyword_count_field.add_button("Get Embeddings", self.get_oai_embeddings_callback)
         row = self.keyword_count_field.get_next_row()
+        buttons = Buttons(tab, row, "Update DB")
+        b = buttons.add_button("Everything", self.implement_me, -1)
+        b = buttons.add_button("GPT Embeddings", self.implement_me, -1)
+        b = buttons.add_button("Reduced Embeddings", self.implement_me, -1)
+        b = buttons.add_button("Clusters", self.implement_me, -1)
+        row = buttons.get_next_row()
 
     def build_param_row(self, parent:tk.Frame, row:int) -> int:
         f = tk.Frame(parent)
