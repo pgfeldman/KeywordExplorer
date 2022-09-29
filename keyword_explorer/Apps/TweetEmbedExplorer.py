@@ -46,7 +46,7 @@ class EmbeddingsExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "EmbeddingsExplorer"
-        self.app_version = "9.28.22"
+        self.app_version = "9.29.22"
         self.geom = (600, 620)
         self.oai = OpenAIComms()
         self.msi = MySqlInterface(user_name="root", db_name="twitter_v2")
@@ -112,9 +112,8 @@ class EmbeddingsExplorer(AppBase):
         self.keyword_count_field.add_button("Get Embeddings", self.get_oai_embeddings_callback)
         row = self.keyword_count_field.get_next_row()
         buttons = Buttons(tab, row, "Update DB")
-        b = buttons.add_button("Everything", self.implement_me, -1)
-        b = buttons.add_button("Reduced Embeddings", self.implement_me, -1)
-        b = buttons.add_button("Clusters", self.implement_me, -1)
+        b = buttons.add_button("Reduced+Clusters", self.store_reduced_and_clustering_callback, -1)
+        b = buttons.add_button("Clusters", self.store_clustering_callback, -1)
         b = buttons.add_button("Topic Names", self.implement_me, -1)
         row = buttons.get_next_row()
 
@@ -163,12 +162,27 @@ class EmbeddingsExplorer(AppBase):
             return d[name]
         return default
 
-    def store_all_tweet_data_callback(self):
+    def store_reduced_and_clustering_callback(self):
+        print("store_reduced_and_clustering_callback")
         et:EmbeddedText
+        rows = 0
         for et in self.mr.embedding_list:
             sql = "update table_tweet set cluster_id = %s, cluster_name = %s, reduced = %s where row_id = %s;"
-            vals = (et.cluster_id, et.cluster_name, "{}".format(et.reduced))
+            vals = (et.cluster_id, et.cluster_name, et.reduced, et.row_id)
             self.msi.write_sql_values_get_row(sql, vals)
+            rows += 1
+        message.showinfo("DB Write", "Wrote {} rows of reduced and cluster data".format(rows))
+
+    def store_clustering_callback(self):
+        print("store_clustering_callback")
+        et:EmbeddedText
+        rows = 0
+        for et in self.mr.embedding_list:
+            sql = "update table_tweet set cluster_id = %s, cluster_name = %s where row_id = %s;"
+            vals = (et.cluster_id, et.cluster_name, et.row_id)
+            self.msi.write_sql_values_get_row(sql, vals)
+            rows += 1
+        message.showinfo("DB Write", "Wrote {} rows of cluster data".format(rows))
     def retreive_tweet_data_callback(self):
         print("get_db_embeddings_callback")
         keyword = self.keyword_combo.get_text()
@@ -178,10 +192,10 @@ class EmbeddingsExplorer(AppBase):
             return
 
         print("\t Loading from DB")
-        query = "select tweet_id, embedding from keyword_tweet_view where experiment_id = %s"
+        query = "select tweet_id, embedding, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s"
         values = (self.experiment_id,)
         if keyword != 'all_keywords':
-            query = "select tweet_row, tweet_id, text, embedding from keyword_tweet_view where experiment_id = %s and keyword = %s"
+            query = "select tweet_row, tweet_id, text, embedding, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s and keyword = %s"
             values = (self.experiment_id, keyword)
         result = self.msi.read_data(query, values, True)
         row_dict:Dict

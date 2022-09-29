@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
 from keyword_explorer.tkUtils.MoveableNode import MovableNode
-from typing import List, Dict, Union, Any
+from typing import List, Dict, Union, Any, Pattern
 
 class EmbeddedText:
     row_id:int
@@ -22,11 +22,14 @@ class EmbeddedText:
     reduced:List
     vis_dim:List
     mnode:Union[None, MovableNode]
+    reg:Pattern
+    source_regex:Pattern
 
     def __init__(self, row_id:int, raw_str:str):
         self.row_id = row_id
         self.raw_str = raw_str
         self.source_regex = re.compile(r"\w+-\w+-\w+-\d+:")
+        self.reg = re.compile(r"-?\d+\.\d+")
         self.parse()
         self.reduced = [0, 0]
         self.cluster_id = -1
@@ -49,8 +52,11 @@ class EmbeddedText:
             return val
         return default
     def set_optional(self, reduced_str:str, cluster_id:int, cluster_name:str):
+        #print("set_optional: reduced = {}".format(reduced_str))
         if reduced_str != None:
-            self.reduced = ast.literal_eval(reduced_str)
+            l = self.reg.findall(reduced_str)
+            ls = "[{}]".format(", ".join(l))
+            self.reduced = ast.literal_eval(ls)
 
         if cluster_id != None:
             self.cluster_id = cluster_id
