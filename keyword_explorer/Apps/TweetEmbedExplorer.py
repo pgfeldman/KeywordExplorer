@@ -213,6 +213,8 @@ class EmbeddingsExplorer(AppBase):
             cluster_name = self.safe_dict(row_dict, 'cluster_name', None)
             et.set_optional(reduced, cluster_id, cluster_name)
 
+        self.mr.calc_xy_range()
+
         for i in range(10):
             et = self.mr.embedding_list[i]
             print(et.to_string())

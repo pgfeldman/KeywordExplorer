@@ -91,6 +91,15 @@ class ManifoldReduction:
         self.embedding_list.append(et)
         return et
 
+    def calc_xy_range(self):
+        self.min_x = self.min_y = self.max_x = self.max_y = 0
+        et:EmbeddedText
+        for et in self.embedding_list:
+            self.min_x = min(self.min_x, et.reduced[0])
+            self.min_y = min(self.min_y, et.reduced[1])
+            self.max_x = max(self.max_x, et.reduced[0])
+            self.max_y = max(self.max_y, et.reduced[1])
+
     def calc_embeding(self, perplexity:int = 15, pca_components:int = 0):
         mat = []
         et:EmbeddedText
@@ -103,14 +112,12 @@ class ManifoldReduction:
         print("\tTSNE step")
         tsne = TSNE(n_components=self.target_dim, perplexity=perplexity, random_state=42, init='random', learning_rate=200)
         reduced_list = tsne.fit_transform(mat)
-        self.min_x = self.min_y = self.max_x = self.max_y = 0
+
         for i in range(len(reduced_list)):
             et = self.embedding_list[i]
             et.reduced = reduced_list[i]
-            self.min_x = min(self.min_x, et.reduced[0])
-            self.min_y = min(self.min_y, et.reduced[1])
-            self.max_x = max(self.max_x, et.reduced[0])
-            self.max_y = max(self.max_y, et.reduced[1])
+
+        self.calc_xy_range()
         print("ManifoldReduction.calc_embedding: Finished reduction to {} dimensions".format(self.target_dim))
 
         # tsne = TSNE(n_components=2, perplexity=15, random_state=42, init='random', learning_rate=200)
