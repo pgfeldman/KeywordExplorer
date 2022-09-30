@@ -33,6 +33,7 @@ class EmbeddingsExplorer(AppBase):
     graph_keyword_combo: TopicComboExt
     experiment_combo: TopicComboExt
     keyword_count_field: DataField
+    exclude_cluster_field: DataField
     pca_dim_param: LabeledParam
     eps_param: LabeledParam
     min_samples_param: LabeledParam
@@ -154,8 +155,12 @@ class EmbeddingsExplorer(AppBase):
 
         f = tk.Frame(tab)
         f.grid(row=row, column=0, columnspan=2, sticky="nsew", padx=1, pady=1)
-        row = 0
-        self.canvas_frame = CanvasFrame(f, row, "Graph", self.dp, width=550, height=250)
+        self.canvas_frame = CanvasFrame(f, 0, "Graph", self.dp, width=550, height=250)
+
+        row += 1
+        self.exclude_cluster_field = DataField(tab, row, "Exclude Cluster:")
+        self.exclude_cluster_field.add_button("Exclude", self.implement_me)
+        row = self.exclude_cluster_field.get_next_row()
 
     def safe_dict(self, d:Dict, name:str, default:Any) -> Any:
         if name in d:
