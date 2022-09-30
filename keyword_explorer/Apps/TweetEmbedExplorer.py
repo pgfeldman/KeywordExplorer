@@ -156,10 +156,11 @@ class EmbeddingsExplorer(AppBase):
         f = tk.Frame(tab)
         f.grid(row=row, column=0, columnspan=2, sticky="nsew", padx=1, pady=1)
         self.canvas_frame = CanvasFrame(f, 0, "Graph", self.dp, width=550, height=250)
+        self.canvas_frame.set_select_callback_fn(self.selected_node_callback)
 
         row += 1
         self.exclude_cluster_field = DataField(tab, row, "Exclude Cluster:")
-        self.exclude_cluster_field.add_button("Exclude", self.implement_me)
+        self.exclude_cluster_field.add_button("Exclude", self.exclude_cluster_callback)
         row = self.exclude_cluster_field.get_next_row()
 
     def safe_dict(self, d:Dict, name:str, default:Any) -> Any:
@@ -281,6 +282,33 @@ class EmbeddingsExplorer(AppBase):
             else:
                 et.mnode.set_color(c)
         print("\tFinished creating points")
+
+    def selected_node_callback(self, node_id:int, msg:str):
+        print("node_id = {}, msg = {}".format(node_id, msg))
+        et:EmbeddedText
+        for et in self.mr.embedding_list:
+            if et.mnode != None:
+                mn = et.mnode
+                if mn.id == node_id:
+                    self.exclude_cluster_field.clear()
+                    self.exclude_cluster_field.set_text(str(et.cluster_id))
+                    break
+
+    def exclude_cluster_callback(self):
+        print("exclude_cluster_callback")
+        to_exclude = self.exclude_cluster_field.get_text()
+        if to_exclude.isdigit():
+            cluster_id = int(to_exclude)
+            keyword = self.keyword_combo.get_text()
+            experiment_id = self.experiment_id
+            sql = "SELECT COUNT(*) FROM table_exclude where experiment_id = %s and cluster_id = %s and keyword = %s"
+            vals = (experiment_id, cluster_id, keyword)
+            result = self.msi.read_data(sql, vals)
+            d:Dict = result[0]
+            print(d)
+            if d['COUNT(*)'] == 0:
+                sql = "INSERT INTO table_exclude (experiment_id, cluster_id, keyword) VALUES (%s, %s, %s)"
+                self.msi.write_sql_values_get_row(sql, vals, True)
 
 
     def label_clusters_callback(self):
