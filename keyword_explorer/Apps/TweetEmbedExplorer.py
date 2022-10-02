@@ -164,8 +164,12 @@ class EmbeddingsExplorer(AppBase):
         row = self.exclude_cluster_field.get_next_row()
 
     def color_excluded_clusters(self):
+        keyword = self.keyword_combo.get_text()
         sql = "select * from table_exclude where experiment_id = %s and keyword = %s"
-        vals = (self.experiment_id, self.keyword_combo.get_text())
+        vals = (self.experiment_id, keyword)
+        if keyword == 'all_keywords':
+            sql = "select * from table_exclude where experiment_id = %s"
+            vals = (self.experiment_id, )
         result = self.msi.read_data(sql, vals)
         cluster_list = []
         d:Dict
