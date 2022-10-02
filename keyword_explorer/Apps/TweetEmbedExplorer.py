@@ -163,6 +163,20 @@ class EmbeddingsExplorer(AppBase):
         self.exclude_cluster_field.add_button("Exclude", self.exclude_cluster_callback)
         row = self.exclude_cluster_field.get_next_row()
 
+    def color_excluded_clusters(self):
+        sql = "select * from table_exclude where experiment_id = %s and keyword = %s"
+        vals = (self.experiment_id, self.keyword_combo.get_text())
+        result = self.msi.read_data(sql, vals)
+        cluster_list = []
+        d:Dict
+        for d in result:
+            cluster_list.append(d.cluster_id)
+
+        et:EmbeddedText
+        for et in self.mr.embedding_list:
+            if et.cluster_id in cluster_list and et.mnode != None:
+                et.mnode.set_color("black")
+
     def safe_dict(self, d:Dict, name:str, default:Any) -> Any:
         if name in d:
             return d[name]
@@ -220,6 +234,7 @@ class EmbeddingsExplorer(AppBase):
             et.set_optional(reduced, cluster_id, cluster_name)
 
         self.mr.calc_xy_range()
+
 
         for i in range(10):
             et = self.mr.embedding_list[i]
@@ -309,6 +324,7 @@ class EmbeddingsExplorer(AppBase):
             if d['COUNT(*)'] == 0:
                 sql = "INSERT INTO table_exclude (experiment_id, cluster_id, keyword) VALUES (%s, %s, %s)"
                 self.msi.write_sql_values_get_row(sql, vals, True)
+                self.color_excluded_clusters()
 
 
     def label_clusters_callback(self):
