@@ -1,13 +1,13 @@
--- MySQL dump 10.16  Distrib 10.1.34-MariaDB, for Win32 (AMD64)
+-- MariaDB dump 10.19  Distrib 10.4.19-MariaDB, for Win64 (AMD64)
 --
 -- Host: localhost    Database: twitter_v2
 -- ------------------------------------------------------
--- Server version	10.1.34-MariaDB
+-- Server version	10.4.19-MariaDB
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8 */;
+/*!40101 SET NAMES utf8mb4 */;
 /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
 /*!40103 SET TIME_ZONE='+00:00' */;
 /*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
@@ -45,6 +45,20 @@ SET character_set_client = utf8;
 SET character_set_client = @saved_cs_client;
 
 --
+-- Table structure for table `table_exclude`
+--
+
+DROP TABLE IF EXISTS `table_exclude`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `table_exclude` (
+  `experiment_id` int(11) DEFAULT NULL,
+  `cluster_id` int(11) DEFAULT NULL,
+  `keyword` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `table_experiment`
 --
 
@@ -57,7 +71,7 @@ CREATE TABLE `table_experiment` (
   `date` datetime DEFAULT NULL,
   `sample_start` datetime DEFAULT NULL,
   `sample_end` datetime DEFAULT NULL,
-  `keywords` text,
+  `keywords` text DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -72,7 +86,7 @@ DROP TABLE IF EXISTS `table_query`;
 CREATE TABLE `table_query` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `experiment_id` int(11) DEFAULT NULL,
-  `query` text,
+  `query` text DEFAULT NULL,
   `keyword` varchar(255) DEFAULT NULL,
   `start_time` datetime DEFAULT NULL,
   `end_time` datetime DEFAULT NULL,
@@ -92,21 +106,41 @@ CREATE TABLE `table_tweet` (
   `row_id` int(11) NOT NULL AUTO_INCREMENT,
   `query_id` int(11) DEFAULT NULL,
   `conversation_id` bigint(20) DEFAULT NULL,
-  `is_thread` tinyint(1) DEFAULT '0',
+  `is_thread` tinyint(1) DEFAULT 0,
   `author_id` bigint(20) DEFAULT NULL,
   `created_at` datetime DEFAULT NULL,
   `in_reply_to_user_id` bigint(20) DEFAULT NULL,
   `lang` varchar(255) DEFAULT NULL,
   `id` bigint(20) NOT NULL,
-  `text` text,
+  `text` text DEFAULT NULL,
   `topic_name` varchar(255) DEFAULT NULL,
-  `embedding` text,
+  `embedding` text DEFAULT NULL,
   `reduced` varchar(255) DEFAULT NULL,
   `cluster_id` int(11) DEFAULT NULL,
   `cluster_name` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`row_id`),
   UNIQUE KEY `value` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=30050 DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `table_user`
+--
+
+DROP TABLE IF EXISTS `table_user`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `table_user` (
+  `row_id` int(11) NOT NULL AUTO_INCREMENT,
+  `created_at` datetime DEFAULT NULL,
+  `description` varchar(512) DEFAULT NULL,
+  `id` bigint(20) DEFAULT NULL,
+  `location` varchar(128) DEFAULT NULL,
+  `name` varchar(255) DEFAULT NULL,
+  `username` varchar(255) DEFAULT NULL,
+  `verified` tinyint(1) DEFAULT NULL,
+  PRIMARY KEY (`row_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -123,7 +157,7 @@ CREATE TABLE `table_tweet` (
 /*!50001 SET collation_connection      = utf8mb4_unicode_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `keyword_tweet_view` AS select `te`.`name` AS `name`,`te`.`id` AS `experiment_id`,`tq`.`start_time` AS `start`,`tq`.`end_time` AS `end`,`te`.`keywords` AS `keywords`,`tq`.`query` AS `query`,`tq`.`keyword` AS `keyword`,`tt`.`author_id` AS `author_id`,`tt`.`conversation_id` AS `conversation_id`,`tt`.`row_id` AS `tweet_row`,`tt`.`id` AS `tweet_id`,`tt`.`text` AS `text`,`tt`.`is_thread` AS `is_thread`,`tt`.`embedding` AS `embedding`,`tt`.`reduced` AS `reduced`,`tt`.`cluster_id` AS `cluster_id`,`tt`.`cluster_name` AS `cluster_name` from ((`table_tweet` `tt` join `table_query` `tq` on((`tt`.`query_id` = `tq`.`id`))) join `table_experiment` `te` on((`tq`.`experiment_id` = `te`.`id`))) */;
+/*!50001 VIEW `keyword_tweet_view` AS select `te`.`name` AS `name`,`te`.`id` AS `experiment_id`,`tq`.`start_time` AS `start`,`tq`.`end_time` AS `end`,`te`.`keywords` AS `keywords`,`tq`.`query` AS `query`,`tq`.`keyword` AS `keyword`,`tt`.`author_id` AS `author_id`,`tt`.`conversation_id` AS `conversation_id`,`tt`.`row_id` AS `tweet_row`,`tt`.`id` AS `tweet_id`,`tt`.`text` AS `text`,`tt`.`is_thread` AS `is_thread`,`tt`.`embedding` AS `embedding`,`tt`.`reduced` AS `reduced`,`tt`.`cluster_id` AS `cluster_id`,`tt`.`cluster_name` AS `cluster_name` from ((`table_tweet` `tt` join `table_query` `tq` on(`tt`.`query_id` = `tq`.`id`)) join `table_experiment` `te` on(`tq`.`experiment_id` = `te`.`id`)) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -137,4 +171,4 @@ CREATE TABLE `table_tweet` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2022-09-28 14:41:53
+-- Dump completed on 2022-10-03 17:42:38

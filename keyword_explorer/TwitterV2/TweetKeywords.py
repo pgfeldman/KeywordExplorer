@@ -167,6 +167,14 @@ class TweetKeywords(TwitterV2Base):
             url = "{}&next_token={}".format(url, next_token)
         return url
 
+    # Takes a comma separated list of user IDs. Up to 100 are allowed in a single request.
+    # Make sure to not include a space between commas and fields.
+    def create_user_url(user_id:str) -> str:
+        user_fields = "location,name,username,verified&expansions=pinned_tweet_id"
+        user_fields = "created_at,description,location,name,username,verified"
+        url = "https://api.twitter.com/2/users?ids={}&user.fields={}".format(user_id, user_fields)
+        return url
+
     def parse_json(self, json_response, num_responses:int) -> Union[str, None]:
         meta:Dict = json_response['meta']
         data:Dict = json_response['data']

@@ -7,6 +7,7 @@ import matplotlib.colors as mcolors
 
 from keyword_explorer.Apps.AppBase import AppBase
 from keyword_explorer.OpenAI.OpenAIComms import OpenAIComms
+from keyword_explorer.TwitterV2.TweetKeywords import TweetKeywords
 from keyword_explorer.tkUtils.CanvasFrame import CanvasFrame
 from keyword_explorer.tkUtils.TopicComboExt import TopicComboExt
 from keyword_explorer.tkUtils.DataField import DataField
@@ -14,6 +15,7 @@ from keyword_explorer.tkUtils.LabeledParam import LabeledParam
 from keyword_explorer.tkUtils.Buttons import Buttons
 from keyword_explorer.tkUtils.ToolTip import ToolTip
 from keyword_explorer.tkUtils.MoveableNode import MovableNode
+from keyword_explorer.tkUtils.Checkboxes import Checkboxes, DIR
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
 from keyword_explorer.utils.ManifoldReduction import ManifoldReduction, EmbeddedText
 
@@ -39,6 +41,7 @@ class EmbeddingsExplorer(AppBase):
     min_samples_param: LabeledParam
     perplexity_param: LabeledParam
     rows_param: LabeledParam
+    option_checkboxes:Checkboxes
     experiment_id: int
 
     def __init__(self, *args, **kwargs):
@@ -50,11 +53,15 @@ class EmbeddingsExplorer(AppBase):
         self.app_version = "9.29.22"
         self.geom = (600, 620)
         self.oai = OpenAIComms()
+        self.tkws = TweetKeywords()
         self.msi = MySqlInterface(user_name="root", db_name="twitter_v2")
         self.mr = ManifoldReduction()
 
         if not self.oai.key_exists():
             message.showwarning("Key Error", "Could not find Environment key 'OPENAI_KEY'")
+
+        if not self.tkws.key_exists():
+            message.showwarning("Key Error", "Could not find Environment key 'BEARER_TOKEN_2'")
         self.experiment_id = -1
 
 
@@ -96,7 +103,17 @@ class EmbeddingsExplorer(AppBase):
         return row
 
     def build_create_corpora_tab(self, tab: ttk.Frame):
-        pass
+        label_width = 20
+        row = 0
+        self.option_checkboxes = Checkboxes(tab, row, "Meta wrapping:", label_width=label_width)
+        # cb = self.option_checkboxes.add_checkbox("Randomize", self.randomize_callback, dir=DIR.ROW)
+        # ToolTip(cb, "Randomly select the starting time for each day so that a full pull won't go into tomorrow")
+        cb = self.option_checkboxes.add_checkbox("Before text (default is after)", self.implement_me, dir=DIR.ROW)
+        cb = self.option_checkboxes.add_checkbox("Created at", self.implement_me, dir=DIR.ROW)
+        cb = self.option_checkboxes.add_checkbox("Language at", self.implement_me, dir=DIR.ROW)
+        cb = self.option_checkboxes.add_checkbox("Keyword", self.implement_me, dir=DIR.ROW)
+        cb = self.option_checkboxes.add_checkbox("Author", self.implement_me, dir=DIR.ROW)
+        row = self.option_checkboxes.get_next_row()
 
     def build_get_store_tab(self, tab: ttk.Frame):
         engine_list = ['text-similarity-ada-001',
@@ -116,6 +133,7 @@ class EmbeddingsExplorer(AppBase):
         b = buttons.add_button("Reduced+Clusters", self.store_reduced_and_clustering_callback, -1)
         b = buttons.add_button("Clusters", self.store_clustering_callback, -1)
         b = buttons.add_button("Topic Names", self.implement_me, -1)
+        b = buttons.add_button("Users", self.store_user_callback, -1)
         row = buttons.get_next_row()
 
     def build_param_row(self, parent:tk.Frame, row:int) -> int:
@@ -207,6 +225,34 @@ class EmbeddingsExplorer(AppBase):
             self.msi.write_sql_values_get_row(sql, vals)
             rows += 1
         message.showinfo("DB Write", "Wrote {} rows of cluster data".format(rows))
+
+    def store_user_callback(self):
+        keyword = self.keyword_combo.get_text()
+        sql = "select distinct author_id from keyword_tweet_view where experiment_id = %s order by author_id"
+        vals = (self.experiment_id,)
+        if keyword != 'all_keywords':
+            sql = "select distinct author_id from keyword_tweet_view where experiment_id = %s and keyword = %s order by author_id"
+            vals = (self.experiment_id, keyword)
+        results = self.msi.read_data(sql, vals)
+        d:Dict
+        count = 0
+        l = []
+        for d in results:
+            l.append(d['author_id'])
+            count += 1
+            if count == 99:
+                s = ",".join(map(str, l))
+                print("[{}]: {}".format(len(l), s))
+                count = 0
+                l = []
+        if len(l) > 0:
+            s = ",".join(map(str, l))
+            print("[{}]: {}".format(len(l), s))
+
+
+
+
+
     def retreive_tweet_data_callback(self):
         print("get_db_embeddings_callback")
         keyword = self.keyword_combo.get_text()
@@ -228,6 +274,7 @@ class EmbeddingsExplorer(AppBase):
         self.mr.clear()
         self.canvas_frame.clear_Nodes()
         print("\tLoading {} rows".format(len(result)))
+        count = 0
         et:EmbeddedText
         for row_dict in result:
             et = self.mr.load_row(row_dict['tweet_row'], row_dict['embedding'])
@@ -236,6 +283,9 @@ class EmbeddingsExplorer(AppBase):
             cluster_id = self.safe_dict(row_dict, 'cluster_id', None)
             cluster_name = self.safe_dict(row_dict, 'cluster_name', None)
             et.set_optional(reduced, cluster_id, cluster_name)
+            count += 1
+            if count % 1000 == 0:
+                print("loaded {} of {} records:".format(count, len(result)))
 
         self.mr.calc_xy_range()
 
@@ -300,6 +350,7 @@ class EmbeddingsExplorer(AppBase):
                 et.mnode = n
             else:
                 et.mnode.set_color(c)
+        self.color_excluded_clusters()
         print("\tFinished creating points")
 
     def selected_node_callback(self, node_id:int, msg:str):

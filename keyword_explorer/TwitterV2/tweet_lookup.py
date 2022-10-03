@@ -70,6 +70,14 @@ def create_tweets_url(tweet_ids:str) -> str:
     print(url)
     return url
 
+# Takes a comma separated list of user IDs. Up to 100 are allowed in a single request.
+# Make sure to not include a space between commas and fields.
+def create_user_url(user_id:str) -> str:
+    user_fields = "location,name,username,verified&expansions=pinned_tweet_id"
+    user_fields = "created_at,description,location,name,username,verified"
+    url = "https://api.twitter.com/2/users?ids={}&user.fields={}".format(user_id, user_fields)
+    return url
+
 def create_keywords_url(query:str, max_result:int = 10, time_str:str = None, next_token:str = None) -> str:
     tweet_fields = "tweet.fields=lang,author_id,in_reply_to_user_id,created_at"
     url = "https://api.twitter.com/2/tweets/search/all?max_results={}&query={}&{}".format(max_result, query, tweet_fields)
@@ -152,7 +160,16 @@ def counts_query_example():
         meta = json_response['meta']
         count += 1
 
-def main():
+def user_query_example():
+    query = "155,22186596,758514997995589632,1289933022901370880"
+    url = create_user_url(query)
+    json_response = connect_to_endpoint(url)
+    print_response("Get user", json_response)
+
+def user_main():
+    user_query_example()
+
+def tweet_main():
     print("BEARER_TOKEN = {}".format(bearer_token))
 
     my_old_thread = "1484131517878181891"
@@ -174,4 +191,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    user_main()
