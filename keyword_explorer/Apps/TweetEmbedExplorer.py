@@ -249,9 +249,8 @@ class EmbeddingsExplorer(AppBase):
             s = ",".join(map(str, l))
             print("[{}]: {}".format(len(l), s))
 
-
-
-
+        self.tkws.run_user_query([155,22186596,758514997995589632,1289933022901370880], self.msi)
+        print("store_user_callback(): complete")
 
     def retreive_tweet_data_callback(self):
         print("get_db_embeddings_callback")

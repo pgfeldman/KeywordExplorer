@@ -131,16 +131,15 @@ DROP TABLE IF EXISTS `table_user`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `table_user` (
-  `row_id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` bigint(20) NOT NULL,
   `created_at` datetime DEFAULT NULL,
-  `description` varchar(512) DEFAULT NULL,
-  `id` bigint(20) DEFAULT NULL,
-  `location` varchar(128) DEFAULT NULL,
-  `name` varchar(255) DEFAULT NULL,
-  `username` varchar(255) DEFAULT NULL,
+  `description` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `location` varchar(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `username` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `verified` tinyint(1) DEFAULT NULL,
-  PRIMARY KEY (`row_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+  UNIQUE KEY `table_user_id_uindex` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -171,4 +170,4 @@ CREATE TABLE `table_user` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2022-10-03 17:42:38
+-- Dump completed on 2022-10-04 11:25:54

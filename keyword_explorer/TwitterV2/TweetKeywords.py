@@ -2,10 +2,10 @@ import math
 from datetime import datetime, timedelta
 import random
 import pprint
-import time
+import re
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
 
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Any
 
 
 from keyword_explorer.TwitterV2.TwitterV2Base import TwitterV2Base
@@ -169,7 +169,7 @@ class TweetKeywords(TwitterV2Base):
 
     # Takes a comma separated list of user IDs. Up to 100 are allowed in a single request.
     # Make sure to not include a space between commas and fields.
-    def create_user_url(user_id:str) -> str:
+    def create_user_url(self, user_id:str) -> str:
         user_fields = "location,name,username,verified&expansions=pinned_tweet_id"
         user_fields = "created_at,description,location,name,username,verified"
         url = "https://api.twitter.com/2/users?ids={}&user.fields={}".format(user_id, user_fields)
@@ -184,6 +184,11 @@ class TweetKeywords(TwitterV2Base):
             return meta['next_token']
 
         return None
+
+    def safe_dict(self, d:Dict, name:str, default:Any=None) -> Any:
+        if name in d:
+            return d[name]
+        return default
 
         # The meat of a twitter query and processing
     def run_thread_query(self, tk:TweetKeyword, conversation_id:str, tweets_per_sample:int, tweets_to_download:int,
@@ -311,6 +316,26 @@ class TweetKeywords(TwitterV2Base):
         if msi != None:
             tk.to_db(msi, stop_dt)
         return tk.get_entries()
+
+    def run_user_query(self, id_list:List, msi:MySqlInterface):
+        dt_format = '%Y-%m-%dT%H:%M:%S.000Z'
+        s:str = ",".join(map(str, id_list))
+        url = self.create_user_url(s)
+        json_response = self.connect_to_endpoint(url)
+        data:List = json_response['data']
+        d:Dict
+        for d in data:
+            created_at = datetime.strptime(d['created_at'], dt_format)
+            description = self.safe_dict(d, 'description')
+            description = description.encode("utf-8", "replace")
+            id = d['id']
+            location = self.safe_dict(d, 'location')
+            name = self.safe_dict(d, 'name')
+            username = self.safe_dict(d, 'username')
+            verified = True if d['verified'] == 'true' else False
+            sql = "replace into twitter_v2.table_user (id, created_at, description, location, name, username, verified) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+            vals = (id, created_at, description, location, name, username, verified)
+            msi.write_sql_values_get_row(sql, vals)
 
 
 def exercise_get_keyword_tweets():
