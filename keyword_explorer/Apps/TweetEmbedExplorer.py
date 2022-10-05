@@ -41,7 +41,9 @@ class EmbeddingsExplorer(AppBase):
     min_samples_param: LabeledParam
     perplexity_param: LabeledParam
     rows_param: LabeledParam
-    option_checkboxes:Checkboxes
+    tweet_option_checkboxes:Checkboxes
+    author_option_checkboxes:Checkboxes
+    generation_options:Checkboxes
     experiment_id: int
 
     def __init__(self, *args, **kwargs):
@@ -50,7 +52,7 @@ class EmbeddingsExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "EmbeddingsExplorer"
-        self.app_version = "9.29.22"
+        self.app_version = "10.5.22"
         self.geom = (600, 620)
         self.oai = OpenAIComms()
         self.tkws = TweetKeywords()
@@ -105,15 +107,29 @@ class EmbeddingsExplorer(AppBase):
     def build_create_corpora_tab(self, tab: ttk.Frame):
         label_width = 20
         row = 0
-        self.option_checkboxes = Checkboxes(tab, row, "Meta wrapping:", label_width=label_width)
-        # cb = self.option_checkboxes.add_checkbox("Randomize", self.randomize_callback, dir=DIR.ROW)
+        self.tweet_option_checkboxes = Checkboxes(tab, row, "Tweet meta wrapping:", label_width=label_width)
+        # cb = self.tweet_option_checkboxes.add_checkbox("Randomize", self.randomize_callback, dir=DIR.ROW)
         # ToolTip(cb, "Randomly select the starting time for each day so that a full pull won't go into tomorrow")
-        cb = self.option_checkboxes.add_checkbox("Before text (default is after)", self.implement_me, dir=DIR.ROW)
-        cb = self.option_checkboxes.add_checkbox("Created at", self.implement_me, dir=DIR.ROW)
-        cb = self.option_checkboxes.add_checkbox("Language at", self.implement_me, dir=DIR.ROW)
-        cb = self.option_checkboxes.add_checkbox("Keyword", self.implement_me, dir=DIR.ROW)
-        cb = self.option_checkboxes.add_checkbox("Author", self.implement_me, dir=DIR.ROW)
-        row = self.option_checkboxes.get_next_row()
+        cb = self.tweet_option_checkboxes.add_checkbox("Created at", self.implement_me, dir=DIR.ROW)
+        cb = self.tweet_option_checkboxes.add_checkbox("Language", self.implement_me, dir=DIR.ROW)
+        cb = self.tweet_option_checkboxes.add_checkbox("Keyword", self.implement_me, dir=DIR.ROW)
+        row = self.tweet_option_checkboxes.get_next_row()
+        self.author_option_checkboxes = Checkboxes(tab, row, "Author meta wrapping:", label_width=label_width)
+        cb = self.author_option_checkboxes.add_checkbox("Name", self.implement_me, dir=DIR.ROW)
+        cb = self.author_option_checkboxes.add_checkbox("Username", self.implement_me, dir=DIR.ROW)
+        cb = self.author_option_checkboxes.add_checkbox("Location", self.implement_me, dir=DIR.ROW)
+        cb = self.author_option_checkboxes.add_checkbox("Description", self.implement_me, dir=DIR.ROW)
+        row = self.author_option_checkboxes.get_next_row()
+        self.generation_options = Checkboxes(tab, row, "Corpora Generation:", label_width=label_width)
+        cb = self.generation_options.add_checkbox("Wrapping before text (default is after)", self.implement_me, dir=DIR.ROW)
+        cb = self.generation_options.add_checkbox("Single file (default is separate)", self.implement_me, dir=DIR.ROW)
+        cb = self.generation_options.add_checkbox("Percent OFF (default is ON)", self.implement_me, dir=DIR.ROW)
+        cb = self.generation_options.add_checkbox("Include excluded clusters", self.implement_me, dir=DIR.ROW)
+        row = self.generation_options.get_next_row()
+        buttons = Buttons(tab, row, "Corpora")
+        b = buttons.add_button("Set folder", self.implement_me)
+        b = buttons.add_button("Generate", self.implement_me)
+
 
     def build_get_store_tab(self, tab: ttk.Frame):
         engine_list = ['text-similarity-ada-001',
@@ -192,7 +208,7 @@ class EmbeddingsExplorer(AppBase):
         cluster_list = []
         d:Dict
         for d in result:
-            cluster_list.append(d.cluster_id)
+            cluster_list.append(d['cluster_id'])
 
         et:EmbeddedText
         for et in self.mr.embedding_list:
@@ -228,6 +244,11 @@ class EmbeddingsExplorer(AppBase):
 
     def store_user_callback(self):
         keyword = self.keyword_combo.get_text()
+
+        if self.experiment_id == -1 or len(keyword) < 2:
+            message.showwarning("DB Error", "get_db_embeddings_callback(): Please set database and/or keyword")
+            return
+
         sql = "select distinct author_id from keyword_tweet_view where experiment_id = %s order by author_id"
         vals = (self.experiment_id,)
         if keyword != 'all_keywords':
@@ -241,15 +262,17 @@ class EmbeddingsExplorer(AppBase):
             l.append(d['author_id'])
             count += 1
             if count == 99:
+                self.tkws.run_user_query(l, self.msi)
                 s = ",".join(map(str, l))
                 print("[{}]: {}".format(len(l), s))
                 count = 0
                 l = []
         if len(l) > 0:
+            self.tkws.run_user_query(l, self.msi)
             s = ",".join(map(str, l))
             print("[{}]: {}".format(len(l), s))
 
-        self.tkws.run_user_query([155,22186596,758514997995589632,1289933022901370880], self.msi)
+        # self.tkws.run_user_query([155,22186596,758514997995589632,1289933022901370880], self.msi)
         print("store_user_callback(): complete")
 
     def retreive_tweet_data_callback(self):
