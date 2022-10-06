@@ -1,16 +1,63 @@
 mysqldump -u root -p --no-data twitter_v2 > twitter_v2_schema.sql
 
-select tweet_id, text, embedding  from keyword_tweet_view where experiment_id = 1 limit 10;
+select * from table_experiment;
+select * from table_query;
+select * from table_tweet limit 10;
+select * from table_exclude;
+select * from table_user;
 
-cluster_id:int
-cluster_name:str
-original:List
-reduced:List
+truncate table_experiment;
+truncate table_query;
+truncate table_tweet;
+truncate table_exclude;
+truncate table_user;
 
-CREATE or REPLACE view keyword_tweet_view as
-    select te.name, te.id as experiment_id, tq.start_time as start, tq.end_time as end, te.keywords,
-           tq.query, tq.keyword, tt.author_id, tt.conversation_id, tt.id as tweet_id, tt.text,
-           tt.is_thread, tt.embedding
-    from table_tweet tt
-    inner join table_query tq on tt.query_id = tq.id
-    inner join table_experiment te on tq.experiment_id = te.id;
+create or replace view keyword_tweet_view as
+    select te.name, te.id as experiment_id, te.sample_start as start, te.sample_end as end, te.keywords,
+           tq.query, tq.keyword,
+           tt.author_id, tt.conversation_id, tt.id as tweet_id, tt.text, tt.is_thread, tt.embedding
+    from table_experiment te
+    inner join table_query tq on te.id = tq.experiment_id
+    inner join table_tweet tt on tq.id = tt.query_id;
+
+create or replace view tweet_user_cluster_view as
+select te.name, te.id as experiment_id, te.sample_start as start, te.sample_end as end, te.keywords,
+       tq.query, tq.keyword,
+       tt.author_id, tt.conversation_id, tt.id as tweet_id, tt.text, tt.is_thread, tt.embedding
+    from table_experiment te
+    inner join table_query tq on te.id = tq.experiment_id
+    inner join table_tweet tt on tq.id = tt.query_id
+    inner join table_exclude te on te.cluster_id = tt.cluster_id
+    inner join table_user tu on tu.id = tt.author_id;
+
+select * from keyword_tweet_view limit 10;
+select name, keyword, text from keyword_tweet_view limit 10;
+select name, keyword, text, conversation_id from keyword_tweet_view;
+select distinct keyword, tweet_id, conversation_id from keyword_tweet_view where tweet_id != conversation_id and experiment_id = 1 and is_thread = FALSE;
+select count(*) from keyword_tweet_view where is_thread = TRUE and experiment_id = 1;
+select keyword, count(*) from keyword_tweet_view group by keyword;
+select keyword, count(*) from keyword_tweet_view where experiment_id = 1 and is_thread = TRUE group by keyword;
+select keyword, count(*) from keyword_tweet_view where experiment_id = 1 and conversation_id is not null and is_thread = FALSE group by keyword;
+select keyword, count(*) from table_query where experiment_id  group by keyword;
+select * from table_tweet;
+
+select text from keyword_tweet_view where keyword = 'ivermectin';
+select * from table_query where keyword like('ivermectin');
+update table_query set experiment_id = 1 where experiment_id = -1;
+
+select query_id, keyword, count(*) from table_tweet tt inner join table_query tq on tt.query_id = tq.id group by query_id;
+
+select count(*) from table_tweet where embedding is null;
+select tweet_id, embedding from keyword_tweet_view where experiment_id = 1 and keyword = 'paxlovid OR Nirmatrelvir OR ritonavir' LIMIT 10;
+
+INSERT INTO table_exclude (cluster_id, experiment_id, keyword) VALUES (19, 1, 'paxlovid OR Nirmatrelvir OR ritonavir');
+select count(*) from table_exclude where cluster_id = 19 and experiment_id = 1 and keyword = 'paxlovid OR Nirmatrelvir OR ritonavir';
+
+select distinct author_id from table_tweet order by author_id;
+select distinct author_id from keyword_tweet_view order by author_id;
+replace into table_user (id, created_at, description, location, name, username, verified)
+    VALUES (1289933022901370880, '2020-08-02 14:37:20', '\ud83c\uddfa\ud83c\udde6 \ud83d\udc97 #writer, proud parent of neurodivergent, gay, nonbinary beauties; poet, #mecfs (#pwME 30 years), chronic illness, #pointillism, #art, #politics',
+            'North Carolina', 'J. Ruth Kelly (she/her)', 'something else', FALSE);
+
+
+

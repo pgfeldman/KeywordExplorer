@@ -33,14 +33,10 @@ SET character_set_client = utf8;
   `keyword` tinyint NOT NULL,
   `author_id` tinyint NOT NULL,
   `conversation_id` tinyint NOT NULL,
-  `tweet_row` tinyint NOT NULL,
   `tweet_id` tinyint NOT NULL,
   `text` tinyint NOT NULL,
   `is_thread` tinyint NOT NULL,
-  `embedding` tinyint NOT NULL,
-  `reduced` tinyint NOT NULL,
-  `cluster_id` tinyint NOT NULL,
-  `cluster_name` tinyint NOT NULL
+  `embedding` tinyint NOT NULL
 ) ENGINE=MyISAM */;
 SET character_set_client = @saved_cs_client;
 
@@ -143,6 +139,27 @@ CREATE TABLE `table_user` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Temporary table structure for view `tweet_user_cluster_view`
+--
+
+DROP TABLE IF EXISTS `tweet_user_cluster_view`;
+/*!50001 DROP VIEW IF EXISTS `tweet_user_cluster_view`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `tweet_user_cluster_view` (
+  `experiment_id` tinyint NOT NULL,
+  `keyword` tinyint NOT NULL,
+  `text` tinyint NOT NULL,
+  `cluster_id` tinyint NOT NULL,
+  `exclude` tinyint NOT NULL,
+  `name` tinyint NOT NULL,
+  `username` tinyint NOT NULL,
+  `location` tinyint NOT NULL,
+  `description` tinyint NOT NULL
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
 -- Final view structure for view `keyword_tweet_view`
 --
 
@@ -156,7 +173,26 @@ CREATE TABLE `table_user` (
 /*!50001 SET collation_connection      = utf8mb4_unicode_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `keyword_tweet_view` AS select `te`.`name` AS `name`,`te`.`id` AS `experiment_id`,`tq`.`start_time` AS `start`,`tq`.`end_time` AS `end`,`te`.`keywords` AS `keywords`,`tq`.`query` AS `query`,`tq`.`keyword` AS `keyword`,`tt`.`author_id` AS `author_id`,`tt`.`conversation_id` AS `conversation_id`,`tt`.`row_id` AS `tweet_row`,`tt`.`id` AS `tweet_id`,`tt`.`text` AS `text`,`tt`.`is_thread` AS `is_thread`,`tt`.`embedding` AS `embedding`,`tt`.`reduced` AS `reduced`,`tt`.`cluster_id` AS `cluster_id`,`tt`.`cluster_name` AS `cluster_name` from ((`table_tweet` `tt` join `table_query` `tq` on(`tt`.`query_id` = `tq`.`id`)) join `table_experiment` `te` on(`tq`.`experiment_id` = `te`.`id`)) */;
+/*!50001 VIEW `keyword_tweet_view` AS select `te`.`name` AS `name`,`te`.`id` AS `experiment_id`,`te`.`sample_start` AS `start`,`te`.`sample_end` AS `end`,`te`.`keywords` AS `keywords`,`tq`.`query` AS `query`,`tq`.`keyword` AS `keyword`,`tt`.`author_id` AS `author_id`,`tt`.`conversation_id` AS `conversation_id`,`tt`.`id` AS `tweet_id`,`tt`.`text` AS `text`,`tt`.`is_thread` AS `is_thread`,`tt`.`embedding` AS `embedding` from ((`table_experiment` `te` join `table_query` `tq` on(`te`.`id` = `tq`.`experiment_id`)) join `table_tweet` `tt` on(`tq`.`id` = `tt`.`query_id`)) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `tweet_user_cluster_view`
+--
+
+/*!50001 DROP TABLE IF EXISTS `tweet_user_cluster_view`*/;
+/*!50001 DROP VIEW IF EXISTS `tweet_user_cluster_view`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_unicode_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
+/*!50001 VIEW `tweet_user_cluster_view` AS select `te`.`id` AS `experiment_id`,`tq`.`keyword` AS `keyword`,`tt`.`text` AS `text`,`tt`.`cluster_id` AS `cluster_id`,if(`tt`.`cluster_id` = `tex`.`cluster_id`,1,0) AS `exclude`,`tu`.`name` AS `name`,`tu`.`username` AS `username`,`tu`.`location` AS `location`,`tu`.`description` AS `description` from ((((`table_experiment` `te` join `table_query` `tq` on(`te`.`id` = `tq`.`experiment_id`)) join `table_tweet` `tt` on(`tq`.`id` = `tt`.`query_id`)) join `table_user` `tu` on(`tu`.`id` = `tt`.`author_id`)) left join `table_exclude` `tex` on(`tt`.`cluster_id` = `tex`.`cluster_id`)) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -170,4 +206,4 @@ CREATE TABLE `table_user` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2022-10-04 11:25:54
+-- Dump completed on 2022-10-06  9:05:48
