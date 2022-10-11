@@ -21,14 +21,16 @@ create or replace view keyword_tweet_view as
     inner join table_tweet tt on tq.id = tt.query_id;
 
 create or replace view tweet_user_cluster_view as
-select te.name, te.id as experiment_id, te.sample_start as start, te.sample_end as end, te.keywords,
-       tq.query, tq.keyword,
-       tt.author_id, tt.conversation_id, tt.id as tweet_id, tt.text, tt.is_thread, tt.embedding
+select te.id as experiment_id,
+        tq.keyword,
+        tt.text, tt.created_at, tt.lang, tt.cluster_id, if(tt.cluster_id = tex.cluster_id, TRUE, FALSE) as exclude,
+        tu.name, tu.username, tu.location, tu.description
+
     from table_experiment te
     inner join table_query tq on te.id = tq.experiment_id
     inner join table_tweet tt on tq.id = tt.query_id
-    inner join table_exclude tex on tex.cluster_id = tt.cluster_id
-    inner join table_user tu on tu.id = tt.author_id;
+    inner join table_user tu on tu.id = tt.author_id
+    left join table_exclude tex on tt.cluster_id = tex.cluster_id;
 
 select * from keyword_tweet_view limit 10;
 select name, keyword, text from keyword_tweet_view limit 10;

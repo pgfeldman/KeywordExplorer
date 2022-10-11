@@ -114,24 +114,25 @@ class EmbeddingsExplorer(AppBase):
         # cb = self.tweet_option_checkboxes.add_checkbox("Randomize", self.randomize_callback, dir=DIR.ROW)
         # ToolTip(cb, "Randomly select the starting time for each day so that a full pull won't go into tomorrow")
         cb = self.tweet_option_checkboxes.add_checkbox("Created at", lambda : self.set_corpora_flag_callback("tweet_created_at_flag"), dir=DIR.ROW)
-        cb = self.tweet_option_checkboxes.add_checkbox("Language", self.implement_me, dir=DIR.ROW)
-        cb = self.tweet_option_checkboxes.add_checkbox("Keyword", self.implement_me, dir=DIR.ROW)
+        cb = self.tweet_option_checkboxes.add_checkbox("Language", lambda: self.set_corpora_flag_callback("language_flag"), dir=DIR.ROW)
+        cb = self.tweet_option_checkboxes.add_checkbox("Keyword", lambda: self.set_corpora_flag_callback("keyword_flag"), dir=DIR.ROW)
+        cb = self.tweet_option_checkboxes.add_checkbox("Do something with threads?", self.implement_me, dir=DIR.ROW)
         row = self.tweet_option_checkboxes.get_next_row()
         self.author_option_checkboxes = Checkboxes(tab, row, "Author meta wrapping:", label_width=label_width)
-        cb = self.author_option_checkboxes.add_checkbox("Name", self.implement_me, dir=DIR.ROW)
-        cb = self.author_option_checkboxes.add_checkbox("Username", self.implement_me, dir=DIR.ROW)
-        cb = self.author_option_checkboxes.add_checkbox("Location", self.implement_me, dir=DIR.ROW)
-        cb = self.author_option_checkboxes.add_checkbox("Description", self.implement_me, dir=DIR.ROW)
+        cb = self.author_option_checkboxes.add_checkbox("Name", lambda: self.set_corpora_flag_callback("name_flag"), dir=DIR.ROW)
+        cb = self.author_option_checkboxes.add_checkbox("Username", lambda: self.set_corpora_flag_callback("username_flag"), dir=DIR.ROW)
+        cb = self.author_option_checkboxes.add_checkbox("Location", lambda: self.set_corpora_flag_callback("location_flag"), dir=DIR.ROW)
+        cb = self.author_option_checkboxes.add_checkbox("Description", lambda: self.set_corpora_flag_callback("description_flag"), dir=DIR.ROW)
         row = self.author_option_checkboxes.get_next_row()
         self.generation_options = Checkboxes(tab, row, "Corpora Generation:", label_width=label_width)
-        cb = self.generation_options.add_checkbox("Wrapping before text (default is after)", self.implement_me, dir=DIR.ROW)
-        cb = self.generation_options.add_checkbox("Single file (default is separate)", self.implement_me, dir=DIR.ROW)
-        cb = self.generation_options.add_checkbox("Percent OFF (default is ON)", self.implement_me, dir=DIR.ROW)
-        cb = self.generation_options.add_checkbox("Include excluded clusters", self.implement_me, dir=DIR.ROW)
+        cb = self.generation_options.add_checkbox("Wrapping before text (default is after)", lambda: self.set_corpora_flag_callback("wrap_after_text_flag"), dir=DIR.ROW)
+        cb = self.generation_options.add_checkbox("Single file (default is separate)", lambda: self.set_corpora_flag_callback("single_file_flag"), dir=DIR.ROW)
+        cb = self.generation_options.add_checkbox("Percent OFF (default is ON)", lambda: self.set_corpora_flag_callback("percent_on_flag"), dir=DIR.ROW)
+        cb = self.generation_options.add_checkbox("Include excluded clusters", lambda: self.set_corpora_flag_callback("excluded_culsters_flag"), dir=DIR.ROW)
         row = self.generation_options.get_next_row()
         buttons = Buttons(tab, row, "Corpora")
-        b = buttons.add_button("Set folder", self.implement_me)
-        b = buttons.add_button("Generate", self.implement_me)
+        b = buttons.add_button("Set folder", self.cg.set_folder)
+        b = buttons.add_button("Generate", lambda: self.cg.write_files(self.experiment_id, self.keyword_combo.get_text()))
 
 
     def build_get_store_tab(self, tab: ttk.Frame):
@@ -291,10 +292,10 @@ class EmbeddingsExplorer(AppBase):
             return
 
         print("\t Loading from DB")
-        query = "select tweet_id, embedding, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s"
+        query = 'select tweet_id, embedding, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s'
         values = (self.experiment_id,)
         if keyword != 'all_keywords':
-            query = "select tweet_row, tweet_id, text, embedding, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s and keyword = %s"
+            query = 'select tweet_row, tweet_id, text, embedding, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s and keyword = %s'
             values = (self.experiment_id, keyword)
         result = self.msi.read_data(query, values, True)
         row_dict:Dict

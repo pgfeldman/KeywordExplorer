@@ -1,13 +1,13 @@
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
-from keyword_explorer.tkUtils.Checkboxes import Checkboxes
-import os
+import tkinter.filedialog as fd
+import random
+
+from typing import Dict, List
 
 class CorporaGenerator:
-    meta_wrapping_flag:bool
     tweet_created_at_flag:bool
     language_flag:bool
     keyword_flag:bool
-    author_flag:bool
     name_flag:bool
     username_flag:bool
     location_flag:bool
@@ -17,22 +17,22 @@ class CorporaGenerator:
     percent_on_flag:bool
     excluded_culsters_flag:bool
     msi:MySqlInterface
+    directory:str
 
     def __init__(self, msi:MySqlInterface):
         self.msi = msi
-        self.meta_wrapping_flag =  False
-        self.tweet_created_at_flag =  False
-        self.language_flag =  False
-        self.keyword_flag =  False
-        self.author_flag =  False
-        self.name_flag =  False
-        self.username_flag =  False
-        self.location_flag =  False
-        self.description_flag =  False
-        self.wrap_after_text_flag =  True
-        self.single_file_flag =  False
-        self.percent_on_flag =  True
-        self.excluded_culsters_flag =  False
+        self.tweet_created_at_flag= False
+        self.language_flag= False
+        self.keyword_flag= False
+        self.name_flag= False
+        self.username_flag= False
+        self.location_flag= False
+        self.description_flag= False
+        self.wrap_after_text_flag = True
+        self.single_file_flag= False
+        self.percent_on_flag = True
+        self.excluded_culsters_flag= False
+        self.directory = "./"
 
     def set_by_name(self, name:str) -> bool:
         val:bool = self.__getattribute__(name)
@@ -41,4 +41,101 @@ class CorporaGenerator:
         print("{} = {}".format(name, val))
         return val
 
+    def set_folder(self):
+        self.directory = fd.askdirectory()
+        print("set_folder = {}".format(self.directory))
 
+    def write_files(self, experiment_id:int, keyword:str):
+        keyword_list = [keyword]
+        d:Dict
+        if keyword == 'all_keywords':
+            sql = "select distinct keywords from twitter_v2.table_experiment where id = %s"
+            vals = (experiment_id, )
+            result = self.msi.read_data(sql, vals)
+            d = result[0]
+            s:str = d['keywords']
+            keyword_list = s.split(',')
+
+        keyword:str
+        for keyword in keyword_list:
+            print("\n---------{}".format(keyword))
+            sql = 'select * from tweet_user_cluster_view where experiment_id = %s and keyword = %s and exclude = FALSE LIMIT 100'
+            if self.excluded_culsters_flag:
+                sql = 'select * from tweet_user_cluster_view where experiment_id = %s and keyword = %s LIMIT 100'
+            vals = (experiment_id, keyword.strip())
+            result = self.msi.read_data(sql, vals)
+            self.write_keyword_file(keyword, result)
+            # for d in result:
+            #     print(d)
+
+    def write_keyword_file(self, keyword:str, query_result_list:List, test_percent:float = 0.2):
+        probs = {"ten":0.1, "twenty":0.3, "thirty":0.6, "forty":1.0}
+        d:Dict
+        test_f = open("{}/{}_test.txt".format(self.directory, keyword), mode='w', encoding='utf-8')
+        train_f = open("{}/{}_train.txt".format(self.directory, keyword), mode='w', encoding='utf-8')
+
+        for d in query_result_list:
+            meta_dict = {}
+            if self.tweet_created_at_flag:
+                meta_dict['created'] = d['created_at']
+            if self.language_flag:
+                meta_dict['language'] = d['lang']
+            if self.keyword_flag:
+                meta_dict['keyword'] = keyword
+            if self.name_flag:
+                meta_dict['name'] = d['name']
+            if self.username_flag:
+                meta_dict['username'] = d['username']
+            if self.location_flag:
+                meta_dict['location'] = d['location']
+            if self.description_flag:
+                meta_dict['description'] = d['description']
+            if self.percent_on_flag:
+                prob = random.random()
+                for key, val in probs.items():
+                    if prob <= val:
+                        meta_dict['probability'] = key
+                        break
+
+            s = "|| text: {} ||".format(d['text'])
+            if self.wrap_after_text_flag:
+                for key, val in meta_dict.items():
+                    s = "{} {}: {} ||".format(s, key, val)
+            else:
+                for key, val in meta_dict:
+                    s = "|| {}: {} {}".format(key, val, s)
+
+
+            #if self.wrap_after_text_flag:
+            if random.random() < test_percent:
+                test_f.write("[[{}]]\n".format(s))
+            else:
+                train_f.write("[[{}]]\n".format(s))
+
+        test_f.flush()
+        test_f.close()
+        train_f.flush()
+        train_f.close()
+
+def main():
+    msi = MySqlInterface(user_name="root", db_name="twitter_v2")
+    cg = CorporaGenerator(msi)
+
+    cg.tweet_created_at_flag= True
+    cg.language_flag= True
+    cg.keyword_flag= True
+    cg.name_flag= True
+    cg.username_flag= True
+    cg.location_flag= True
+    cg.description_flag= True
+    cg.wrap_after_text_flag = True
+    cg.single_file_flag= True
+    cg.percent_on_flag = True
+    cg.excluded_culsters_flag= False
+
+    cg.set_folder()
+    # cg.write_files(1, "paxlovid OR Nirmatrelvir OR ritonavir")
+    cg.write_files(1, "all_keywords")
+
+if __name__ == "__main__":
+    main()
