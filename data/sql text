@@ -27,7 +27,7 @@ select te.name, te.id as experiment_id, te.sample_start as start, te.sample_end 
     from table_experiment te
     inner join table_query tq on te.id = tq.experiment_id
     inner join table_tweet tt on tq.id = tt.query_id
-    inner join table_exclude te on te.cluster_id = tt.cluster_id
+    inner join table_exclude tex on tex.cluster_id = tt.cluster_id
     inner join table_user tu on tu.id = tt.author_id;
 
 select * from keyword_tweet_view limit 10;

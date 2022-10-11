@@ -1,4 +1,5 @@
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
+from keyword_explorer.tkUtils.Checkboxes import Checkboxes
 import os
 
 class CorporaGenerator:
@@ -32,4 +33,12 @@ class CorporaGenerator:
         self.single_file_flag =  False
         self.percent_on_flag =  True
         self.excluded_culsters_flag =  False
+
+    def set_by_name(self, name:str) -> bool:
+        val:bool = self.__getattribute__(name)
+        self.__setattr__(name, (not val))
+        val:bool = self.__getattribute__(name)
+        print("{} = {}".format(name, val))
+        return val
+
 

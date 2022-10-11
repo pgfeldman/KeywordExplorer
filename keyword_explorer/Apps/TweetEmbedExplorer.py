@@ -18,6 +18,7 @@ from keyword_explorer.tkUtils.MoveableNode import MovableNode
 from keyword_explorer.tkUtils.Checkboxes import Checkboxes, DIR
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
 from keyword_explorer.utils.ManifoldReduction import ManifoldReduction, EmbeddedText
+from keyword_explorer.utils.CorporaGenerator import CorporaGenerator
 
 from typing import Dict, List, Any
 
@@ -29,6 +30,7 @@ class EmbeddingsExplorer(AppBase):
     oai: OpenAIComms
     msi: MySqlInterface
     mr: ManifoldReduction
+    cg: CorporaGenerator
     canvas_frame: CanvasFrame
     engine_combo: TopicComboExt
     keyword_combo: TopicComboExt
@@ -58,6 +60,7 @@ class EmbeddingsExplorer(AppBase):
         self.tkws = TweetKeywords()
         self.msi = MySqlInterface(user_name="root", db_name="twitter_v2")
         self.mr = ManifoldReduction()
+        self.cg = CorporaGenerator(self.msi)
 
         if not self.oai.key_exists():
             message.showwarning("Key Error", "Could not find Environment key 'OPENAI_KEY'")
@@ -110,7 +113,7 @@ class EmbeddingsExplorer(AppBase):
         self.tweet_option_checkboxes = Checkboxes(tab, row, "Tweet meta wrapping:", label_width=label_width)
         # cb = self.tweet_option_checkboxes.add_checkbox("Randomize", self.randomize_callback, dir=DIR.ROW)
         # ToolTip(cb, "Randomly select the starting time for each day so that a full pull won't go into tomorrow")
-        cb = self.tweet_option_checkboxes.add_checkbox("Created at", self.implement_me, dir=DIR.ROW)
+        cb = self.tweet_option_checkboxes.add_checkbox("Created at", lambda : self.set_corpora_flag_callback("tweet_created_at_flag"), dir=DIR.ROW)
         cb = self.tweet_option_checkboxes.add_checkbox("Language", self.implement_me, dir=DIR.ROW)
         cb = self.tweet_option_checkboxes.add_checkbox("Keyword", self.implement_me, dir=DIR.ROW)
         row = self.tweet_option_checkboxes.get_next_row()
@@ -219,6 +222,10 @@ class EmbeddingsExplorer(AppBase):
         if name in d:
             return d[name]
         return default
+
+    def set_corpora_flag_callback(self, var_name:str):
+        print("set_corpora_flag_callback({})".format(var_name))
+        val = self.cg.set_by_name(var_name)
 
     def store_reduced_and_clustering_callback(self):
         print("store_reduced_and_clustering_callback")
