@@ -54,7 +54,7 @@ class EmbeddingsExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "EmbeddingsExplorer"
-        self.app_version = "10.5.22"
+        self.app_version = "10.10.22"
         self.geom = (600, 620)
         self.oai = OpenAIComms()
         self.tkws = TweetKeywords()
@@ -116,7 +116,7 @@ class EmbeddingsExplorer(AppBase):
         cb = self.tweet_option_checkboxes.add_checkbox("Created at", lambda : self.set_corpora_flag_callback("tweet_created_at_flag"), dir=DIR.ROW)
         cb = self.tweet_option_checkboxes.add_checkbox("Language", lambda: self.set_corpora_flag_callback("language_flag"), dir=DIR.ROW)
         cb = self.tweet_option_checkboxes.add_checkbox("Keyword", lambda: self.set_corpora_flag_callback("keyword_flag"), dir=DIR.ROW)
-        cb = self.tweet_option_checkboxes.add_checkbox("Do something with threads?", self.implement_me, dir=DIR.ROW)
+        cb = self.tweet_option_checkboxes.add_checkbox("Exclude threaded tweets", lambda: self.set_corpora_flag_callback("exclude_thread_flag"), dir=DIR.ROW)
         row = self.tweet_option_checkboxes.get_next_row()
         self.author_option_checkboxes = Checkboxes(tab, row, "Author meta wrapping:", label_width=label_width)
         cb = self.author_option_checkboxes.add_checkbox("Name", lambda: self.set_corpora_flag_callback("name_flag"), dir=DIR.ROW)
