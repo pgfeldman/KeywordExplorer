@@ -38,7 +38,7 @@ class KeywordExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "KeywordExplorer"
-        self.app_version = "8.15.22"
+        self.app_version = "10.13.22"
         self.geom = (850, 790)
         self.oai = OpenAIComms()
         self.tvc = TwitterV2Counts()
@@ -88,9 +88,9 @@ class KeywordExplorer(AppBase):
         self.regex_field.set_text(r"\n[0-9]+\)|\n[0-9]+|[0-9]+\)")
         row = self.regex_field.get_next_row()
         buttons = Buttons(lf, row, "Actions", label_width=label_width)
-        buttons.add_button("New prompt", self.new_prompt_callback)
-        buttons.add_button("Extend prompt", self.extend_prompt_callback)
-        buttons.add_button("Parse response", self.parse_response_callback)
+        buttons.add_button("New prompt", self.new_prompt_callback, width=-1)
+        buttons.add_button("Extend prompt", self.extend_prompt_callback, width=-1)
+        buttons.add_button("Parse response", self.parse_response_callback, width=-1)
         row = buttons.get_next_row()
 
     def build_gpt_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
@@ -117,11 +117,11 @@ class KeywordExplorer(AppBase):
         self.end_date_field = DateEntryField(lf, row, 'End Date', text_width, label_width=label_width)
         row = self.end_date_field.get_next_row()
         buttons = Buttons(lf, row, "Actions", label_width=label_width)
-        buttons.add_button("Clear", self.clear_counts_callbacks)
-        buttons.add_button("Test Keyword", self.test_keyword_callback)
-        buttons.add_button("Plot", self.plot_counts_callback)
-        buttons.add_button("Save", self.save_callback)
-        buttons.add_button("Launch Twitter", self.launch_twitter_callback)
+        buttons.add_button("Clear", self.clear_counts_callbacks, width=-1)
+        buttons.add_button("Test Keyword", self.test_keyword_callback, width=-1)
+        buttons.add_button("Plot", self.plot_counts_callback, width=-1)
+        buttons.add_button("Save", self.save_callback, width=-1)
+        buttons.add_button("Launch Twitter", self.launch_twitter_callback, width=-1)
         row = buttons.get_next_row()
 
     def build_twitter_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):

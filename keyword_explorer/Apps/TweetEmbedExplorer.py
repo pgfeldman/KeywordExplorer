@@ -54,7 +54,7 @@ class EmbeddingsExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "EmbeddingsExplorer"
-        self.app_version = "10.10.22"
+        self.app_version = "10.13.22"
         self.geom = (600, 620)
         self.oai = OpenAIComms()
         self.tkws = TweetKeywords()
@@ -320,7 +320,7 @@ class EmbeddingsExplorer(AppBase):
             return
 
         print("\t Loading from DB")
-        query = 'select tweet_id, embedding, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s'
+        query = 'select tweet_row, tweet_id, embedding, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s'
         values = (self.experiment_id,)
         if keyword != 'all_keywords':
             query = 'select tweet_row, tweet_id, text, embedding, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s and keyword = %s'
@@ -331,7 +331,7 @@ class EmbeddingsExplorer(AppBase):
         print("\tClearing ManifoldReduction")
         self.mr.clear()
         self.canvas_frame.clear_Nodes()
-        print("\tLoading {} rows".format(len(result)))
+        self.dp.dprint("\tLoading {} rows".format(len(result)))
         count = 0
         et:EmbeddedText
         for row_dict in result:
@@ -341,9 +341,9 @@ class EmbeddingsExplorer(AppBase):
             cluster_id = self.safe_dict(row_dict, 'cluster_id', None)
             cluster_name = self.safe_dict(row_dict, 'cluster_name', None)
             et.set_optional(reduced, cluster_id, cluster_name)
-            count += 1
             if count % 1000 == 0:
-                print("loaded {} of {} records:".format(count, len(result)))
+                self.dp.dprint("loaded {} of {} records".format(count, len(result)))
+            count += 1
 
         self.mr.calc_xy_range()
 
@@ -359,7 +359,7 @@ class EmbeddingsExplorer(AppBase):
     def reduce_dimensions_callback(self):
         pca_dim = self.pca_dim_param.get_as_int()
         perplexity = self.perplexity_param.get_as_int()
-        print("Reducing: PCA dim = {}  perplexity = {}".format(pca_dim, perplexity))
+        self.dp.dprint("Reducing: PCA dim = {}  perplexity = {}".format(pca_dim, perplexity))
         self.mr.calc_embeding(perplexity=perplexity, pca_components=pca_dim)
         print("\tFinished dimension reduction")
         message.showinfo("reduce_dimensions_callback", "Reduced to {} dimensions".format(pca_dim))
@@ -388,7 +388,7 @@ class EmbeddingsExplorer(AppBase):
         n:MovableNode
         color_list = list(mcolors.TABLEAU_COLORS.values())
         num_nodes = len(self.mr.embedding_list)
-        print("\tExplore: num_nodes = {}".format(num_nodes))
+        self.dp.dprint("Explore: num_nodes = {}".format(num_nodes))
         if num_nodes == 0:
             return
         step = int(num_nodes / self.rows_param.get_as_int())
@@ -409,7 +409,7 @@ class EmbeddingsExplorer(AppBase):
             else:
                 et.mnode.set_color(c)
         self.color_excluded_clusters()
-        print("\tFinished creating points")
+        self.dp.dprint("Finished creating points")
 
     def selected_node_callback(self, node_id:int, msg:str):
         print("node_id = {}, msg = {}".format(node_id, msg))

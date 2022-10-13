@@ -35,7 +35,7 @@ class TweetCountExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "TweetCountExplorer"
-        self.app_version = "9.1.22"
+        self.app_version = "10.13.22"
         self.geom = (850, 440)
 
         self.tvc = TwitterV2Counts()
@@ -70,15 +70,15 @@ class TweetCountExplorer(AppBase):
         self.end_date_field = DateEntryField(lf, row, 'End Date', text_width, label_width=label_width)
         row = self.end_date_field.get_next_row()
         buttons = Buttons(lf, row, "Actions", label_width=label_width)
-        b = buttons.add_button("Clear", self.clear_counts_callbacks)
+        b = buttons.add_button("Clear", self.clear_counts_callbacks, width=-1)
         ToolTip(b, "Clears any old data from the plot")
-        b = buttons.add_button("Test Keyword", self.test_keyword_callback)
+        b = buttons.add_button("Test Keyword", self.test_keyword_callback, width=-1)
         ToolTip(b, "Query Twitter for each keyword and plot")
-        b = buttons.add_button("Plot", self.plot_counts_callback)
+        b = buttons.add_button("Plot", self.plot_counts_callback, width=-1)
         ToolTip(b, "Plot the current data")
-        b = buttons.add_button("Save", self.save_callback)
+        b = buttons.add_button("Save", self.save_callback, width=-1)
         ToolTip(b, "Save the results as an xlsx file")
-        b = buttons.add_button("Launch Twitter", self.launch_twitter_callback)
+        b = buttons.add_button("Launch Twitter", self.launch_twitter_callback, width=-1)
         ToolTip(b, "Open tabs in the default browser for each term over the time period")
         row = buttons.get_next_row()
 

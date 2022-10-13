@@ -36,7 +36,7 @@ class WikiPageviewExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "WikiPageviewExplorer.md"
-        self.app_version = "8.17.22"
+        self.app_version = "10.13.22"
         self.geom = (850, 700)
 
         self.multi_count_list = []
@@ -79,9 +79,9 @@ class WikiPageviewExplorer(AppBase):
         ToolTip(self.response_text_field.tk_text, "List of best matches in English Wikipedia\nSelect the desired results to examine and\nclick 'Copy Selected'")
         row = self.response_text_field.get_next_row()
         buttons = Buttons(lf, row, "Actions", label_width=label_width)
-        b = buttons.add_button("Search", self.search_wiki_callback)
+        b = buttons.add_button("Search", self.search_wiki_callback, width=-1)
         ToolTip(b, "Search for best matches in English Wikipedia")
-        b = buttons.add_button("Copy Selected", self.copy_selected_callback)
+        b = buttons.add_button("Copy Selected", self.copy_selected_callback, width=-1)
         ToolTip(b, "Copy selected responses to 'Pages' below for views")
         row = buttons.get_next_row()
 
@@ -97,13 +97,13 @@ class WikiPageviewExplorer(AppBase):
         buttons = Buttons(lf, row, "Actions", label_width=label_width)
         b = buttons.add_button("Clear", self.clear_pageviews_callback)
         ToolTip(b, "Clears the topics from the Views text area")
-        b = buttons.add_button("Test Pages", self.test_pages_callback)
+        b = buttons.add_button("Test Pages", self.test_pages_callback, width=-1)
         ToolTip(b, "Query page views between Start Date and End Date and plot results")
-        b = buttons.add_button("Plot", self.plot_callback)
+        b = buttons.add_button("Plot", self.plot_callback, width=-1)
         ToolTip(b, "Plot page views")
-        b = buttons.add_button("Save", self.save_callback)
+        b = buttons.add_button("Save", self.save_callback, width=-1)
         ToolTip(b, "Save page views to Excel file")
-        b = buttons.add_button("Show Pages", self.show_pages_callback)
+        b = buttons.add_button("Show Pages", self.show_pages_callback, width=-1)
         ToolTip(b, "Launch each Wikipedia page as a separate tab in the default browser")
         row = buttons.get_next_row()
 
