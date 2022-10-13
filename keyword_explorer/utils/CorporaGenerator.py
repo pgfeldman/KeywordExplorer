@@ -1,6 +1,8 @@
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
 import tkinter.filedialog as fd
+import tkinter.messagebox as message
 import random
+from datetime import datetime
 
 from typing import Dict, List
 
@@ -47,6 +49,14 @@ class CorporaGenerator:
         self.directory = fd.askdirectory()
         print("set_folder = {}".format(self.directory))
 
+    def get_where_options(self) -> Dict:
+        where_options_dict = {}
+        if self.excluded_culsters_flag:
+            where_options_dict['exclude'] = not self.excluded_culsters_flag
+        if self.exclude_thread_flag:
+            where_options_dict['is_thread'] = not self.exclude_thread_flag
+        return where_options_dict
+
     def write_files(self, experiment_id:int, keyword:str, limit:int = 0):
         limit_str = ""
         if limit > 0:
@@ -61,31 +71,45 @@ class CorporaGenerator:
             s:str = d['keywords']
             keyword_list = s.split(',')
 
+        if self.single_file_flag:
+            sql = 'select * from tweet_user_cluster_view where experiment_id = %s '
+            where_options_dict = self.get_where_options()
+            vals = [experiment_id, ]
+            for key, val in where_options_dict.items():
+                sql = "{}and {} = %s ".format(sql, key)
+                vals.append(val)
+            sql += limit_str
+            result = self.msi.read_data(sql, tuple(vals))
+            self.write_keyword_file('all_keywords', result)
+            print("\n-------\n{}\n{}".format(sql, tuple(vals)))
+            message.showinfo("Corpora", "Test/Train files written for all keywords")
+            return
+
         keyword:str
         for keyword in keyword_list:
             print("\n---------{}".format(keyword))
-            where_options_dict = {}
             sql = 'select * from tweet_user_cluster_view where experiment_id = %s and keyword = %s '
-            if self.excluded_culsters_flag:
-                where_options_dict['exclude'] = not self.excluded_culsters_flag
-            if self.exclude_thread_flag:
-                where_options_dict['is_thread'] = not self.exclude_thread_flag
+            where_options_dict = self.get_where_options()
             vals = [experiment_id, keyword.strip()]
             for key, val in where_options_dict.items():
                 sql = "{}and {} = %s ".format(sql, key)
                 vals.append(val)
             sql += limit_str
             result = self.msi.read_data(sql, tuple(vals))
-            # self.write_keyword_file(keyword, result)
+            self.write_keyword_file(keyword, result)
             print("\n-------\n{}\n{}".format(sql, tuple(vals)))
-            for d in result:
-                print(d)
+            # for d in result:
+            #     print(d)
+        message.showinfo("Corpora", "Test/Train files written for {}".format(keyword_list))
 
     def write_keyword_file(self, keyword:str, query_result_list:List, test_percent:float = 0.2):
+        print("{}: writing {} rows".format(keyword, len(query_result_list)))
         probs = {"ten":0.1, "twenty":0.3, "thirty":0.6, "forty":1.0}
+        date_fmt = "%b-%d-%Y_%H-%M-%S"
+        now = datetime.now()
         d:Dict
-        test_f = open("{}/{}_test.txt".format(self.directory, keyword), mode='w', encoding='utf-8')
-        train_f = open("{}/{}_train.txt".format(self.directory, keyword), mode='w', encoding='utf-8')
+        test_f = open("{}/{}_test_{}.txt".format(self.directory, keyword, now.strftime(date_fmt)), mode='w', encoding='utf-8')
+        train_f = open("{}/{}_train_{}.txt".format(self.directory, keyword, now.strftime(date_fmt)), mode='w', encoding='utf-8')
 
         for d in query_result_list:
             meta_dict = {}
@@ -110,13 +134,14 @@ class CorporaGenerator:
                         meta_dict['probability'] = key
                         break
 
-            s = "|| text: {} ||".format(d['text'])
+            cleaned_str = d['text'].replace("\n", "")
+            s = "text: {}".format(cleaned_str)
             if self.wrap_after_text_flag:
                 for key, val in meta_dict.items():
-                    s = "{} {}: {} ||".format(s, key, val)
+                    s = "{} || {}: {}".format(s, key, val)
             else:
                 for key, val in meta_dict:
-                    s = "|| {}: {} {}".format(key, val, s)
+                    s = "{}: {} || {}".format(key, val, s)
 
 
             #if self.wrap_after_text_flag:
@@ -129,6 +154,7 @@ class CorporaGenerator:
         test_f.close()
         train_f.flush()
         train_f.close()
+
 
 def main():
     msi = MySqlInterface(user_name="root", db_name="twitter_v2")

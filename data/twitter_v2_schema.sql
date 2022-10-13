@@ -34,7 +34,11 @@ SET character_set_client = utf8;
   `author_id` tinyint NOT NULL,
   `conversation_id` tinyint NOT NULL,
   `tweet_id` tinyint NOT NULL,
+  `tweet_row` tinyint NOT NULL,
   `text` tinyint NOT NULL,
+  `cluster_id` tinyint NOT NULL,
+  `cluster_name` tinyint NOT NULL,
+  `reduced` tinyint NOT NULL,
   `is_thread` tinyint NOT NULL,
   `embedding` tinyint NOT NULL
 ) ENGINE=MyISAM */;
@@ -176,7 +180,7 @@ SET character_set_client = @saved_cs_client;
 /*!50001 SET collation_connection      = utf8mb4_unicode_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `keyword_tweet_view` AS select `te`.`name` AS `name`,`te`.`id` AS `experiment_id`,`te`.`sample_start` AS `start`,`te`.`sample_end` AS `end`,`te`.`keywords` AS `keywords`,`tq`.`query` AS `query`,`tq`.`keyword` AS `keyword`,`tt`.`author_id` AS `author_id`,`tt`.`conversation_id` AS `conversation_id`,`tt`.`id` AS `tweet_id`,`tt`.`text` AS `text`,`tt`.`is_thread` AS `is_thread`,`tt`.`embedding` AS `embedding` from ((`table_experiment` `te` join `table_query` `tq` on(`te`.`id` = `tq`.`experiment_id`)) join `table_tweet` `tt` on(`tq`.`id` = `tt`.`query_id`)) */;
+/*!50001 VIEW `keyword_tweet_view` AS select `te`.`name` AS `name`,`te`.`id` AS `experiment_id`,`te`.`sample_start` AS `start`,`te`.`sample_end` AS `end`,`te`.`keywords` AS `keywords`,`tq`.`query` AS `query`,`tq`.`keyword` AS `keyword`,`tt`.`author_id` AS `author_id`,`tt`.`conversation_id` AS `conversation_id`,`tt`.`id` AS `tweet_id`,`tt`.`row_id` AS `tweet_row`,`tt`.`text` AS `text`,`tt`.`cluster_id` AS `cluster_id`,`tt`.`cluster_name` AS `cluster_name`,`tt`.`reduced` AS `reduced`,`tt`.`is_thread` AS `is_thread`,`tt`.`embedding` AS `embedding` from ((`table_experiment` `te` join `table_query` `tq` on(`te`.`id` = `tq`.`experiment_id`)) join `table_tweet` `tt` on(`tq`.`id` = `tt`.`query_id`)) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -209,4 +213,4 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2022-10-11 15:43:11
+-- Dump completed on 2022-10-13  9:07:49

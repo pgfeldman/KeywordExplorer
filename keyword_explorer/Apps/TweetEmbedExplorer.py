@@ -262,7 +262,8 @@ class EmbeddingsExplorer(AppBase):
         rows = 0
         for et in self.mr.embedding_list:
             sql = "update table_tweet set cluster_id = %s, cluster_name = %s, reduced = %s where row_id = %s;"
-            vals = (et.cluster_id, et.cluster_name, et.reduced, et.row_id)
+            vals = (int(et.cluster_id), et.cluster_name, "{}".format(et.reduced), int(et.row_id))
+            print("store_reduced_and_clustering_callback\n\t{}\n\t{}".format(sql, vals))
             self.msi.write_sql_values_get_row(sql, vals)
             rows += 1
         message.showinfo("DB Write", "Wrote {} rows of reduced and cluster data".format(rows))
@@ -336,7 +337,7 @@ class EmbeddingsExplorer(AppBase):
         et:EmbeddedText
         for row_dict in result:
             et = self.mr.load_row(row_dict['tweet_row'], row_dict['embedding'])
-            et.text = row_dict['text']
+            et.text = self.safe_dict(row_dict, 'text', "unset")
             reduced = self.safe_dict(row_dict, 'reduced', None)
             cluster_id = self.safe_dict(row_dict, 'cluster_id', None)
             cluster_name = self.safe_dict(row_dict, 'cluster_name', None)
@@ -366,7 +367,7 @@ class EmbeddingsExplorer(AppBase):
 
     def cluster_callback(self):
         print("Clustering")
-        eps = self.eps_param.get_as_int()
+        eps = self.eps_param.get_as_float()
         min_samples = self.min_samples_param.get_as_int()
         self.mr.dbscan(eps=eps, min_samples=min_samples)
         self.dp.dprint("Finished clustering")
@@ -460,6 +461,8 @@ class EmbeddingsExplorer(AppBase):
         engine = self.engine_combo.get_text()
         print("get_embeddings_callback() Experiment id = {}, Keyword = {}, Engine = {}".format(self.experiment_id, keyword, engine))
         result = self.msi.read_data(query, values)
+        self.dp.dprint("Getting embeddings for {} rows".format(len(result)))
+        count = 0
         row_dict:Dict
         for row_dict in result:
             id = row_dict['tweet_id']
@@ -469,6 +472,9 @@ class EmbeddingsExplorer(AppBase):
             query = "update table_tweet set embedding = %s where id = %s"
             values = ("{}:{}".format(engine, embd), id)
             self.msi.write_sql_values_get_row(query, values)
+            if count % 1000 == 0:
+                self.dp.dprint("Embedded {} of {} records".format(count, len(result)))
+            count += 1
 
 
     def get_keyword_entries_callback(self, keyword: str):
