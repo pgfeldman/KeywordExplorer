@@ -123,7 +123,7 @@ def tweet_id_query_example(id: str = "1484131517878181891"):
 
 def historical_query_example():
     query = "from:philfeld" # "to:philfeld and is:reply"
-    query = '"china virus"' # "to:philfeld and is:reply"
+    query = '"china virus" place_country:US lang:en' # "to:philfeld and is:reply"
     timeframe = "end_time=2018-07-18T00:00:00.000Z"
     timeframe = "start_time=2022-06-01T00:00:00.000Z&end_time=2022-06-02T00:00:00.000Z"
     url = create_historical_url(query=query, time_str=timeframe, max_result=10)

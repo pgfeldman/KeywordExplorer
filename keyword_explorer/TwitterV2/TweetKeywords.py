@@ -143,7 +143,7 @@ class TweetKeywords(TwitterV2Base):
         tweet_fields = "&tweet.fields=attachments,lang,author_id,id,text,in_reply_to_user_id,created_at,conversation_id,geo"
         expansion_fields = "&expansions=referenced_tweets.id,referenced_tweets.id.author_id,entities.mentions.username,in_reply_to_user_id,attachments.media_keys"
         media_fields = "&media.fields=preview_image_url,type,url"
-        tweet_options = "lang:en -is:retweet"
+        tweet_options = "place_country:US lang:en -is:retweet"
         url = "https://api.twitter.com/2/tweets/search/all?max_results={}&query={} {}".format(max_result, query, tweet_options)
         url += tweet_fields
         # url += expansion_fields
@@ -158,7 +158,7 @@ class TweetKeywords(TwitterV2Base):
 
     def create_historical_conversation_url(self, conversation_id:str, max_result:int = 10, next_token:str = None) -> str:
         tweet_fields = "tweet.fields=lang,author_id,in_reply_to_user_id,created_at,conversation_id"
-        tweet_options = "lang:en -is:retweet"
+        tweet_options = "place_country:US lang:en -is:retweet"
         url = "https://api.twitter.com/2/tweets/search/all?max_results={}&query=conversation_id:{} " \
               "{}&{}".format(
             max_result, conversation_id, tweet_options, tweet_fields)
@@ -391,9 +391,9 @@ def exercise_get_threads():
 
 def main():
     # exercise_get_counts()
-    # exercise_get_keyword_tweets()
+    exercise_get_keyword_tweets()
     # exercise_sample_keywords_one_day()
-    exercise_get_threads()
+    # exercise_get_threads()
 
 
 
