@@ -18,6 +18,12 @@ class Checkbox():
         self.name = name
         self.cb = ttk.Checkbutton(wrapper, text=name, command=command, variable=self.bvar)
 
+    def get_val(self) -> bool:
+        return self.bvar.get()
+
+    def set_val(self, val:bool):
+        self.bvar.set(val)
+
 class Checkboxes():
     tk_label:tk.Label
     tk_button:ttk.Checkbutton
@@ -41,7 +47,7 @@ class Checkboxes():
         self.btn_col = 0
         self.btn_row = 0
 
-    def add_checkbox(self, name:str, command:Callable, sticky:Any = (tk.N, tk.W), dir:DIR=DIR.COL) -> ttk.Checkbutton:
+    def add_checkbox(self, name:str, command:Callable, sticky:Any = (tk.N, tk.W), dir:DIR=DIR.COL) -> Checkbox:
         cb = Checkbox(self.wrapper, name=name, command=command)
         self.check_list.append(cb)
         cb.cb.grid(column=self.btn_col, row=self.btn_row, sticky=sticky, pady=2, padx=5)
@@ -49,7 +55,7 @@ class Checkboxes():
             self.btn_col += 1
         elif dir == DIR.ROW:
             self.btn_row += 1
-        return cb.cb
+        return cb
 
     def set_checkbox(self, name:str, val:bool):
         cb:Checkbox

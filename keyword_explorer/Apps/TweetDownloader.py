@@ -7,7 +7,7 @@ from typing import List, Dict
 from keyword_explorer.Apps.AppBase import AppBase
 from keyword_explorer.TwitterV2.TweetKeywords import TweetKeywords, TweetKeyword
 from keyword_explorer.tkUtils.Buttons import Buttons
-from keyword_explorer.tkUtils.Checkboxes import Checkboxes
+from keyword_explorer.tkUtils.Checkboxes import Checkboxes, Checkbox, DIR
 from keyword_explorer.tkUtils.DataField import DataField
 from keyword_explorer.tkUtils.DateEntryField import DateEntryField
 from keyword_explorer.tkUtils.TextField import TextField
@@ -50,8 +50,11 @@ class TweetDownloader(AppBase):
     lowest_count_field:DataField
     highest_count_field:DataField
     percent_field:DataField
+    query_options_field:DataField
     # option_checkboxes:Checkboxes
     experiment_combo: TopicComboExt
+    db_option_checkboxes: Checkboxes
+    db_write_cb: Checkbox
     keyword_data_list:List
     randomize:bool
     hour_offset:int
@@ -68,7 +71,7 @@ class TweetDownloader(AppBase):
 
     def setup_app(self):
         self.app_name = "TweetDownloader"
-        self.app_version = "9.8.22"
+        self.app_version = "10.14.22"
         self.geom = (1000, 560)
         self.console_lines = 10
         self.text_width = 70
@@ -79,7 +82,7 @@ class TweetDownloader(AppBase):
             message.showwarning("Key Error", "Could not find Environment key 'BEARER_TOKEN_2'")
 
     def build_app_view(self, row:int, main_text_width:int, main_label_width:int) -> int:
-        param_text_width = 20
+        param_text_width = 40
         param_label_width = 15
         row += 1
         lf = tk.LabelFrame(self, text="Twitter")
@@ -188,6 +191,16 @@ class TweetDownloader(AppBase):
         ToolTip(self.cur_date_field.tk_entry, "The current date of the running pull")
         row = self.cur_date_field.get_next_row()
 
+        self.query_options_field = DataField(lf, row, 'Query Options', text_width, label_width=label_width)
+        self.query_options_field.set_text("place_country:US lang:en -is:retweet")
+        ToolTip(self.query_options_field.tk_entry, "TwitterV2 args. Default is USA, English, and no retweets\nMore info is available here:\ndeveloper.twitter.com/en/docs/twitter-api/tweets/search/integrate/build-a-query")
+        row = self.query_options_field.get_next_row()
+
+        self.db_option_checkboxes = Checkboxes(lf, row, "DB Options", label_width=label_width)
+        self.db_write_cb = self.db_option_checkboxes.add_checkbox("Disable writes", self.set_db_writes_callback, dir=DIR.ROW)
+        ToolTip(self.db_write_cb.cb, "Disable/Enable db writes (for debugging w/o db updates)")
+        row = self.db_option_checkboxes.get_next_row()
+
     def set_experiment_text(self, l:List):
         self.keyword_text_field.clear()
         pos = 0
@@ -235,6 +248,11 @@ class TweetDownloader(AppBase):
             self.dp.dprint("Experiment[{}] has {:,} threads".format(id, row['count(*)']))
         self.experiment_combo.set_label("ID {:,} Threads:".format(threads))
 
+    def set_db_writes_callback(self):
+        val = self.db_write_cb.get_val()
+        print("set_db_writes_callback: {}".format(val))
+        pass
+
     def randomize_callback(self):
         self.randomize = not self.randomize
         # print("self.randomize = {}".format(self.randomize))
@@ -257,6 +275,7 @@ class TweetDownloader(AppBase):
         tk:TweetKeyword
         tk_list = []
         tweets_to_download = self.thread_length.get_as_int()
+        self.tkws.set_query_params(self.query_options_field.get_text())
 
         print("collect_thread_callback with experiment_id = {}".format(self.experiment_id))
         # get the keywords in this experiment so we can create TweetKeyword objects
@@ -284,6 +303,7 @@ class TweetDownloader(AppBase):
 
     # TODO: Add condition that exits when corpus size is reached
     def collect_percent_callback(self):
+        self.tkws.set_query_params(self.query_options_field.get_text())
         date_fmt = "%B %d, %Y (%H:%M:%S)"
         percent = self.percent_field.get_as_int()
         clamp = self.clamp_field.get_as_int()
@@ -356,6 +376,7 @@ class TweetDownloader(AppBase):
     # Collect the same number of tweets for each keyword over the sample duration
     # TODO: Add condition that exits when corpus size is reached
     def collect_balanced_callback(self):
+        self.tkws.set_query_params(self.query_options_field.get_text())
         date_fmt = "%B %d, %Y (%H:%M:%S)"
         # get the max number of samples that we want to get per day
         clamp = self.clamp_field.get_as_int()

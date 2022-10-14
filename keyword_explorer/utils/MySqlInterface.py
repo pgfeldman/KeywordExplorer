@@ -20,6 +20,9 @@ class MySqlInterface:
             cursorclass=pymysql.cursors.DictCursor, charset='utf8mb4')
         self.connection.autocommit(True)
 
+    def set_enable_writes(self, val:bool):
+        self.enable_writes = val
+
     def read_data(self, sql_str: str, tvals:Tuple = None, debug:bool = False) -> List:
 
         self.last_query = sql_str
@@ -57,6 +60,8 @@ class MySqlInterface:
 
     # see https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlcursor-execute.html
     def write_sql_values_get_row(self, sql:str, values:Tuple, debug:bool=False):
+        if not self.enable_writes:
+            return
         try:
             with self.connection.cursor() as cursor:
                 cursor.execute(sql, values)
