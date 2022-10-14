@@ -114,6 +114,7 @@ class TweetKeyword():
 class TweetKeywords(TwitterV2Base):
     max_tweets_per_sample = 500
     min_tweets_per_sample = 10
+    query_params:Union[str, None]
 
     def __init__(self):
         super().__init__()
@@ -127,9 +128,10 @@ class TweetKeywords(TwitterV2Base):
         self.multi_count_list = []
         self.total_tweets = 0
         self.totals_dict = {}
+        self.query_params = None
 
-    @staticmethod
-    def create_counts_url(query:str, start_time:str, end_time:str, granularity:str = "day", next_token:str = None):
+    # @staticmethod
+    def create_counts_url(self, query:str, start_time:str, end_time:str, granularity:str = "day", next_token:str = None):
         url = "https://api.twitter.com/2/tweets/counts/all?query={}&start_time={}&end_time={}&granularity={}".format(
             query, start_time, end_time, granularity)
         if next_token != None:
@@ -137,13 +139,15 @@ class TweetKeywords(TwitterV2Base):
         # print("create_counts_url(): {}".format(url))
         return url
 
-    @staticmethod
-    def create_keywords_url(query:str, max_result:int = 10, time_str:str = None, next_token:str = None) -> str:
+    # @staticmethod
+    def create_keywords_url(self, query:str, max_result:int = 10, time_str:str = None, next_token:str = None) -> str:
         tweet_fields = "tweet.fields=lang,geo,author_id,in_reply_to_user_id,created_at,conversation_id&expansions=geo.place_id"
         tweet_fields = "&tweet.fields=attachments,lang,author_id,id,text,in_reply_to_user_id,created_at,conversation_id,geo"
         expansion_fields = "&expansions=referenced_tweets.id,referenced_tweets.id.author_id,entities.mentions.username,in_reply_to_user_id,attachments.media_keys"
         media_fields = "&media.fields=preview_image_url,type,url"
         tweet_options = "place_country:US lang:en -is:retweet"
+        if self.query_params != None:
+            tweet_options = self.query_params
         url = "https://api.twitter.com/2/tweets/search/all?max_results={}&query={} {}".format(max_result, query, tweet_options)
         url += tweet_fields
         # url += expansion_fields
@@ -156,9 +160,14 @@ class TweetKeywords(TwitterV2Base):
         # print("\tTweetKeywords.create_keywords_url(): url = {}".format(url))
         return url
 
+    def set_query_params(self, params:str = 'place_country:US lang:en -is:retweet'):
+        self.query_params = params
+
     def create_historical_conversation_url(self, conversation_id:str, max_result:int = 10, next_token:str = None) -> str:
         tweet_fields = "tweet.fields=lang,author_id,in_reply_to_user_id,created_at,conversation_id"
         tweet_options = "place_country:US lang:en -is:retweet"
+        if self.query_params != None:
+            tweet_options = self.query_params
         url = "https://api.twitter.com/2/tweets/search/all?max_results={}&query=conversation_id:{} " \
               "{}&{}".format(
             max_result, conversation_id, tweet_options, tweet_fields)
