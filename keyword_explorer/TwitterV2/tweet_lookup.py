@@ -17,7 +17,7 @@ https://developer.twitter.com/en/docs/twitter-api/tweets/counts/introduction
 
 # To set your enviornment variables in your terminal run the following line:
 # export 'BEARER_TOKEN'='<your_bearer_token>'
-#bearer_token = "AAAAAAAAAAAAAAAAAAAAAMVPWAEAAAAAo3uC%2Fq68qUXLTwi41%2FKxXCvsYVI%3DAXG4U2nYO73pvhag3stPFPli4aR9VFYsxAa3bbTN2DW9OU40fL"
+#bearer_token = "AAAAAAAAAAAAAAAAAAAAAMVPWAEAAA-----------------------------------------------------------"
 #bearer_token = os.environ.get("BEARER_TOKEN")
 bearer_token = os.environ.get("BEARER_TOKEN_2")
 
