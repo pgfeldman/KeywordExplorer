@@ -1,6 +1,6 @@
 Explorer Apps
 ====================================
-There are four applications in this project, _KeywordExplorer_, _TweetsCountExplorer_, _TweetDownloader_, and _WikiPageviewExplorer_. They can be installed with pip:
+There are six(!) applications in this project, _KeywordExplorer_, _TweetsCountExplorer_, _TweetDownloader_,  _WikiPageviewExplorer_, _TweetEmbedExplorer_, and _ModelExplorer_. They can be installed with pip:
 
     pip install keyword-explorer
 
