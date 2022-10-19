@@ -1,3 +1,4 @@
 Compare the embedding of generated tweets to existing tweets as a way of looking up ground truth
 Apply the probability of features in the text to features in the generated valuse and make this conditional on the prompt
 Maybe use existing tweets to determine what prompts to use?
+Cross-language compare of responses given identical prompts in the different languages
