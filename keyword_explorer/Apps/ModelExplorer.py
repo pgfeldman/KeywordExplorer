@@ -124,19 +124,30 @@ class ModelExplorer(AppBase):
         return row + 1
 
     def run_probe_callback(self):
-        s = "{}\n<p>probe: {}</p>\n<ul>\n".format(html_begin, self.probe_field.get_text())
+        probe = self.probe_field.get_text()
+        s = "{}\n<p>probe: {}</p>\n".format(html_begin, probe)
         self.gpt_response_frame.load_html(s)
         if self.hgpt == None:
             message.showwarning("GPT-2", "Model isn't loaded. Please select\ndirectory in the file menu")
             return
-
-        result_list = self.hgpt.run_probes(s)
+        self.dp.dprint("running probe {}".format(probe))
+        result_list = self.hgpt.run_probes(probe)
         for result in result_list:
-            dict_list = self.hgpt.parse_sequence(result)
-            d:Dict
-            for d in dict_list:
-                s = "{}<li>{}: {}/<li>\n".format(s, d['word'], d['substr'])
-        s = "{}/ul\n{}".format(html_end)
+            sequence_list = self.hgpt.clean_and_split_sequence(result)
+            count = 0
+            for sequence in sequence_list:
+                dict_list = self.hgpt.parse_sequence(sequence)
+                d:Dict
+                for d in dict_list: # get the text first
+                    if d['word'] == 'text':
+                        s += "<p>sequence {} of {}</p>\n<p>text: {}</p>\n<ul>\n".format(count, len(sequence_list), d['substr'])
+                        break
+                for d in dict_list: #then the meta wrapping
+                    if d['word'] != 'text':
+                        s += "\t<li>{}: {}</li>\n".format(d['word'], d['substr'])
+                s += "</ul>\n"
+                count+= 1
+        print(s)
         self.gpt_response_frame.load_html(s)
 
 

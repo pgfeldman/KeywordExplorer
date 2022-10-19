@@ -12,6 +12,7 @@ class HFaceGPT:
     sequence_regex = re.compile(r"\]\]\[\[")
     element_regex = re.compile(r"\|\| \w+: ")
     word_regex = re.compile(r"\w+")
+    start_regex = re.compile(r"\[\[\w+:")
 
     def __init__(self, path:str, initial_prompt:str = "]][[text:", seed:int = 2):
         self.tf_seed = seed
@@ -36,7 +37,7 @@ class HFaceGPT:
         output_list  = self.model.generate(
             input_ids,
             do_sample=True,
-            max_length=256,
+            max_length=128,
             top_k=50,
             top_p=0.95,
             num_return_sequences=num_return_sequences)
@@ -53,8 +54,21 @@ class HFaceGPT:
 
         return strings_list
 
+    def clean_and_split_sequence(self, to_parse:str) -> List:
+        print("HFaceGPT.clean_and_split_sequence() parsing {}".format(to_parse))
+        sub_list = self.start_regex.findall(to_parse)
+        print(sub_list)
+        for s in sub_list:
+            words = self.word_regex.findall(s)
+            to_parse = to_parse.replace(s, "[[|| {}: ".format(words[0]), 1)
+        result_list = self.sequence_regex.split(to_parse)
+        return result_list
+
     def parse_sequence(self, s:str) -> List:
+        print("HFaceGPT.parse_sequence() parsing '{}'".format(s))
         result = self.element_regex.findall(s)
+        if len(result) == 0:
+            return []
         tag:str
         sequence_list = []
         for i in range(len(result)):
@@ -70,7 +84,9 @@ class HFaceGPT:
             d2 = sequence_list[i+1]
             substr = s[d1['end']:d2['start']]
             d1['substr'] = substr.strip()
-        d = sequence_list[-1]
+        d = sequence_list[0]
+        if len(sequence_list) > 0:
+            d = sequence_list[-1]
         d['substr'] = s[d['end']:].strip()
 
         return sequence_list
