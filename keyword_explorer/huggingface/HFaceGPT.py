@@ -5,6 +5,7 @@ import re
 
 from typing import Union, Dict, List, Pattern
 
+
 class HFaceGPT:
     tf_seed:int
     tokenizer:Union[None, GPT2Tokenizer]
@@ -13,14 +14,15 @@ class HFaceGPT:
     element_regex = re.compile(r"\|\| \w+: ")
     word_regex = re.compile(r"\w+")
     start_regex = re.compile(r"\[\[\w+:")
+    result_list:List
 
     def __init__(self, path:str, initial_prompt:str = "]][[text:", seed:int = 2):
         self.tf_seed = seed
         self.tokenizer = GPT2Tokenizer.from_pretrained(path)
         self.model = TFGPT2LMHeadModel.from_pretrained(path, pad_token_id=self.tokenizer.eos_token_id, from_pt=True)
-        result_list = self.run_probes(initial_prompt)
+        self.result_list = self.run_probes(initial_prompt)
         print("initial prompt = {}".format(initial_prompt))
-        for result in result_list:
+        for result in self.result_list:
             print("\t{}".format(result))
 
     def run_probes(self, probe:str, num_return_sequences:int = 10) -> Union[List, None]:
@@ -29,7 +31,7 @@ class HFaceGPT:
             return None
 
         tf.random.set_seed(self.tf_seed)
-        strings_list = []
+        self.result_list = []
         # encode context the generation is conditioned on
         input_ids = self.tokenizer.encode(probe, return_tensors='tf')
 
@@ -50,9 +52,9 @@ class HFaceGPT:
             # s = s.split(']]] [[[')[0]
             # print("\t[{}]: {}".format(i, s))
             parse_list.append(s)
-            strings_list.append(s)
+            self.result_list.append(s)
 
-        return strings_list
+        return self.result_list
 
     def clean_and_split_sequence(self, to_parse:str) -> List:
         print("HFaceGPT.clean_and_split_sequence() parsing {}".format(to_parse))
