@@ -87,8 +87,10 @@ class ModelExplorer(AppBase):
         row = self.build_percent_row(parent, row)
 
         self.flag_checkboxes = Checkboxes(parent, row, "Flags")
-        cb = self.flag_checkboxes.add_checkbox("Re-use Seed", lambda: self.seed_callback(), dir= DIR.ROW )
+        cb = self.flag_checkboxes.add_checkbox("Re-use Seed", self.seed_callback, dir= DIR.COL )
         ToolTip(cb.cb, "Use the same seed for each batch")
+        cb = self.flag_checkboxes.add_checkbox("Save to DB", self.implement_me, dir= DIR.COL )
+        ToolTip(cb.cb, "Save the output to the gpt_experiments database\nNot implemented")
         row = self.flag_checkboxes.get_next_row()
 
         self.probe_field = DataField(parent, row, "Probe:", text_width, label_width=label_width)

@@ -1,6 +1,6 @@
 {
     "probe_str": "]][[text: ",
-    "description": "",
+    "description": "This is a description",
     "max_len": 128,
     "top_k": 50,
     "top_p": 0.95,
