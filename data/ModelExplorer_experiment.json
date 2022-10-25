@@ -1,0 +1,11 @@
+{
+    "probe_str": "]][[text: ",
+    "description": "",
+    "max_len": 128,
+    "top_k": 50,
+    "top_p": 0.95,
+    "num_sequences": 10,
+    "batch_size": 1,
+    "seed_flag": false,
+    "model_path": "D:/Development/models/ivermectin_paxlovid"
+}

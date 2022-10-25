@@ -6,6 +6,7 @@ from tkinter import filedialog
 from tkinter.font import Font
 from datetime import datetime
 from pathlib import Path
+import json
 from typing import Tuple, Dict, List
 
 from keyword_explorer.tkUtils.ConsoleDprint import ConsoleDprint
@@ -121,6 +122,14 @@ class AppBase(tk.Tk):
             filename = result.name
             print("AppBase.save_experiment_callback() Saving to {}".format(filename))
             self.save_experiment_text(filename)
+
+    def save_experiment_json(self, d:Dict):
+        result = filedialog.asksaveasfile(filetypes=(("JSON files", "*.json"),("All Files", "*.*")), title="Save/Update experiment")
+        if result:
+            filename = result.name
+            print("AppBase.save_experiment_json() Saving to {}".format(filename))
+            with open (filename, 'w') as f:
+                json.dump(d, f, indent=4)
 
 
     def log_action(self, task:str, row_info:Dict, mode:str = "a"):

@@ -15,9 +15,12 @@ class HFaceGPT:
     word_regex = re.compile(r"\w+")
     start_regex = re.compile(r"\[\[\w+:")
     result_list:List
+    path_str:str
 
     def __init__(self, path:str, initial_prompt:str = "]][[text:", seed:int = 2):
         self.tf_seed = seed
+        self.path_str = path
+        tf.random.set_seed(self.tf_seed)
         self.tokenizer = GPT2Tokenizer.from_pretrained(path)
         self.model = TFGPT2LMHeadModel.from_pretrained(path, pad_token_id=self.tokenizer.eos_token_id, from_pt=True)
         self.result_list = self.run_probes(initial_prompt)
@@ -25,12 +28,13 @@ class HFaceGPT:
         for result in self.result_list:
             print("\t{}".format(result))
 
-    def run_probes(self, probe:str, num_return_sequences:int = 10) -> Union[List, None]:
+    def run_probes(self, probe:str, num_return_sequences:int = 10, max_length:int = 128, top_k:int = 50, top_p:float = 0.95, reset_seed:bool = False) -> Union[List, None]:
         if self.model == None or self.tokenizer == None:
             message.showwarning("GPT Model", "Model directory unset")
             return None
 
-        tf.random.set_seed(self.tf_seed)
+        if reset_seed:
+            tf.random.set_seed(self.tf_seed)
         self.result_list = []
         # encode context the generation is conditioned on
         input_ids = self.tokenizer.encode(probe, return_tensors='tf')
