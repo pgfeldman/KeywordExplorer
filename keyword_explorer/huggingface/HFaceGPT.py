@@ -43,9 +43,9 @@ class HFaceGPT:
         output_list  = self.model.generate(
             input_ids,
             do_sample=True,
-            max_length=128,
-            top_k=50,
-            top_p=0.95,
+            max_length=max_length,
+            top_k=top_k,
+            top_p=top_p,
             num_return_sequences=num_return_sequences)
 
         print("\n{}:".format(probe))

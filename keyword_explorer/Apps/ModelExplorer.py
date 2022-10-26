@@ -1,4 +1,5 @@
 import re
+import json
 import tkinter.messagebox as message
 import tkinter.filedialog as filedialog
 import tkinter as tk
@@ -10,7 +11,7 @@ from keyword_explorer.tkUtils.DataField import DataField
 from keyword_explorer.tkUtils.LabeledParam import LabeledParam
 from keyword_explorer.tkUtils.Buttons import Buttons
 from keyword_explorer.tkUtils.ToolTip import ToolTip
-from keyword_explorer.tkUtils.Checkboxes import Checkboxes, DIR
+from keyword_explorer.tkUtils.Checkboxes import Checkboxes, Checkbox, DIR
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
 from keyword_explorer.huggingface.HFaceGPT import HFaceGPT
 from keyword_explorer.huggingface.PatternCounter import PatternCounters, PatternCounter
@@ -30,12 +31,15 @@ class ModelExplorer(AppBase):
     thirty_percent:LabeledParam
     forty_percent:LabeledParam
     flag_checkboxes:Checkboxes
+    seed_checkbox:Checkbox
+    db_checkbox:Checkbox
     msi: MySqlInterface
     sequence_regex:Pattern
     element_regex:Pattern
     pattern_counters:PatternCounters
     hgpt:HFaceGPT
     reuse_seed:bool
+    db_flag:bool
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -57,6 +61,7 @@ class ModelExplorer(AppBase):
         self.pattern_counters.add(PatternCounter(r"\w+: thirty"), "thirty")
         self.pattern_counters.add(PatternCounter(r"\w+: forty"), "forty")
         self.reuse_seed = False
+        self.db_flag = False
 
     def build_menus(self):
         print("building menus")
@@ -87,14 +92,14 @@ class ModelExplorer(AppBase):
         row = self.build_percent_row(parent, row)
 
         self.flag_checkboxes = Checkboxes(parent, row, "Flags")
-        cb = self.flag_checkboxes.add_checkbox("Re-use Seed", self.seed_callback, dir= DIR.COL )
-        ToolTip(cb.cb, "Use the same seed for each batch")
-        cb = self.flag_checkboxes.add_checkbox("Save to DB", self.implement_me, dir= DIR.COL )
-        ToolTip(cb.cb, "Save the output to the gpt_experiments database\nNot implemented")
+        self.seed_checkbox = self.flag_checkboxes.add_checkbox("Re-use Seed", self.seed_callback, dir= DIR.COL )
+        ToolTip(self.seed_checkbox.cb, "Use the same seed for each batch")
+        self.db_checkbox = self.flag_checkboxes.add_checkbox("Save to DB", self.implement_me, dir= DIR.COL )
+        ToolTip(self.db_checkbox.cb, "Save the output to the gpt_experiments database\nNot implemented")
         row = self.flag_checkboxes.get_next_row()
 
         self.probe_field = DataField(parent, row, "Probe:", text_width, label_width=label_width)
-        ToolTip(self.probe_field.tk_entry, "Type your search term or phrase here")
+        ToolTip(self.probe_field.tk_entry, "Type your comma-separated search\n terms or phrase here")
         self.probe_field.set_text(']][[text: ')
         row = self.probe_field.get_next_row()
 
@@ -169,12 +174,38 @@ class ModelExplorer(AppBase):
         d['num_sequences'] = self.num_seq_param.get_as_int()
         d['batch_size'] = self.batch_size_param.get_as_int()
         d['seed_flag'] = self.reuse_seed
+        d['db_flag'] = self.db_flag
         if self.hgpt != None:
             d['model_path'] = self.hgpt.path_str
         self.save_experiment_json(d)
 
+    def load_experiment_callback(self):
+        result = filedialog.askopenfile(filetypes=(("JSON files", "*.json"),("All Files", "*.*")), title="Load experiment")
+        if result:
+            filename = result.name
+            self.dp.dprint("AppBase.load_experiment_callback() loading {}".format(filename))
+            with open(filename, encoding="utf8") as f:
+                d = json.load(f)
+                self.probe_field.set_text(d['probe_str'])
+                self.description_field.set_text(d['description'])
+                self.max_length_param.set_text(d['max_len'])
+                self.top_k_param.set_text(d['top_k'])
+                self.top_p_param.set_text(d['top_p'])
+                self.num_seq_param.set_text(d['num_sequences'])
+                self.batch_size_param.set_text(d['batch_size'])
+                self.batch_size_param.set_text(d['batch_size'])
+                self.reuse_seed = d['seed_flag']
+                self.seed_checkbox.set_val(self.reuse_seed)
+                self.db_flag = d['db_flag']
+                self.db_checkbox.set_val(self.db_flag)
+                if "model_path" in d:
+                    self.hgpt = HFaceGPT(d['model_path'])
+
     def seed_callback(self):
         self.reuse_seed = not self.reuse_seed
+
+    def db_flag_callback(self):
+        self.db_flag = not self.db_flag
 
     def calc_percents(self):
         for s in self.hgpt.result_list:
@@ -185,42 +216,53 @@ class ModelExplorer(AppBase):
         for name, pc in self.pattern_counters.pc_dict.items():
             print("{} = {} {:.1f}%".format(name, pc.match_count, self.pattern_counters.get_percent(name)))
 
-        self.ten_percent.set_text(int(self.pattern_counters.get_percent("ten")))
-        self.twenty_percent.set_text(int(self.pattern_counters.get_percent("twenty")))
-        self.thirty_percent.set_text(int(self.pattern_counters.get_percent("thirty")))
-        self.forty_percent.set_text(int(self.pattern_counters.get_percent("forty")))
+        self.ten_percent.set_text("{}%".format(int(self.pattern_counters.get_percent("ten"))))
+        self.twenty_percent.set_text("{}%".format(int(self.pattern_counters.get_percent("twenty"))))
+        self.thirty_percent.set_text("{}%".format(int(self.pattern_counters.get_percent("thirty"))))
+        self.forty_percent.set_text("{}%".format(int(self.pattern_counters.get_percent("forty"))))
         self.total_percent.set_text(self.pattern_counters.get_total())
 
     def run_probe_callback(self):
-        probe = self.probe_field.get_text()
-        s = "probe: '{}'".format(probe)
-        self.gpt_response_frame.delete('1.0', tk.END)
-        self.gpt_response_frame.insert("1.0", s)
         if self.hgpt == None:
             message.showwarning("GPT-2", "Model isn't loaded. Please select\ndirectory in the file menu")
             return
-        self.dp.dprint("running probe {}".format(probe))
-        result_list = self.hgpt.run_probes(probe)
-        self.calc_percents()
-        for result in result_list:
-            sequence_list = self.hgpt.clean_and_split_sequence(result)
-            count = 0
-            for sequence in sequence_list:
-                dict_list = self.hgpt.parse_sequence(sequence)
-                d:Dict
-                for d in dict_list: # get the text first
-                    if d['word'] == 'text':
-                        s += "sequence {} of {}\ntext: {}\n".format(count, len(sequence_list), d['substr'])
-                        break
-                for d in dict_list: #then the meta wrapping
-                    if d['word'] != 'text':
-                        s += "\t{}: {}\n".format(d['word'], d['substr'])
-                s += "\n\n"
-                count+= 1
-        print(s)
+        probe_list = self.probe_field.get_text().split(",")
+        for probe in probe_list:
+            probe = probe.strip()
+            s = "probe: '{}'".format(probe)
+            self.gpt_response_frame.delete('1.0', tk.END)
+            self.gpt_response_frame.insert("1.0", s)
 
-        self.gpt_response_frame.delete('1.0', tk.END)
-        self.gpt_response_frame.insert("1.0", s)
+            self.dp.dprint("running probe {}".format(probe))
+            max_len = self.max_length_param.get_as_int()
+            top_k = self.top_k_param.get_as_int()
+            top_p = self.top_p_param.get_as_float()
+            num_sequences = self.num_seq_param.get_as_int()
+            batch_size = self.batch_size_param.get_as_int()
+            seed_flag = self.reuse_seed
+            for batch in range(batch_size):
+                result_list = self.hgpt.run_probes(probe, num_return_sequences=num_sequences, top_k=top_k, top_p=top_p, max_length=max_len, reset_seed=seed_flag)
+                seed_flag = False # We only want the seed reset once for each probe
+                self.calc_percents()
+                for result in result_list:
+                    sequence_list = self.hgpt.clean_and_split_sequence(result)
+                    count = 0
+                    for sequence in sequence_list:
+                        dict_list = self.hgpt.parse_sequence(sequence)
+                        d:Dict
+                        for d in dict_list: # get the text first
+                            if d['word'] == 'text':
+                                s += "sequence {} of {}\ntext: {}\n".format(count, len(sequence_list), d['substr'])
+                                break
+                        for d in dict_list: #then the meta wrapping
+                            if d['word'] != 'text':
+                                s += "\t{}: {}\n".format(d['word'], d['substr'])
+                        s += "\n\n"
+                        count+= 1
+                print(s)
+
+                self.gpt_response_frame.delete('1.0', tk.END)
+                self.gpt_response_frame.insert("1.0", s)
 
 
     def load_model_callback(self):

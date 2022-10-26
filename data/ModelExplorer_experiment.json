@@ -1,5 +1,5 @@
 {
-    "probe_str": "]][[text: ",
+    "probe_str": "]][[text: Ivermectin is, ]][[text: Paxlovid is",
     "description": "This is a description",
     "max_len": 128,
     "top_k": 50,
