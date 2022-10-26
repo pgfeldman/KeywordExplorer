@@ -7,7 +7,7 @@ from tkinter.font import Font
 from datetime import datetime
 from pathlib import Path
 import json
-from typing import Tuple, Dict, List
+from typing import Tuple, Dict, List, Any
 
 from keyword_explorer.tkUtils.ConsoleDprint import ConsoleDprint
 from keyword_explorer.tkUtils.DataField import DataField
@@ -131,6 +131,17 @@ class AppBase(tk.Tk):
             with open (filename, 'w') as f:
                 json.dump(d, f, indent=4)
 
+    def safe_dict_read(self, d:Dict, key:str, default:Any) -> Any:
+        if key in d:
+            return d[key]
+        return default
+
+    def clean_text(self, s:str) -> str:
+        char_list = [s[j] for j in range(len(s)) if ord(s[j]) in range(65536)]
+        s=''
+        for j in char_list:
+            s=s+j
+        return s
 
     def log_action(self, task:str, row_info:Dict, mode:str = "a"):
         with open(self.logfile, mode) as fio:

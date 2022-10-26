@@ -185,21 +185,21 @@ class ModelExplorer(AppBase):
             filename = result.name
             self.dp.dprint("AppBase.load_experiment_callback() loading {}".format(filename))
             with open(filename, encoding="utf8") as f:
-                d = json.load(f)
-                self.probe_field.set_text(d['probe_str'])
-                self.description_field.set_text(d['description'])
-                self.max_length_param.set_text(d['max_len'])
-                self.top_k_param.set_text(d['top_k'])
-                self.top_p_param.set_text(d['top_p'])
-                self.num_seq_param.set_text(d['num_sequences'])
-                self.batch_size_param.set_text(d['batch_size'])
-                self.batch_size_param.set_text(d['batch_size'])
-                self.reuse_seed = d['seed_flag']
+                d:Dict = json.load(f)
+                self.probe_field.set_text(self.safe_dict_read(d, 'probe_str', ']][[text:'))
+                self.description_field.set_text(self.safe_dict_read(d, 'description', 'unset'))
+                self.max_length_param.set_text(self.safe_dict_read(d, 'max_len', 128))
+                self.top_k_param.set_text(self.safe_dict_read(d, 'top_k', 50))
+                self.top_p_param.set_text(self.safe_dict_read(d, 'top_p', 0.95))
+                self.num_seq_param.set_text(self.safe_dict_read(d, 'num_sequences', 128))
+                self.batch_size_param.set_text(self.safe_dict_read(d, 'batch_size', 1))
+                self.reuse_seed = self.safe_dict_read(d, 'seed_flag', False)
                 self.seed_checkbox.set_val(self.reuse_seed)
-                self.db_flag = d['db_flag']
+                self.db_flag = self.safe_dict_read(d, 'db_flag', False)
                 self.db_checkbox.set_val(self.db_flag)
                 if "model_path" in d:
                     self.hgpt = HFaceGPT(d['model_path'])
+                    self.calc_percents()
 
     def seed_callback(self):
         self.reuse_seed = not self.reuse_seed
@@ -229,10 +229,6 @@ class ModelExplorer(AppBase):
         probe_list = self.probe_field.get_text().split(",")
         for probe in probe_list:
             probe = probe.strip()
-            s = "probe: '{}'".format(probe)
-            self.gpt_response_frame.delete('1.0', tk.END)
-            self.gpt_response_frame.insert("1.0", s)
-
             self.dp.dprint("running probe {}".format(probe))
             max_len = self.max_length_param.get_as_int()
             top_k = self.top_k_param.get_as_int()
@@ -240,6 +236,7 @@ class ModelExplorer(AppBase):
             num_sequences = self.num_seq_param.get_as_int()
             batch_size = self.batch_size_param.get_as_int()
             seed_flag = self.reuse_seed
+            s = "probe: '{}'".format(probe)
             for batch in range(batch_size):
                 result_list = self.hgpt.run_probes(probe, num_return_sequences=num_sequences, top_k=top_k, top_p=top_p, max_length=max_len, reset_seed=seed_flag)
                 seed_flag = False # We only want the seed reset once for each probe
@@ -260,7 +257,7 @@ class ModelExplorer(AppBase):
                         s += "\n\n"
                         count+= 1
                 print(s)
-
+                s = self.clean_text(s)
                 self.gpt_response_frame.delete('1.0', tk.END)
                 self.gpt_response_frame.insert("1.0", s)
 

@@ -7,5 +7,6 @@
     "num_sequences": 10,
     "batch_size": 1,
     "seed_flag": false,
+    "db_flag": false,
     "model_path": "D:/Development/models/ivermectin_paxlovid"
 }
