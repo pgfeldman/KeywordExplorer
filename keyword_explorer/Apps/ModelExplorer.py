@@ -1,5 +1,6 @@
 import re
 import json
+from datetime import datetime
 import tkinter.messagebox as message
 import tkinter.filedialog as filedialog
 import tkinter as tk
@@ -31,6 +32,7 @@ class ModelExplorer(AppBase):
     thirty_percent:LabeledParam
     forty_percent:LabeledParam
     flag_checkboxes:Checkboxes
+    spreadsheet_checkbox:Checkbox
     seed_checkbox:Checkbox
     db_checkbox:Checkbox
     msi: MySqlInterface
@@ -47,7 +49,7 @@ class ModelExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "ModelExplorer"
-        self.app_version = "10.25.22"
+        self.app_version = "10.27.22"
         self.geom = (850, 750)
         self.msi = MySqlInterface(user_name="root", db_name="gpt_experiments")
         self.tokenizer = None
@@ -94,8 +96,10 @@ class ModelExplorer(AppBase):
         self.flag_checkboxes = Checkboxes(parent, row, "Flags")
         self.seed_checkbox = self.flag_checkboxes.add_checkbox("Re-use Seed", self.seed_callback, dir= DIR.COL )
         ToolTip(self.seed_checkbox.cb, "Use the same seed for each batch")
-        self.db_checkbox = self.flag_checkboxes.add_checkbox("Save to DB", self.implement_me, dir= DIR.COL )
-        ToolTip(self.db_checkbox.cb, "Save the output to the gpt_experiments database\nNot implemented")
+        self.db_checkbox = self.flag_checkboxes.add_checkbox("Save to DB", self.db_flag_callback, dir= DIR.COL )
+        ToolTip(self.db_checkbox.cb, "Save the output to the gpt_experiments database")
+        self.spreadsheet_checkbox = self.flag_checkboxes.add_checkbox("Save to spreadsheet", self.implement_me, dir= DIR.COL )
+        ToolTip(self.spreadsheet_checkbox.cb, "Save the output to a spreadsheet\nNot implemented")
         row = self.flag_checkboxes.get_next_row()
 
         self.probe_field = DataField(parent, row, "Probe:", text_width, label_width=label_width)
@@ -203,9 +207,11 @@ class ModelExplorer(AppBase):
 
     def seed_callback(self):
         self.reuse_seed = not self.reuse_seed
+        self.dp.dprint("db_flag = {}".format(self.db_flag))
 
     def db_flag_callback(self):
         self.db_flag = not self.db_flag
+        self.dp.dprint("db_flag = {}".format(self.db_flag))
 
     def calc_percents(self):
         for s in self.hgpt.result_list:
@@ -226,15 +232,23 @@ class ModelExplorer(AppBase):
         if self.hgpt == None:
             message.showwarning("GPT-2", "Model isn't loaded. Please select\ndirectory in the file menu")
             return
+        max_len = self.max_length_param.get_as_int()
+        top_k = self.top_k_param.get_as_int()
+        top_p = self.top_p_param.get_as_float()
+        num_sequences = self.num_seq_param.get_as_int()
+        batch_size = self.batch_size_param.get_as_int()
+        experiment_id = -1
+        if self.db_flag:
+            sql = "insert into gpt_experiments.table_experiment (description, model_name, date, probe_list, batch_size, do_sample, max_length, top_k, top_p, num_return_sequences) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+            vals = (self.description_field.get_text(), self.hgpt.name, datetime.now(), self.probe_field.get_text(),
+                    batch_size, True, max_len, top_k, top_p, num_sequences)
+            experiment_id = self.msi.write_sql_values_get_row(sql, vals)
+            self.dp.dprint("run_probe_callback() experiment_id = {}".format(experiment_id))
+
         probe_list = self.probe_field.get_text().split(",")
         for probe in probe_list:
             probe = probe.strip()
             self.dp.dprint("running probe {}".format(probe))
-            max_len = self.max_length_param.get_as_int()
-            top_k = self.top_k_param.get_as_int()
-            top_p = self.top_p_param.get_as_float()
-            num_sequences = self.num_seq_param.get_as_int()
-            batch_size = self.batch_size_param.get_as_int()
             seed_flag = self.reuse_seed
             s = "probe: '{}'".format(probe)
             for batch in range(batch_size):
@@ -247,13 +261,24 @@ class ModelExplorer(AppBase):
                     for sequence in sequence_list:
                         dict_list = self.hgpt.parse_sequence(sequence)
                         d:Dict
+                        text_id = -1
                         for d in dict_list: # get the text first
                             if d['word'] == 'text':
                                 s += "sequence {} of {}\ntext: {}\n".format(count, len(sequence_list), d['substr'])
+                                if count == 1 and experiment_id != -1:
+                                    sql = "insert into table_text (experiment_id, probe, text) VALUES (%s, %s, %s)"
+                                    vals = (experiment_id, probe, d['substr'])
+                                    text_id = self.msi.write_sql_values_get_row(sql, vals)
+                                    self.dp.dprint("run_probe_callback() text_id = {}, probe = {}, text = {}".format(text_id, probe, d['substr']))
                                 break
                         for d in dict_list: #then the meta wrapping
                             if d['word'] != 'text':
                                 s += "\t{}: {}\n".format(d['word'], d['substr'])
+                                if text_id != -1:
+                                    sql = "insert into table_text_data (text_id, name, value) VALUES (%s, %s, %s)"
+                                    vals = (text_id, d['word'], d['substr'])
+                                    self.msi.write_sql_values_get_row(sql, vals)
+                                    self.dp.dprint("run_probe_callback() name = {}, val = {}".format(text_id, d['word'], d['substr']))
                         s += "\n\n"
                         count+= 1
                 print(s)

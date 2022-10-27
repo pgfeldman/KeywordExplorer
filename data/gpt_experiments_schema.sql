@@ -68,7 +68,7 @@ CREATE TABLE `table_experiment` (
   `top_p` float DEFAULT NULL,
   `num_return_sequences` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=123 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -105,9 +105,10 @@ DROP TABLE IF EXISTS `table_text`;
 CREATE TABLE `table_text` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `experiment_id` int(11) DEFAULT NULL,
+  `probe` text DEFAULT NULL,
   `text` text DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -123,8 +124,28 @@ CREATE TABLE `table_text_data` (
   `name` varchar(128) DEFAULT NULL,
   `value` varchar(128) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=80 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Temporary table structure for view `test_view`
+--
+
+DROP TABLE IF EXISTS `test_view`;
+/*!50001 DROP VIEW IF EXISTS `test_view`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `test_view` (
+  `id` tinyint NOT NULL,
+  `experiment_id` tinyint NOT NULL,
+  `probe` tinyint NOT NULL,
+  `text` tinyint NOT NULL,
+  `keyword` tinyint NOT NULL,
+  `created` tinyint NOT NULL,
+  `location` tinyint NOT NULL,
+  `probability` tinyint NOT NULL
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
 
 --
 -- Final view structure for view `combined`
@@ -163,6 +184,25 @@ CREATE TABLE `table_text_data` (
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `test_view`
+--
+
+/*!50001 DROP TABLE IF EXISTS `test_view`*/;
+/*!50001 DROP VIEW IF EXISTS `test_view`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_unicode_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
+/*!50001 VIEW `test_view` AS select `tt`.`id` AS `id`,`tt`.`experiment_id` AS `experiment_id`,`tt`.`probe` AS `probe`,`tt`.`text` AS `text`,`ttd_k`.`value` AS `keyword`,`ttd_c`.`value` AS `created`,`ttd_l`.`value` AS `location`,`ttd_p`.`value` AS `probability` from ((((`table_text` `tt` join `table_text_data` `ttd_c` on(`tt`.`id` = `ttd_c`.`text_id` and `ttd_c`.`name` = 'created')) join `table_text_data` `ttd_k` on(`tt`.`id` = `ttd_k`.`text_id` and `ttd_k`.`name` = 'keyword')) join `table_text_data` `ttd_l` on(`tt`.`id` = `ttd_l`.`text_id` and `ttd_l`.`name` = 'location')) join `table_text_data` `ttd_p` on(`tt`.`id` = `ttd_p`.`text_id` and `ttd_p`.`name` = 'probability')) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -173,4 +213,4 @@ CREATE TABLE `table_text_data` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2022-10-26 15:49:20
+-- Dump completed on 2022-10-27 11:19:16

@@ -7,6 +7,7 @@ from typing import Union, Dict, List, Pattern
 
 
 class HFaceGPT:
+    name:str
     tf_seed:int
     tokenizer:Union[None, GPT2Tokenizer]
     model:Union[None, TFGPT2LMHeadModel]
@@ -20,6 +21,7 @@ class HFaceGPT:
     def __init__(self, path:str, initial_prompt:str = "]][[text:", seed:int = 2):
         self.tf_seed = seed
         self.path_str = path
+        self.name = path.split()[-1]
         tf.random.set_seed(self.tf_seed)
         self.tokenizer = GPT2Tokenizer.from_pretrained(path)
         self.model = TFGPT2LMHeadModel.from_pretrained(path, pad_token_id=self.tokenizer.eos_token_id, from_pt=True)

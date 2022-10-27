@@ -62,5 +62,20 @@ replace into table_user (id, created_at, description, location, name, username, 
     VALUES (1289933022901370880, '2020-08-02 14:37:20', '\ud83c\uddfa\ud83c\udde6 \ud83d\udc97 #writer, proud parent of neurodivergent, gay, nonbinary beauties; poet, #mecfs (#pwME 30 years), chronic illness, #pointillism, #art, #politics',
             'North Carolina', 'J. Ruth Kelly (she/her)', 'something else', FALSE);
 
+-------------------------------------------------------- gpt_experiments
+select * from table_experiment;
+select * from table_text;
+select * from table_text_data;
+
+create or replace view test_view as
+    select tt.*, ttd_k.value as keyword, ttd_c.value as created, ttd_l.value as location, ttd_p.value as probability
+    FROM table_text tt
+    inner join table_text_data ttd_c on tt.id = ttd_c.text_id and ttd_c.name = 'created'
+    inner join table_text_data ttd_k on tt.id = ttd_k.text_id and ttd_k.name = 'keyword'
+    inner join table_text_data ttd_l on tt.id = ttd_l.text_id and ttd_l.name = 'location'
+    inner join table_text_data ttd_p on tt.id = ttd_p.text_id and ttd_p.name = 'probability';
+
+select * from test_view;
+
 
 
