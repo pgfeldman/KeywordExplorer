@@ -20,15 +20,17 @@ MariaDB [(none)]> create database twitter_v2;
 MariaDB [(none)]> use twitter_v2;
 MariaDB [twitter_v2]> source twitter_v2.sql;
 MariaDB [twitter_v2]> describe twitter_v2;
-+----------------------+
-| Tables_in_twitter_v2 |
-+----------------------+
-| keyword_tweet_view   |
-| table_experiment     |
-| table_query          |
-| table_tweet          |
-+----------------------+
-4 rows in set (0.001 sec)
++-----------------------------------+
+| Tables_in_twitter_v2              |
++-----------------------------------+
+| keyword_tweet_view                |
+| table_experiment                  |
+| table_query                       |
+| table_tweet                       |
+| table_user                        |
+| tweet_user_cluster_view           |
++-----------------------------------+
+6 rows in set (0.001 sec)
 ```
 
 At this point the app should be ready to use.

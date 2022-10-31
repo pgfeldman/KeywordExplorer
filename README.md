@@ -19,12 +19,22 @@ A brief overview of each can be reached using the links below.
 [**ModelExplorer**](./markup/ModelExplorer.md) is a Python desktop app that lets a user interact with a finetuned GPT-2 model trained using EmbeddingExplorer
 
 ## Before Using! <span id = "before-using"/>
-_KeywordExplorer_ **requires** that you have an OpenAI account and a Twitter developer account. _TweetCountExplorer_ requires a Twitter developer account, and _WikiPageviewExplorer_ requires a user agent. _TweetDownloader_ requres additional elements such as a database, which will be descussed in its section but not here. The following links are very helpful:
+Most of these apps **require** that you have an OpenAI account and/or a Twitter developer account:
+* _KeywordExplorer_ requires a Twitter and OpenAI account
+* _TweetCountExplorer_ requires a Twitter developer account
+* _WikiPageviewExplorer_ uses the wikipedia API (pip install wikipedia), and requires a user agent
+* _TweetDownloader_ requres additional elements such as a database, which will be descussed in its section but not here. 
+* _TweetEmbedExplorer_ requires a Twitter account, OpenAI account, and a MariaBD/MySQl database
+* _ModelExplorer_ uses the HuggingFace _transformers_ API (pip install transformers), and a MariaDB/Mysql database
+
+The following links are very helpful:
 
 - OpenAI: https://openai.com/api/
+- https://beta.openai.com/docs/introduction
 - Twitter: https://developer.twitter.com/en
 - https://developer.twitter.com/en/docs/twitter-api/getting-started/getting-access-to-the-twitter-api
 - https://developer.twitter.com/en/docs/authentication/guides/v2-authentication-mapping
+- HuggingFace: https://huggingface.co/docs/transformers/installation
 
 In each case you'll have to get an ID and set it as an environment variable. The names must be OPENAI_KEY for your GPT-3 account and BEARER_TOKEN_2 for your Twitter account, as shown below for a Windows environment:
 

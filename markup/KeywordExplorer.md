@@ -16,6 +16,8 @@ https://developer.twitter.com/en/docs/twitter-api/tweets/counts/introduction
 
 if you run into trouble.
 
+Setting up the OpenAI GPT-3 account is more straightforward, and the API is more robust
+
 The screen is divided into 6 panels:
 - [Experiment name](#experiment-name-panel)
 - [GPT](#gpt-panel)
