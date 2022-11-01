@@ -18,7 +18,7 @@ The schema for the database is in the **data** directory. The database must be n
 ```
 MariaDB [(none)]> create database twitter_v2;
 MariaDB [(none)]> use twitter_v2;
-MariaDB [twitter_v2]> source twitter_v2.sql;
+MariaDB [twitter_v2]> source twitter_v2_schema.sql;
 MariaDB [twitter_v2]> describe twitter_v2;
 +-----------------------------------+
 | Tables_in_twitter_v2              |
