@@ -41,4 +41,10 @@ At this point the app should be ready to use.
 
 ## How to use
 
-Using the tool is pretty straightforward. That being said, it's possible to break it. If you are running it in the console, then you will get additional information on the command line that might help you figure out things. Most often, it is a poorly-formed keyword that gets sent off to Twitter. Also, setting up your twitter account properly is tricky, so make sure that you have that working first.
+Using the tool is pretty straightforward. That being said, it's possible to break it. If you are running it in the console, then you will get additional information on the command line that might help you figure out things. Also, setting up your twitter account properly is tricky, so make sure that you have that and your OpenAi accounts working first.
+
+![tweet-embed-common](../images/tweet_embed_common.png)
+![tweet-embed-get-store](../images/tweet_embed_get_store.png)
+![tweet-embed-canvas](../images/tweet_embed_canvas.png)
+![tweet-embed-corpora](../images/tweet_embed_corpora.png)
+
