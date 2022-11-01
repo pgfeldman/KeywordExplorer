@@ -48,3 +48,7 @@ Using the tool is pretty straightforward. That being said, it's possible to brea
 ![tweet-embed-canvas](../images/tweet_embed_canvas.png)
 ![tweet-embed-corpora](../images/tweet_embed_corpora.png)
 
+Once a model test train corpora has been created, you can finetune a GPT model to generate new tweets that are similar to the training set. A trained model has been shown to be able to accurately predict, for example, the vegetarian preferences of Yelp reviewers when all vegetarian data has been excluded from the test/train data (https://arxiv.org/abs/2204.07483). This means that you can train a model on a set of tweets that may not contain the explicit information you are looking for (e.g. how a target group might react to a new product) and the model will still be able to generate tweets that are likely to contain that information.
+
+To train a model, follow these directions: [How to train a model](../markup/model_train.md).
+
