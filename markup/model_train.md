@@ -13,4 +13,8 @@ Inside the output folder, you'll find the files that make up the trained model (
 
 ![model-files](../images/model_files.png)
 
-Copy these files to a folder in your project. You will need to select this folder to run the model from within the App.
+Copy these files to a folder in your project. You will need to select this folder to run the model from within the ModelExplorer App.
+
+![model-folder](../images/model_folder.png)
+
+At this point you should be ready to go!
