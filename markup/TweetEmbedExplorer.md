@@ -49,6 +49,7 @@ There are three tabs, _Get/Store_, _Canvas_, and _Corpora_. All of these share a
 <br/>Figure 1: _Common Elements_
 
 ###Get/Store Tab
+
 This tab handles the generation and storing of text embeddings. The app uses GPT-3 embeddings as the basis. The size of the embedding vector is based on the engine selected (see more [here](https://beta.openai.com/docs/guides/embeddings)). Clicking the **Get Embeddings** will iterate through the selected items in the database and add the GPT embeddings to them. It's surprisingly quick, though be patient. Num rows shows the number of tweets that were updated
 
 The _Update DB_ row handles additional items that can be added to the database. The **Reduced+Clusters** and **Clusters** store data that is generated in the _Canvas_ tab. The **Topic Names** button is currently nonfunctional, but will use the GPT-3 to come up with human-readable cluster names. The **Users** button causes the user associated with each tweet to be downloaded from Twitter. This is important for getting location, since tweets rarely have that information associated with them.
@@ -56,6 +57,7 @@ The _Update DB_ row handles additional items that can be added to the database. 
 ![tweet-embed-get-store](../images/tweet_embed_get_store.png)
 
 ###Canvas Tab
+
 The _Canvas_ tab is the most complex, with a lot of capability. The first row contains the parameters used for calculating the dimension reduction from the GPT-3 vectors to a 2D display. This is done by clicing the **Reduce** button. It has two passes - the first pass is a [Principal Components Analysis](https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html) that reduces the GPT vectors to a smaller value that can be processed into 2 dimensions using [T-SNE](https://scikit-learn.org/stable/modules/generated/sklearn.manifold.TSNE.html). The parameter that affects behavior the most is [perplexity](https://scikit-learn.org/stable/auto_examples/manifold/plot_t_sne_perplexity.html?highlight=perplexity), which can be adjusted using the **Perplex:** field.
 
 Once the 2D mapping is generated, then the embedding can be displayed using the **Plot** button. This brings up a [matplotlib scatter plot](https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.scatter.html) that allows for a quick evaluation of the current state of the embeddings.
@@ -69,6 +71,7 @@ Lastly, the **Retrieve** button can pull all embedding information from the data
 ![tweet-embed-canvas](../images/tweet_embed_canvas.png)
 
 ###Corpora Tab
+
 ![tweet-embed-corpora](../images/tweet_embed_corpora.png)
 
 Once a model test train corpora has been created, you can finetune a GPT model to generate new tweets that are similar to the training set. A trained model has been shown to be able to accurately predict, for example, the vegetarian preferences of Yelp reviewers when all vegetarian data has been excluded from the test/train data (https://arxiv.org/abs/2204.07483). This means that you can train a model on a set of tweets that may not contain the explicit information you are looking for (e.g. how a target group might react to a new product) and the model will still be able to generate tweets that are likely to contain that information.
