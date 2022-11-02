@@ -48,7 +48,7 @@ There are three tabs, _Get/Store_, _Canvas_, and _Corpora_. All of these share a
 ![tweet-embed-common](../images/tweet_embed_common.png)
 <br/>Figure 1: _Common Elements_
 
-###Get/Store Tab
+### Get/Store Tab
 
 This tab handles the generation and storing of text embeddings. The app uses GPT-3 embeddings as the basis. The size of the embedding vector is based on the engine selected (see more [here](https://beta.openai.com/docs/guides/embeddings)). Clicking the **Get Embeddings** will iterate through the selected items in the database and add the GPT embeddings to them. It's surprisingly quick, though be patient. Num rows shows the number of tweets that were updated
 
@@ -56,7 +56,7 @@ The _Update DB_ row handles additional items that can be added to the database. 
 <br/>
 ![tweet-embed-get-store](../images/tweet_embed_get_store.png)
 
-###Canvas Tab
+### Canvas Tab
 
 The _Canvas_ tab is the most complex, with a lot of capability. The first row contains the parameters used for calculating the dimension reduction from the GPT-3 vectors to a 2D display. This is done by clicing the **Reduce** button. It has two passes - the first pass is a [Principal Components Analysis](https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html) that reduces the GPT vectors to a smaller value that can be processed into 2 dimensions using [T-SNE](https://scikit-learn.org/stable/modules/generated/sklearn.manifold.TSNE.html). The parameter that affects behavior the most is [perplexity](https://scikit-learn.org/stable/auto_examples/manifold/plot_t_sne_perplexity.html?highlight=perplexity), which can be adjusted using the **Perplex:** field.
 
@@ -70,7 +70,7 @@ Lastly, the **Retrieve** button can pull all embedding information from the data
 <br/>
 ![tweet-embed-canvas](../images/tweet_embed_canvas.png)
 
-###Corpora Tab
+### Corpora Tab
 
 ![tweet-embed-corpora](../images/tweet_embed_corpora.png)
 
