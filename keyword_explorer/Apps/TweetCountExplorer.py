@@ -164,7 +164,7 @@ class TweetCountExplorer(AppBase):
         filename = filedialog.asksaveasfilename(filetypes=(("Excel files", "*.xlsx"),("All Files", "*.*")), title="Save Excel File", initialfile=default)
         if filename:
             print("saving to {}".format(filename))
-            df1 = self.get_description_df(self.prompt_text_field.get_text(), self.response_text_field.get_text())
+            df1 = self.get_description_df()
             df2 = self.tvc.to_dataframe()
             with pd.ExcelWriter(filename) as writer:
                 df1.to_excel(writer, sheet_name='Experiment')
@@ -172,12 +172,12 @@ class TweetCountExplorer(AppBase):
                 writer.save()
             self.log_action("save", {"filename":filename})
 
-    def get_description_df(self, probe:str, response:str) -> pd.DataFrame:
+    def get_description_df(self) -> pd.DataFrame:
         now = datetime.now()
         now_str = now.strftime("%B_%d_%Y_(%H:%M:%S)")
         sample_str = self.sample_list.get_selected()
 
-        description_dict = {'name':getpass.getuser(), 'date':now_str, 'probe':probe, 'response':response, 'sampling':sample_str}
+        description_dict = {'name':getpass.getuser(), 'date':now_str, 'sampling':sample_str}
         df = pd.DataFrame.from_dict(description_dict, orient='index', columns=['Value'])
         return df
 

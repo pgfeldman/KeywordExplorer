@@ -175,6 +175,11 @@ class TwitterV2Counts (TwitterV2Base):
         df = pd.DataFrame(l)
         return df
 
+    def to_spreadsheet(self, filename:str):
+        df = self.to_dataframe()
+        writer = pd.ExcelWriter(filename)
+        df.to_excel("Counts")
+
 
 def exercise_get_counts():
     l = ['covid', 'sars-cov-2', 'chinavirus', 'virus', 'mask', 'vaccine']
