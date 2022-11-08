@@ -5,7 +5,11 @@ To run the script, you will need your text and train files (below named _all_key
 
         python .\run_clm.py --model_type=gpt2 --model_name_or_path gpt2 --train_file ./all_keywords_train.txt --validation_file ./all_keywords_test.txt --do_train --do_eval --output_dir ./output --per_device_train_batch_size=1 --block_size 1024 --num_train_epochs 6
 
-Running the script will produce an _output_ folder that will contain the model and the checkpoints:
+Running the script will look something like this:
+
+![model-training](../images/training.png)
+
+And it will produce an _output_ folder that will contain the model and the checkpoints:
 
 ![model-train](../images/model_train.png)
 
