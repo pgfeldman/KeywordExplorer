@@ -75,9 +75,7 @@ The **Exclude Cluster** field and button allow you to explore individual nodes. 
 ![exclude-cluster](../images/exclude.png)
 
 Lastly, the **Retrieve** button can pull all previous embedding information from the database for new analysis or corpora generation. This lets you revisit your data and adjust over multiple sessions
-<br/>
-<br/>
-![tweet-embed-canvas](../images/tweet_embed_canvas.png)
+
 
 ### Corpora Tab
 
