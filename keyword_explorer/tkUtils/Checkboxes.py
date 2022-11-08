@@ -34,14 +34,19 @@ class Checkboxes():
     parent:'tk.Frame'
     check_list:List
 
-    def __init__(self, parent:tk.Frame, row:int, label:str, label_width:int=20, sticky="nsew"):
+    def __init__(self, parent:tk.Frame, row:int, label:str, label_width:int=20, sticky="nsew", border:bool = False):
         self.parent = parent
         self.row = row
         self.tk_label = tk.Label(parent, text=label, width=label_width, anchor="w")
 
-        self.wrapper = tk.Frame(parent)
-        self.tk_label.grid(column=0, row=row, sticky="w", padx=5)
-        self.wrapper.grid(column=1, row=row, sticky=sticky)
+        if border:
+            self.wrapper = tk.Frame(parent, borderwidth = 1,  relief=tk.RIDGE)
+            self.tk_label.grid(column=0, row=row, sticky="w", padx=5)
+            self.wrapper.grid(column=1, row=row, sticky=sticky, pady = 4)
+        else:
+            self.wrapper = tk.Frame(parent)
+            self.tk_label.grid(column=0, row=row, sticky="w", padx=5)
+            self.wrapper.grid(column=1, row=row, sticky=sticky)
 
         self.check_list = []
         self.btn_col = 0

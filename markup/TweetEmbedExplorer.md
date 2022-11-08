@@ -54,6 +54,7 @@ This tab handles the generation and storing of text embeddings. The app uses GPT
 
 The _Update DB_ row handles additional items that can be added to the database. The **Reduced+Clusters** and **Clusters** store data that is generated in the _Canvas_ tab. The **Topic Names** button is currently nonfunctional, but will use the GPT-3 to come up with human-readable cluster names. The **Users** button causes the user associated with each tweet to be downloaded from Twitter. This is important for getting location, since tweets rarely have that information associated with them.
 <br/>
+<br/>
 ![tweet-embed-get-store](../images/tweet_embed_get_store.png)
 
 ### Canvas Tab
@@ -62,11 +63,19 @@ The _Canvas_ tab is the most complex, with a lot of capability. The first row co
 
 Once the 2D mapping is generated, then the embedding can be displayed using the **Plot** button. This brings up a [matplotlib scatter plot](https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.scatter.html) that allows for a quick evaluation of the current state of the embeddings.
 
-Once the embedding looks satisfactory, it can be clustered using [DBSCAN](https://scikit-learn.org/stable/modules/generated/sklearn.cluster.DBSCAN.html)  by clicking on the **Cluster** button (more here)
+Once the embedding looks satisfactory, it can be clustered using [DBSCAN](https://scikit-learn.org/stable/modules/generated/sklearn.cluster.DBSCAN.html)  by clicking on the **Cluster** button. Clustering depends on two values, [**EPS**](https://stats.stackexchange.com/questions/225655/what-is-the-interpretation-of-eps-parameter-in-dbscan-clustering) which specifies how close points should be to each other to be considered a part of a cluster. If thedistance between two points is lower or equal to the EPS, then the points are considered neighbors. The other value is **Min Samples**, which is the number of close points needed to be considered a cluster. The minimum value is three. Adjusting these values and re-rendering with **Plot** can allow you to quickly determine good clustering values (see below)
 
-**Explore**, **Limit**, and then **Exclude**
+![PyPlot-Cluster](../images/pyplot_cluster.png)
 
-Lastly, the **Retrieve** button can pull all embedding information from the database for new analysis or corpora generation
+The **Explore**  button brings up an interactive space to explore the embedding. It is _much_ slower than PyPlot, because you can click on the points and see what the tweets are and what cluster they belong to. By using the **Limit** field, a sampling of the points will be used. The default of 1,000 is often enough to provide a useful interface. 
+
+The **Exclude Cluster** field and button allow you to explore individual nodes. In the figure below, you can see that a tweet in cluster 19 has been clicked. Three things happen when a node is clicked. It turns red, the text of the tweet is shown in the Console, and the cluster id is shown in the text field. If the **Exclude** button is pressed, that cluster ID will be added to a table of excluded clusters. The entire cluster then turns black to indicate that it is marked as excluded. Then generating a training corpus, these flagged clusters can be _excluded_ from the training set.
+<br/>
+<br/>
+![exclude-cluster](../images/exclude.png)
+
+Lastly, the **Retrieve** button can pull all previous embedding information from the database for new analysis or corpora generation. This lets you revisit your data and adjust over multiple sessions
+<br/>
 <br/>
 ![tweet-embed-canvas](../images/tweet_embed_canvas.png)
 
@@ -77,4 +86,13 @@ Lastly, the **Retrieve** button can pull all embedding information from the data
 Once a model test train corpora has been created, you can finetune a GPT model to generate new tweets that are similar to the training set. A trained model has been shown to be able to accurately predict, for example, the vegetarian preferences of Yelp reviewers when all vegetarian data has been excluded from the test/train data (https://arxiv.org/abs/2204.07483). This means that you can train a model on a set of tweets that may not contain the explicit information you are looking for (e.g. how a target group might react to a new product) and the model will still be able to generate tweets that are likely to contain that information.
 
 To train a model, follow these directions: [How to train a model](../markup/model_train.md).
+
+The checkboxes allow the corpora to configured in particular ways:
+
+#### Tweet meta wrapping
+
+#### Author meta wrapping
+
+#### Corpora Generation
+
 

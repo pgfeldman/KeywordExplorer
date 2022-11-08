@@ -54,7 +54,7 @@ class EmbeddingsExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "EmbeddingsExplorer"
-        self.app_version = "10.13.22"
+        self.app_version = "11.8.22"
         self.geom = (600, 620)
         self.oai = OpenAIComms()
         self.tkws = TweetKeywords()
@@ -112,7 +112,7 @@ class EmbeddingsExplorer(AppBase):
     def build_create_corpora_tab(self, tab: ttk.Frame):
         label_width = 20
         row = 0
-        self.tweet_option_checkboxes = Checkboxes(tab, row, "Tweet meta wrapping:", label_width=label_width)
+        self.tweet_option_checkboxes = Checkboxes(tab, row, "Tweet meta wrapping:", label_width=label_width, border=True)
         # cb = self.tweet_option_checkboxes.add_checkbox("Randomize", self.randomize_callback, dir=DIR.ROW)
         # ToolTip(cb, "Randomly select the starting time for each day so that a full pull won't go into tomorrow")
         cb = self.tweet_option_checkboxes.add_checkbox("Created at", lambda : self.set_corpora_flag_callback("tweet_created_at_flag"), dir=DIR.ROW)
@@ -124,7 +124,7 @@ class EmbeddingsExplorer(AppBase):
         cb = self.tweet_option_checkboxes.add_checkbox("Exclude threaded tweets", lambda: self.set_corpora_flag_callback("exclude_thread_flag"), dir=DIR.ROW)
         ToolTip(cb.cb, "Excludes tweets that are in threads connected\nto a tweet containing the keyword")
         row = self.tweet_option_checkboxes.get_next_row()
-        self.author_option_checkboxes = Checkboxes(tab, row, "Author meta wrapping:", label_width=label_width)
+        self.author_option_checkboxes = Checkboxes(tab, row, "Author meta wrapping:", label_width=label_width, border=True)
         cb = self.author_option_checkboxes.add_checkbox("Name", lambda: self.set_corpora_flag_callback("name_flag"), dir=DIR.ROW)
         ToolTip(cb.cb, "Adds the tweet author's name to the tweet meta-wrapping")
         cb = self.author_option_checkboxes.add_checkbox("Username", lambda: self.set_corpora_flag_callback("username_flag"), dir=DIR.ROW)
@@ -134,7 +134,7 @@ class EmbeddingsExplorer(AppBase):
         cb = self.author_option_checkboxes.add_checkbox("Description", lambda: self.set_corpora_flag_callback("description_flag"), dir=DIR.ROW)
         ToolTip(cb.cb, "Adds the tweet author's self-description to the tweet meta-wrapping")
         row = self.author_option_checkboxes.get_next_row()
-        self.generation_options = Checkboxes(tab, row, "Corpora Generation:", label_width=label_width)
+        self.generation_options = Checkboxes(tab, row, "Corpora Generation:", label_width=label_width, border=True)
         cb = self.generation_options.add_checkbox("Wrapping before text (default is after)", lambda: self.set_corpora_flag_callback("wrap_after_text_flag"), dir=DIR.ROW)
         ToolTip(cb.cb, "Check to place the meta-wrapping before the tweet text")
         cb = self.generation_options.add_checkbox("Single file (default is separate)", lambda: self.set_corpora_flag_callback("single_file_flag"), dir=DIR.ROW)
