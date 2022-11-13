@@ -35,26 +35,27 @@ class TweetKeyword():
         self.last_stored_dt = None
 
     def parse_json(self, jd:Dict, filter:bool = False, query_id:int = -1, clamp = -1) -> bool:
-        meta = jd['meta']
-        data = jd['data']
+        clamped = False
         count = 0
         raw_count = 0
-        clamped = False
-        for d in data:
-            raw_count += 1
-            d['query_id'] = query_id
-            if filter:
-                if self.keyword in d['text']:
+        meta = jd['meta']
+        if 'data' in jd:
+            data = jd['data']
+            for d in data:
+                raw_count += 1
+                d['query_id'] = query_id
+                if filter:
+                    if self.keyword in d['text']:
+                        self.data_list.append(d)
+                else:
                     self.data_list.append(d)
-            else:
-                self.data_list.append(d)
-                count += 1
-            if clamp > 0 and count > clamp:
-                clamped = True
-                break
-
-        print("\tTweetKeyword.parse_json() = {}: query_id = {} [{}] got {}/{}, Max = {:,} tweets".format(
-            clamped, query_id, self.keyword, count, raw_count, meta['result_count']))
+                    count += 1
+                if clamp > 0 and count > clamp:
+                    clamped = True
+                    break
+        if 'meta' in jd:
+            print("\tTweetKeyword.parse_json() = {}: query_id = {} [{}] got {}/{}, Max = {:,} tweets".format(
+                clamped, query_id, self.keyword, count, raw_count, meta['result_count']))
         return clamped
 
     def force_dict_value(self, d:Dict, name:str, force):
@@ -185,12 +186,12 @@ class TweetKeywords(TwitterV2Base):
         return url
 
     def parse_json(self, json_response, num_responses:int) -> Union[str, None]:
-        meta:Dict = json_response['meta']
-        data:Dict = json_response['data']
-        if meta['result_count'] >= num_responses:
-            return None
-        elif 'next_token' in meta:
-            return meta['next_token']
+        if 'meta' in json_response:
+            meta:Dict = json_response['meta']
+            if meta['result_count'] >= num_responses:
+                return None
+            elif 'next_token' in meta:
+                return meta['next_token']
 
         return None
 

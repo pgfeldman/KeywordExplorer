@@ -71,7 +71,7 @@ class TweetDownloader(AppBase):
 
     def setup_app(self):
         self.app_name = "TweetDownloader"
-        self.app_version = "10.14.22"
+        self.app_version = "11.14.22"
         self.geom = (1000, 560)
         self.console_lines = 10
         self.text_width = 70
