@@ -6,6 +6,7 @@ from tkinter import filedialog
 
 import pandas as pd
 
+from keyword_explorer.tkUtils.ToolTip import ToolTip
 from keyword_explorer.Apps.AppBase import AppBase
 from keyword_explorer.OpenAI.OpenAIComms import OpenAIComms
 from keyword_explorer.TwitterV2.TwitterV2Counts import TwitterV2Counts, TwitterV2Count
@@ -31,6 +32,7 @@ class KeywordExplorer(AppBase):
     token_list:ListField
     engine_list:ListField
     sample_list:ListField
+    query_options_field:DataField
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -38,7 +40,7 @@ class KeywordExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "KeywordExplorer"
-        self.app_version = "10.13.22"
+        self.app_version = "11.15.22"
         self.geom = (850, 790)
         self.oai = OpenAIComms()
         self.tvc = TwitterV2Counts()
@@ -50,7 +52,7 @@ class KeywordExplorer(AppBase):
 
 
     def build_app_view(self, row:int, main_text_width:int, main_label_width:int) -> int:
-        param_text_width = 15
+        param_text_width = 20
         param_label_width = 15
         row += 1
 
@@ -132,6 +134,11 @@ class KeywordExplorer(AppBase):
         self.set_time_sample_callback()
         row = self.sample_list.get_next_row()
 
+        self.query_options_field = DataField(lf, row, 'Query Options', text_width, label_width=label_width)
+        self.query_options_field.set_text("lang:en -is:retweet")
+        ToolTip(self.query_options_field.tk_entry, "TwitterV2 args. Default is English (en), and no retweets\nMore info is available here:\ndeveloper.twitter.com/en/docs/twitter-api/tweets/search/integrate/build-a-query")
+        row = self.query_options_field.get_next_row()
+
     def set_experiment_text(self, l:List):
         self.prompt_text_field.clear()
         pos = 0
@@ -200,17 +207,19 @@ class KeywordExplorer(AppBase):
                 message.showwarning("Keyword too short",
                                     "Please enter something longer than [{}] text area".format(keyword))
                 return
+
+        tweet_options = self.query_options_field.get_text()
         granularity = self.sample_list.get_selected()
         log_dict = {"granularity":granularity, "twitter_start": start_dt.strftime("%Y-%m-%d"), "twitter_end":end_dt.strftime("%Y-%m-%d")}
         for keyword in key_list:
             if granularity == 'day':
-                self.tvc.get_counts(keyword, start_dt, end_time=end_dt, granularity=granularity)
+                self.tvc.get_counts(keyword, start_dt, end_time=end_dt, granularity=granularity, tweet_options=tweet_options)
                 print("testing keyword {} between {} and {} - granularity = {}".format(keyword, start_dt, end_dt, granularity))
             elif granularity == 'week':
-                self.tvc.get_sampled_counts(keyword, start_dt, end_time=end_dt, skip_days=7)
+                self.tvc.get_sampled_counts(keyword, start_dt, end_time=end_dt, skip_days=7, tweet_options=tweet_options)
                 print("testing keyword {} between {} and {} - skip_days = {}".format(keyword, start_dt, end_dt, 7))
             elif granularity == 'month':
-                self.tvc.get_sampled_counts(keyword, start_dt, end_time=end_dt, skip_days=30)
+                self.tvc.get_sampled_counts(keyword, start_dt, end_time=end_dt, skip_days=30, tweet_options=tweet_options)
                 print("testing keyword {} between {} and {} - skip_days = {}".format(keyword, start_dt, end_dt, 30))
             else:
                 self.dp.dprint("test_keyword_callback() unable to handle granularity = {}".format(granularity))

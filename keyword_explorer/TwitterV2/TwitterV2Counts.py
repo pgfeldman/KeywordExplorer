@@ -63,7 +63,7 @@ class TwitterV2Counts (TwitterV2Base):
             totals += tvc.count
         self.totals_dict[query] = totals
 
-    def get_sampled_counts(self, query:str, start_time:datetime, end_time:datetime = None, skip_days:int=3):
+    def get_sampled_counts(self, query:str, start_time:datetime, end_time:datetime = None, skip_days:int=3, tweet_options:str = "lang:en -is:retweet"):
         self.count_list = []
 
         #clean up the query so it works with the api
@@ -83,7 +83,7 @@ class TwitterV2Counts (TwitterV2Base):
             end_time_str = cur_stop.strftime('%Y-%m-%dT%H:%M:%SZ')
             start_time_str = cur_start.strftime('%Y-%m-%dT%H:%M:%SZ')
             print("\tstart_time: {}, end_time: {}".format(start_time_str, end_time_str))
-            url = self.create_counts_url(query, start_time_str, end_time_str)
+            url = self.create_counts_url(query, start_time_str, end_time_str, tweet_options=tweet_options)
             json_response = self.connect_to_endpoint(url)
             print(json_response)
             self.parse_json(json_response)
@@ -92,7 +92,7 @@ class TwitterV2Counts (TwitterV2Base):
         self.multi_count_list.append(self.count_list)
         self.get_query_totals(query)
 
-    def get_counts(self, query:str, start_time:datetime, end_time:datetime = None, granularity:str = "day"):
+    def get_counts(self, query:str, start_time:datetime, end_time:datetime = None, granularity:str = "day", tweet_options:str = "lang:en -is:retweet"):
         self.count_list = []
 
         #clean up the query so it works with the api
@@ -106,14 +106,14 @@ class TwitterV2Counts (TwitterV2Base):
         start_time_str = start_time.strftime('%Y-%m-%dT%H:%M:%SZ')
         print("query: '{}', start_time: {}, end_time: {}".format(query, start_time_str, end_time_str, granularity=granularity))
 
-        url = self.create_counts_url(query, start_time_str, end_time_str)
+        url = self.create_counts_url(query, start_time_str, end_time_str, tweet_options=tweet_options)
         json_response = self.connect_to_endpoint(url)
         next_token = self.parse_json(json_response)
         print("[1]: {}".format(url))
 
         count:int = 2
         while next_token != None:
-            url = self.create_counts_url(query, start_time_str, end_time_str, granularity=granularity, next_token=next_token)
+            url = self.create_counts_url(query, start_time_str, end_time_str, granularity=granularity, next_token=next_token, tweet_options=tweet_options)
             json_response = self.connect_to_endpoint(url)
             next_token = self.parse_json(json_response)
             print("[{}]: {}".format(count, url))
@@ -124,8 +124,7 @@ class TwitterV2Counts (TwitterV2Base):
         self.get_query_totals(query)
 
     @staticmethod
-    def create_counts_url(query:str, start_time:str, end_time:str, granularity:str = "day", next_token:str = None):
-        tweet_options = "lang:en -is:retweet"
+    def create_counts_url(query:str, start_time:str, end_time:str, granularity:str = "day", next_token:str = None, tweet_options:str = "lang:en -is:retweet"):
         url = "https://api.twitter.com/2/tweets/counts/all?query={} {}&start_time={}&end_time={}&granularity={}".format(
             query, tweet_options, start_time, end_time, granularity)
         if next_token != None:

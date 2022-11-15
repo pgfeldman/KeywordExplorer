@@ -144,7 +144,7 @@ class AppBase(tk.Tk):
         return s
 
     def log_action(self, task:str, row_info:Dict, mode:str = "a"):
-        with open(self.logfile, mode) as fio:
+        with open(self.logfile, mode, encoding="utf-8") as fio:
             dt = datetime.now()
             ds = dt.strftime("%H:%M:%S")
             s = "time, {}, task, {}".format(ds, task)
@@ -152,7 +152,10 @@ class AppBase(tk.Tk):
                 if isinstance(val, str):
                     val = val.replace("\n", " ")
                 s += ", {}, {}".format(key, val)
-            fio.write("{}\n".format(s))
+            try:
+                fio.write("{}\n".format(s))
+            except UnicodeEncodeError:
+                print("unable to write {}".format(s))
             fio.close()
 
     def terminate(self):
