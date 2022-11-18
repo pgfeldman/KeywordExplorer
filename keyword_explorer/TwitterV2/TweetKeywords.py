@@ -185,6 +185,10 @@ class TweetKeywords(TwitterV2Base):
         url = "https://api.twitter.com/2/users?ids={}&user.fields={}".format(user_id, user_fields)
         return url
 
+    def create_bookmark_url(self, user_id:str) -> str:
+        url = "https://api.twitter.com/2/users/{}/bookmarks".format(user_id)
+        return url
+
     def parse_json(self, json_response, num_responses:int) -> Union[str, None]:
         if 'meta' in json_response:
             meta:Dict = json_response['meta']
@@ -397,13 +401,20 @@ def exercise_get_threads():
             break
     tk.to_print()
 
-
+def exercise_get_bookmarks():
+    user_id = "836938832"
+    tks = TweetKeywords()
+    url = tks.create_bookmark_url(user_id)
+    print(url)
+    json_response = tks.connect_to_endpoint(url)
+    print(json_response)
 
 def main():
     # exercise_get_counts()
-    exercise_get_keyword_tweets()
+    # exercise_get_keyword_tweets()
     # exercise_sample_keywords_one_day()
     # exercise_get_threads()
+    exercise_get_bookmarks()
 
 
 
