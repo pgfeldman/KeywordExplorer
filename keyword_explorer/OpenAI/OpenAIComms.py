@@ -5,7 +5,7 @@ from typing import List, Dict, Set, Pattern
 
 class OpenAIComms:
     openai.api_key = os.environ.get("OPENAI_KEY")
-    engines:List = ["davinci", "curie", "babbage", "ada", "text-davinci-002", "text-curie-002", "text-babbage-002", "text-ada-002"]
+    engines:List = ["davinci", "curie", "babbage", "ada", "text-davinci-003", "text-curie-001", "text-babbage-001", "text-ada-001"]
     engine:str = engines[0]
     max_tokens:int = 30 # The maximum number of tokens to generate. Requests can use up to 2048 tokens shared between prompt and completion. (One token is roughly 4 characters for normal English text)
     temperature:float = 0.4 # What sampling temperature to use. Higher values means the model will take more risks. Try 0.9 for more creative applications, and 0 (argmax sampling) for ones with a well-defined answer.
