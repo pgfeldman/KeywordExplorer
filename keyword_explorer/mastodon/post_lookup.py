@@ -1,9 +1,5 @@
-import requests
-import os
 import json
-import datetime
-import urllib
-from typing import Dict
+import requests
 
 # A playground for exploring the Mastodon REST interface (https://docs.joinmastodon.org/client/public/)
 
