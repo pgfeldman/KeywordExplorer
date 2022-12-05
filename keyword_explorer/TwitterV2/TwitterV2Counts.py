@@ -160,7 +160,7 @@ class TwitterV2Counts (TwitterV2Base):
         plt.gcf().autofmt_xdate()
         plt.show()
 
-    def to_dataframe(self) -> pd.DataFrame:
+    def to_dataframe(self, excel_fmt:bool = False) -> pd.DataFrame:
         l = []
         for i in range(len(self.multi_count_list)):
             query = self.query_list[i]
@@ -169,13 +169,16 @@ class TwitterV2Counts (TwitterV2Base):
             d = {"keyword":query}
             l.append(d)
             for tvc in count_list:
-                start_time_str = tvc.start_time.strftime('%Y-%m-%dT%H:%M:%SZ')
+                if excel_fmt:
+                    start_time_str = tvc.start_time.strftime('%m/%d/%Y %H:%M')
+                else:
+                    start_time_str = tvc.start_time.strftime('%Y-%m-%dT%H:%M:%SZ')
                 d[start_time_str] = tvc.count
         df = pd.DataFrame(l)
         return df
 
     def to_spreadsheet(self, filename:str):
-        df = self.to_dataframe()
+        df = self.to_dataframe(True)
         writer = pd.ExcelWriter(filename)
         df.to_excel("Counts")
 
