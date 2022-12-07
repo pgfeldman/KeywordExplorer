@@ -40,7 +40,7 @@ class KeywordExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "KeywordExplorer"
-        self.app_version = "11.15.22"
+        self.app_version = "12.7.22"
         self.geom = (850, 790)
         self.oai = OpenAIComms()
         self.tvc = TwitterV2Counts()
@@ -80,19 +80,30 @@ class KeywordExplorer(AppBase):
         row = 0
         self.prompt_text_field = TextField(lf, row, "Prompt:\nDefault style:\nHere's a list of X:\n1)", text_width, height=5, label_width=label_width)
         self.prompt_text_field.set_text("Here's a short list of popular pets:\n1)")
+        ToolTip(self.prompt_text_field.tk_text, "The prompt that the GPT will use to generate text from")
         row = self.prompt_text_field.get_next_row()
+
         self.response_text_field = TextField(lf, row, 'Response', text_width, height=10, label_width=label_width)
+        ToolTip(self.response_text_field.tk_text, "The response from the GPT will be displayed here")
         row = self.response_text_field.get_next_row()
+
         self.max_chars_field = DataField(lf, row, 'Max chars:', text_width, label_width=label_width)
         self.max_chars_field.set_text('30')
+        ToolTip(self.max_chars_field.tk_entry, "The maximum allowable length for a line in the response. \nLonger lines will be discarded")
         row = self.max_chars_field.get_next_row()
+
         self.regex_field = DataField(lf, row, 'Parse regex', text_width, label_width=label_width)
         self.regex_field.set_text(r"\n[0-9]+\)|\n[0-9]+|[0-9]+\)")
+        ToolTip(self.regex_field.tk_entry, "The regex used to parse the GPT response. Editable")
         row = self.regex_field.get_next_row()
+
         buttons = Buttons(lf, row, "Actions", label_width=label_width)
-        buttons.add_button("New prompt", self.new_prompt_callback, width=-1)
-        buttons.add_button("Extend prompt", self.extend_prompt_callback, width=-1)
-        buttons.add_button("Parse response", self.parse_response_callback, width=-1)
+        b = buttons.add_button("New prompt", self.new_prompt_callback, width=-1)
+        ToolTip(b, "Sends the prompt to the GPT-3")
+        b = buttons.add_button("Extend prompt", self.extend_prompt_callback, width=-1)
+        ToolTip(b, "Uses the previous prompt and response as the new prompt")
+        b = buttons.add_button("Parse response", self.parse_response_callback, width=-1)
+        ToolTip(b, "Applies the regex in the 'Parse Regex' field to each line in the resonse text \nthat is longer than Max Chars and places the parsed results in the 'Test Keyords' area below")
         row = buttons.get_next_row()
 
     def build_gpt_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
@@ -100,11 +111,13 @@ class KeywordExplorer(AppBase):
         self.token_list = ListField(lf, row, "Tokens", width=text_width, label_width=label_width, static_list=True)
         self.token_list.set_text(text='32, 64, 128, 256')
         self.token_list.set_callback(self.set_tokens_callback)
+        ToolTip(self.token_list.tk_list, "Sets the maxumum number of tokens that the GPT can use in a response")
         row = self.token_list.get_next_row()
 
         self.engine_list = ListField(lf, row, "Engines", width=text_width, label_width=label_width, static_list=True)
         self.engine_list.set_text(list=self.oai.engines)
         self.engine_list.set_callback(self.set_engine_callback)
+        ToolTip(self.engine_list.tk_list, "Sets the GPT engine. Includes the original and most recent engines")
         row = self.engine_list.get_next_row()
         #
         # lbl = tk.Label(lf, text="Tokens", width=label_width, bg="red")
@@ -113,17 +126,25 @@ class KeywordExplorer(AppBase):
     def build_twitter(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
         self.keyword_text_field = TextField(lf, row, 'Test Keyword(s)', text_width, height=10, label_width=label_width)
+        ToolTip(self.keyword_text_field.tk_text,
+                "List of terms to search.\nTerms can have spaces or be combined with OR:\nNorth Korea\nSouth Korea\nNorth Korea OR South Korea")
         row = self.keyword_text_field.get_next_row()
+
         self.start_date_field = DateEntryField(lf, row, 'Start Date', text_width, label_width=label_width)
         row = self.start_date_field.get_next_row()
         self.end_date_field = DateEntryField(lf, row, 'End Date', text_width, label_width=label_width)
         row = self.end_date_field.get_next_row()
         buttons = Buttons(lf, row, "Actions", label_width=label_width)
-        buttons.add_button("Clear", self.clear_counts_callbacks, width=-1)
-        buttons.add_button("Test Keyword", self.test_keyword_callback, width=-1)
-        buttons.add_button("Plot", self.plot_counts_callback, width=-1)
-        buttons.add_button("Save", self.save_callback, width=-1)
-        buttons.add_button("Launch Twitter", self.launch_twitter_callback, width=-1)
+        b = buttons.add_button("Clear", self.clear_counts_callbacks, width=-1)
+        ToolTip(b, "Clears any old data from the plot")
+        b = buttons.add_button("Test Keyword", self.test_keyword_callback, width=-1)
+        ToolTip(b, "Query Twitter for each keyword and plot")
+        b = buttons.add_button("Plot", self.plot_counts_callback, width=-1)
+        ToolTip(b, "Plot the current data")
+        b = buttons.add_button("Save", self.save_callback, width=-1)
+        ToolTip(b, "Save the results as an xlsx file")
+        b = buttons.add_button("Launch Twitter", self.launch_twitter_callback, width=-1)
+        ToolTip(b, "Open tabs in the default browser for each term over the time period")
         row = buttons.get_next_row()
 
     def build_twitter_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
@@ -132,6 +153,7 @@ class KeywordExplorer(AppBase):
         self.sample_list.set_text(text='day, week, month')
         self.sample_list.set_callback(self.set_time_sample_callback)
         self.set_time_sample_callback()
+        ToolTip(self.sample_list.tk_list, "The sampling period\nWeek and month are subsamples")
         row = self.sample_list.get_next_row()
 
         self.query_options_field = DataField(lf, row, 'Query Options', text_width, label_width=label_width)

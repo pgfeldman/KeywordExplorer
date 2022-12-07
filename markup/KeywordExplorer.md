@@ -45,7 +45,7 @@ The extra line with the "1)" prompts the GPT to return a numbered list. Most of 
 
 Clicking on 'New Prompt' will send that prompt to the GPT-3. You'll see that it was sent, along with the selected engine and the number of tokens in the *Console* window. If you want to continue prompting, then 'Extend Prompt', which will add the results to the initial prompt. You may have to edit the text a bit, since the GPT can stop in mid-word while generating a response.
 
-Clicking on 'Parse Response' will apply the regex in the 'Parse Regex' field to each line in the resonse text that is longer than _Max Chars and place the parsed results in the 'Test Keyords' area in the Twitter section (described [Twitter](#twitter-panel) below). You can edit or try new regexes if you have a different form of output. I highly recommend (https://regex101.com) as a place to test out regexes on text. You can copy the text from the Response field into their playground.
+Clicking on 'Parse Response' will apply the regex in the 'Parse Regex' field to each line in the resonse text that is longer than _Max Chars_ and place the parsed results in the 'Test Keyords' area in the Twitter section (described [Twitter](#twitter-panel) below). You can edit or try new regexes if you have a different form of output. I highly recommend (https://regex101.com) as a place to test out regexes on text. You can copy the text from the Response field into their playground.
 
 Clicking on 'Extend Prompt' will use the current prompt, plus the text that has already been returned to create a new prompt. The result will be appended to the current response.
 

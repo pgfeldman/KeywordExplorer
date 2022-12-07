@@ -65,7 +65,7 @@ class TweetCountExplorer(AppBase):
         row = 0
         self.keyword_text_field = TextField(lf, row, 'Test Keyword(s)', text_width, height=10, label_width=label_width)
         ToolTip(self.keyword_text_field.tk_text,
-            "List of terms to search.\nTerms can have spaces or be combined with OR:\nNorth Korea\nSouth Korea\nNorth Korea or South Korea")
+            "List of terms to search.\nTerms can have spaces or be combined with OR:\nNorth Korea\nSouth Korea\nNorth Korea OR South Korea")
         row = self.keyword_text_field.get_next_row()
         self.start_date_field = DateEntryField(lf, row, 'Start Date', text_width, label_width=label_width)
         row = self.start_date_field.get_next_row()
