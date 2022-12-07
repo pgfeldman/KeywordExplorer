@@ -2,6 +2,9 @@ import json
 import requests
 
 # A playground for exploring the Mastodon REST interface (https://docs.joinmastodon.org/client/public/)
+# Mastodon API: https://docs.joinmastodon.org/api/
+# Mastodon client getting started with the API: https://docs.joinmastodon.org/client/intro/
+
 
 def create_timeline_url(instance:str = "mastodon.social", limit:int=10):
     url = "https://{}/api/v1/timelines/public?limit={}".format(instance, limit)
