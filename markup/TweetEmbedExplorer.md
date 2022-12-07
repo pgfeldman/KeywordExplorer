@@ -85,12 +85,35 @@ Once a model test train corpora has been created, you can finetune a GPT model t
 
 To train a model, follow these directions: [How to train a model](../markup/model_train.md).
 
-The checkboxes allow the corpora to configured in particular ways:
+The checkboxes allow the corpora to configured in particular ways. There are three groups:
 
 #### Tweet meta wrapping
+These checkboxes generally add a string segment to a line of corpora test/train text:
+
+* _Created At_ - Adds a "|| created: YYYY-MM-DD HH:MM"SS ||"
+* _Language_ - Adds a "|| language: xx ||"
+* _Keyword_ - Adds a ""|| keyword: xx ||" that shows the keyword used for the pull
+* _Exclude threaded tweets_ - Checking this cause any tweets that were downloaded as threads but **do not** contain the keyword to be ommitted from the training corpora
 
 #### Author meta wrapping
+These checkboxes all add a string segment to a line of corpora test/train text. For these elements to work, the author information must be downloaded seperately by clicking the **User** button in the **Get/Store** tab:
+
+* _Name_ - The name of the author as written in their profile
+* _Username_ - the screen name of the author
+* _Location_ - the author's location as written in their profile
+* _Description_ - The author's self description as written in their profile
 
 #### Corpora Generation
+These options let the user select how the corpora files will be generated.
+
+* _Wrapping before text_ - By default, meta information is written _after_ the tweet. This means that the model is trained so that the content of the tweet influences the meta information. Checking this box means that the meta information will preceed the tweet, so explorations of location, for example , on the content of tweets can be done
+* _Single File_ - This causes all the tweets to be combined into a single test and single train file. This provides more text to train the model, but means that the a model would be, for example, trained on tweets with the keywords "kittens" **and** "puppies", rather than a kitten model and a puppy model.
+* _Percent OFF_ - By default, each line in the corpora contains a meta wrapping substring of the form "|| probability: xxxx]]", where xxxx can be "ten", "twenty", "thirty", or "forty". The liklihood that a line will have the appropriate string reflects the probablility of the random number generator hitting that value. This provides a quick check of the fidelity of the model, which should generate these values in the same percentages if trained correctly.
+* _Include excluded clusters_ - If checked, then all tweets containing the specified keyword will be included. If not then tweets belonging to excluded clusters will not be included in the corpora.
+
+
+Lastly, there are two _Corpora_ buttons below the checkboxes. The first (_Set folder_) sets the location that all files will be written to. The second (_Generate_) causes the files to be written. If _all_keywords_ option has been selected from [Common Elements](tweet-embed-common), then a test file and a train file for each of the keywords in an experiment will be generated, so choose your file location to minimize confusion. 
+
+At this point, you can train your model(s) using the Huggingface Transformers library as described [**here**](../markup/model_train.md).
 
 
