@@ -112,7 +112,7 @@ These options let the user select how the corpora files will be generated.
 * _Include excluded clusters_ - If checked, then all tweets containing the specified keyword will be included. If not then tweets belonging to excluded clusters will not be included in the corpora.
 
 
-Lastly, there are two _Corpora_ buttons below the checkboxes. The first (_Set folder_) sets the location that all files will be written to. The second (_Generate_) causes the files to be written. If _all_keywords_ option has been selected from [Common Elements](tweet-embed-common), then a test file and a train file for each of the keywords in an experiment will be generated, so choose your file location to minimize confusion. 
+Lastly, there are two _Corpora_ buttons below the checkboxes. The first (_Set folder_) sets the location that all files will be written to. The second (_Generate_) causes the files to be written. If _all_keywords_ option has been selected from [Common Elements](#how-to-use), then a test file and a train file for each of the keywords in an experiment will be generated, so choose your file location to minimize confusion. 
 
 At this point, you can train your model(s) using the Huggingface Transformers library as described [**here**](../markup/model_train.md).
 
