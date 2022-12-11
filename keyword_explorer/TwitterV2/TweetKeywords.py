@@ -282,7 +282,7 @@ class TweetKeywords(TwitterV2Base):
             tk.to_db(msi, end_dt)
 
     def sample_keywords_one_day(self, tk:TweetKeyword, start_dt:datetime, tweets_available:int, clamp:int, tweets_per_sample:int,
-                                msi:MySqlInterface = None, experiment_id:int = -1):
+                                msi:MySqlInterface = None, experiment_id:int = -1) -> int:
         date_fmt = "%B %d, %Y (%H:%M:%S)"
         twitter_fmt = '%Y-%m-%dT%H:%M:%SZ'
 
@@ -294,6 +294,9 @@ class TweetKeywords(TwitterV2Base):
 
         tweets_to_download = min(clamp, tweets_available)
         print("tweets_to_download = {:,}".format(tweets_to_download))
+        if tweets_to_download == 0:
+            tk.num_entries = 0
+            return 0
 
         ratio = tweets_to_download / tweets_available
         print("ratio = {:.2f}".format(ratio))
