@@ -30,7 +30,7 @@ MariaDB [gpt_experiments]> describe gpt_experiments;
 7 rows in set (0.001 sec)
 ```
 ### GPT-2 Models
-_ModelExplorer uses Huggingface GPT-2 models fine-tuned to create tweets wrapped in meta information. The creation of the corpora is described in [**TweetEmbedExplorer**](../markup/TweetEmbedExplorer.md). Biefly, you need to have a test and train file that has text that looks like this: 
+_ModelExplorer uses Huggingface GPT-2 models fine-tuned to create tweets wrapped in meta information. The creation of the corpora is described in [**TweetEmbedExplorer**](../markup/TweetEmbedExplorer.md). Briefly, you need to have a test and train file that has text that looks like this: 
 
         [[text: RT @Andygetout: Sehr geehrter @Karl_Lauterbach,gestern und heute musste ich mit Schrecken feststellen, wie und warum Paxlovid NICHT bei d… || created: 2022-09-04 07:10:25 || location: Kaiserslautern, Germany || probability: twenty]]
         [[text: RT @axios: There's growing concern about the link between Pfizer's antiviral pill and COVID rebound, in which patients test positive or hav… || created: 2022-09-03 02:40:34 || location: Bendigo, Victoria. Australia || probability: thirty]]
@@ -42,3 +42,45 @@ At this point the app should be ready to use.
 ## How to use
 
 Using the tool is pretty straightforward. That being said, it's possible to break it. If you are running it in the console, then you will get additional information on the command line that might help you figure out things. 
+
+This tool *generates* text. The type of text is influenced on its training data. If you have fed it a diet of posts consisting of right-wing hate speech, it will generate more of that. If you training posts about kittens and puppies and rainbows, it will generate more of that! What's really interesting about these models is that they are capable of *accurately inferring* about data that is not in the training data. For example, when we trained a model on Yelp reviews but left out anything with the phrase "vegetarian options", the trained model was able to accurately generate reviews using "vegetarian options" as the prompt that had the same sentiment ratios as the reviews in the held-out data. More detail is in the paper "[Polling Latent Opinions: A Method for Computational Sociolinguistics Using Transformer Language Models](https://arxiv.org/abs/2204.07483)"
+
+## Loading the Model
+ModelExplorer requires a finetuned GPT-2 model to work with. You can create your own following the directions  ([How to train a model](../markup/model_train.md)), or download an the model used for this README from HuggingFace ([model_explorer_hello_world](https://huggingface.co/pgfeldman/model_explorer_hello_world)). To use, the files should be in a separate directory that looks something like this:
+
+![model_files_2](../images/model_files2.png)
+
+To load a model, simply select "Load Model" from the File menu, and navigate to the location of the folder that contains the model files (in this case, "ivermectin_paxlovid")
+
+![load_model](../images/load_model.png)
+
+This tool has five rows above the main output area that control the behavior of the model and monitor its performance:
+
+![model_max_length](../images/model_max_length.png)
+This row controls the generation of text by the model. There are five parameters:
+
+**Max Length**: This is the maximum number of tokens that the model will generate per line. Common words are often single tokens, whil uncommmon or longer words anre made up of multiple tokens. So 128 tokens will generate something on the order of 100 words. The default is 128.
+
+**Top K** The number of "most likely" terms to be evaluated to use when generating the next token in a sequence. The default is 50
+
+**Top P** The percentage of all tokens that will be evaluated when generating the next token in a series. The default is 95%
+
+**Num Sequences** the number of texts generated per batch. The default is ten. More sequences use more memory, so to generate 1000 sequences, consider 10 batches of 100.
+
+**Batch Size** The number of sequences that get generated. The default is one.
+
+![model_total](../images/model_total.png)
+
+This row contains the percentages that the "probability" meta wrapping variables appear in the generated text. In the case of our test model, a run of 10 sequences in ten batches for a total of 100 generations prodiced the following approximations:
+
+- Ten: 8%
+- Twenty: 16%
+- Thirty: 31%
+- Forty: 43%
+
+It's pretty close, and you can see that the predictions are progressively higher for the values that are more common, _thirty_ and _forty_.
+
+![model_flags](../images/model_flags.png)
+![model_probe](../images/model_probe.png)
+![model_actions](../images/model_actions.png)
+
