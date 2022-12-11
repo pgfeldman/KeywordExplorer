@@ -96,9 +96,15 @@ _The woman walked into the room_ and sat down on the bed. She was wearing a long
 
 This can be very useful when examining bias in models and the data that trains them.
 
+**Save to DB** If selected, saves the output of the output of the model to the MariaDB _gpt_experiments_ table. 
+
+**Save to Spreadsheet** (Not implemented)
+
 ---
 
 ![model_probe](../images/model_probe.png)
+
+The probe is the meat of the application. The default is an empty text prompt: 
 
 ---
 
