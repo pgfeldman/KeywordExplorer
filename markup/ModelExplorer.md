@@ -106,6 +106,12 @@ This can be very useful when examining bias in models and the data that trains t
 
 The probe is the meat of the application. The default is an empty text prompt: 
 
+    ]][[text:
+
+This prompt includes the meta wrapping but nothing else, so the machine is not constrained to generate anything other than text. For an example where we constrain the text to generate text for sentiment analysis regarding masks
+
+    ]][[text: Masks are
+
 ---
 
 ![model_actions](../images/model_actions.png)
