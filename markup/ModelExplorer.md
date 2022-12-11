@@ -56,6 +56,8 @@ To load a model, simply select "Load Model" from the File menu, and navigate to 
 
 This tool has five rows above the main output area that control the behavior of the model and monitor its performance:
 
+---
+
 ![model_max_length](../images/model_max_length.png)
 This row controls the generation of text by the model. There are five parameters:
 
@@ -69,6 +71,8 @@ This row controls the generation of text by the model. There are five parameters
 
 **Batch Size** The number of sequences that get generated. The default is one.
 
+---
+
 ![model_total](../images/model_total.png)
 
 This row contains the percentages that the "probability" meta wrapping variables appear in the generated text. In the case of our test model, a run of 10 sequences in ten batches for a total of 100 generations prodiced the following approximations:
@@ -81,6 +85,22 @@ This row contains the percentages that the "probability" meta wrapping variables
 It's pretty close, and you can see that the predictions are progressively higher for the values that are more common, _thirty_ and _forty_.
 
 ![model_flags](../images/model_flags.png)
+
+This row sets a few more user-defined behaviors that are not directly related to text generation.
+
+**Re-use Seed** If checked, this causes the same seed to be used at the beginning of each session (Each time you press "Run"). Seed re-use means that the beginning of text sequences are very similar. For example, the two following responses were generated from the default GPT-2 using the same seed and slightly different prompts (in _italics_):
+
+_The man walked into the room_ and sat down. He was a big man, with a round face and a bald head. He wore a dark suit and a white shirt with a dark tie. "I'm Detective Sergeant John O'Malley," he said." I'm in charge of the investigation into the death of your daughter."
+
+_The woman walked into the room_ and sat down on the bed. She was wearing a long, white nightgown. Her hair was long and black, and her eyes were dark brown. She looked at me for a moment, then said, "I'm your mother."
+
+This can be very useful when examining bias in models and the data that trains them.
+
+---
+
 ![model_probe](../images/model_probe.png)
+
+---
+
 ![model_actions](../images/model_actions.png)
 

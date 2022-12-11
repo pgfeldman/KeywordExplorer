@@ -207,7 +207,7 @@ class ModelExplorer(AppBase):
 
     def seed_callback(self):
         self.reuse_seed = not self.reuse_seed
-        self.dp.dprint("db_flag = {}".format(self.db_flag))
+        self.dp.dprint("reuse_seed = {}".format(self.reuse_seed))
 
     def db_flag_callback(self):
         self.db_flag = not self.db_flag
@@ -266,7 +266,7 @@ class ModelExplorer(AppBase):
                             if d['word'] == 'text':
                                 s += "sequence {} of {}\ntext: {}\n".format(count, len(sequence_list), d['substr'])
                                 if count == 1 and experiment_id != -1:
-                                    sql = "insert into table_text (experiment_id, probe, text) VALUES (%s, %s, %s)"
+                                    sql = "insert into table_output (experiment_id, probe, text) VALUES (%s, %s, %s)"
                                     vals = (experiment_id, probe, d['substr'])
                                     text_id = self.msi.write_sql_values_get_row(sql, vals)
                                     self.dp.dprint("run_probe_callback() text_id = {}, probe = {}, text = {}".format(text_id, probe, d['substr']))
