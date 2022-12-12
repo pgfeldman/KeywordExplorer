@@ -112,7 +112,23 @@ This prompt includes the meta wrapping but nothing else, so the machine is not c
 
     ]][[text: Masks are
 
+In the case of the "hello world" model that we're using, meta information follows the text, so you will get the model's guesses on when the post occured or the location. If the model is trained with the meta wrapping preceeding the text, then a prompt looking for the sentiment at a specific time could be run, e.g:
+
+    created: 2022
+
+Generally, longer prompts create a "narrower" space for the GPT to generate text. So if you want a highly specific set of responses, then use long prompts. If you want to explore a larger region, then use short prompts.
+
 ---
 
 ![model_actions](../images/model_actions.png)
+
+Clicking on the "Run" button will kick off the model query. If you are running the app from the console, you will see the model load into memory and run through the sequences and batches. It can take some time, so be patient
+
+---
+
+![gpt-panel](../images/GPT-output.png)
+
+When the GPT has finished generating the text, it will be parsed and shown. Since 128 tokens can easily generate multiple posts, you will see "sequence x of y". The posts are split in the "]][[" text string and then parsed based on the othe meta information. In this case, the information produced by the model is "text", "created", "location", and "probability". These values are displayed just below the text they are associated with.
+
+Because the second sequence is base on the text in the first sequence, the relationship to the original prompt will be somewhat tenuous. There should be some relationship, though it is not recommended to use second or third sequences when exploring a particular prompt. Sequence number is stored in the database, so queries can be written that explicitly use only the first sequence for each GPT-output.
 
