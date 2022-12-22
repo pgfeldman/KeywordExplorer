@@ -191,4 +191,4 @@ def tweet_main():
 
 
 if __name__ == "__main__":
-    user_main()
+    tweet_main()

@@ -28,7 +28,7 @@ def print_response(title:str, j:json):
 
 def main():
     print("post_lookup")
-    instance_list = ["fediscience.org", "mastodon.social"]
+    instance_list = ["truthsocial.com/", "fediscience.org", "mastodon.social"]
     for instance in instance_list:
         url = create_timeline_url(instance, 1)
         rsp = connect_to_endpoint(url)
