@@ -34,7 +34,7 @@ Pressing the **Test Keyword** button will send a series of qaueries to Twitter t
 
 Running the same query over a range of dates will accumulate the results in the same plot (Known bug - the app treats each new sample as a different label). This allows quickly compare keaywords over a range of dates without blowing through your API limits. To start a new plot, press **Clear** before running.
 
-Lastly, clicking **Launch Twitter** will open a set of tabs in your default browser - one for each keyword within the range of dates specified. This allows you to quickly explore keywords in context. For example, you could see if the "Birds" keywords referred to [the group of warm-blooded vertebrates constituting the class Aves](https://en.wikipedia.org/wiki/Bird), , or the [Baltimore Orioles](https://en.wikipedia.org/wiki/Baltimore_Orioles) if you were looking at dates that included games during their 2014 season.
+Lastly, clicking **Launch Twitter** will open a set of tabs in your default browser - one for each keyword within the range of dates specified. This allows you to quickly explore keywords in context. For example, you could see if the "Birds" keywords referred to [the group of warm-blooded vertebrates constituting the class Aves](https://en.wikipedia.org/wiki/Bird), or the [Baltimore Orioles](https://en.wikipedia.org/wiki/Baltimore_Orioles) if you were looking at dates that included games during their 2014 season.
 
 ### Twitter Params <span id="twitter-params-region"/>
 >![Twitter params region](../images/twitter_params_panel.png)
