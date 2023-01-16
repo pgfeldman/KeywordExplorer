@@ -4,7 +4,7 @@ from  distutils.core import  setup
 
 long_s = '''Explorer Apps
 ====================================
-There are four applications in this project, _KeywordExplorer_, _TweetsCountExplorer_, _TweetDownloader_, and _WikiPageviewExplorer_. They, and the classes that support them, can be installed with pip:
+There are six applications in this project: KeywordExplorer, TweetsCountExplorer, TweetDownloader, WikiPageviewExplorer, TweetEmbedExplorer, and ModelExplorer. They, and the classes that support them, can be installed with pip:
 
     pip install keyword-explorer
 
@@ -16,14 +16,19 @@ There are four applications in this project, _KeywordExplorer_, _TweetsCountExpl
 
 **WikiPageviewExplorer**  is a Python desktop app that lets you explore keywords that appear as articles in the Wikipedia, and chart their relative page views.
 
+**TweetEmbedExplorer** is a Python desktop app for analyzing, filtering, and augmenting tweet information. Augmented information can them be used to create a train/test corpus for finetuning language models such as the GPT-2.
+
+**ModelExplorer** is a Python desktop app that lets a user interact with a finetuned GPT-2 model trained using EmbeddingExplorer
+
 Full documentation is available at https://github.com/pgfeldman/KeywordExplorer#readme'''
 
 setup(
     name='keyword_explorer',
-    version= "0.32.alpha",
+    version= "0.43.alpha",
     packages=['keyword_explorer',
               'keyword_explorer.utils',
               'keyword_explorer.TwitterV2',
+              'keyword_explorer.mastodon',
               'keyword_explorer.tkUtils',
               'keyword_explorer.OpenAI',
               'keyword_explorer.Apps'],

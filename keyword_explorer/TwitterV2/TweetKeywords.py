@@ -414,10 +414,10 @@ def exercise_get_bookmarks():
 
 def main():
     # exercise_get_counts()
-    # exercise_get_keyword_tweets()
+    exercise_get_keyword_tweets()
     # exercise_sample_keywords_one_day()
     # exercise_get_threads()
-    exercise_get_bookmarks()
+    # exercise_get_bookmarks()
 
 
 
