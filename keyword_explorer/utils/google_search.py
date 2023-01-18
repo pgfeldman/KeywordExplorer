@@ -4,6 +4,16 @@ import os
 from datetime import datetime, timedelta
 from typing import Dict, List
 
+'''NOTE: for this code to work you need to get an API key for Google CSE search: https://developers.google.com/custom-search/v1/introduction
+Be advised that you can only have **100** free searches daily. Each additional 1,000 searches costs $5, with a max of 10,000
+or $50/day for the max number of searches. As such, be very careful with how you discard your data and the type of searches
+you make
+
+If you're just interested in the counts for terms, then that comes back in the "info" list returned by get_search_results_list().
+The list consists of GoogleCSEInfo objects, and you should only need to do one query per term to get the counts for a given time period.
+This means, of course that tracking usage over time can create its own costs. A year of weekly queries will use half your
+daily allotment!'''
+
 engines = {
     'com-org-edu': '814dff357c3d046aa',
     'all.com': '017379340413921634422:swl1wknfxia',
@@ -58,7 +68,7 @@ class GoogleCSEResult:
         )
         return s
 
-
+# Full list of arguments for arg_dict are at https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list
 def get_search_results_list(query:str, engine:str, key:str, arg_dict:Dict = None) -> (List, List):
     info_list = []
     results_list = []
@@ -82,17 +92,27 @@ def get_search_results_list(query:str, engine:str, key:str, arg_dict:Dict = None
             results_list.append(g)
     return (results_list, info_list)
 
+def get_search_date_string(start:datetime, stop:datetime) -> str:
+    fmt = "%Y%m%d"
+    start_s = start.strftime(fmt)
+    stop_s = stop.strftime(fmt)
+    return "date:r:{}:{}".format(start_s, stop_s)
+
 def key_exists(key:str = "GOOGLE_CSE_KEY") -> bool:
     val = os.environ.get(key)
     if val == None:
         return False
     return True
 
-def main():
-
+def exercise_cse_key():
+    print("\nexercise_cse_key()")
     engine = engines['com-org-edu']
     key = os.environ.get("GOOGLE_CSE_KEY")
-    arg_dict = {"siteSearch":"'twitter.com'", "sort":"date:r:20140815:20140931"}
+
+    now = datetime.now()
+    then = now - timedelta(days=10)
+    sort_str = get_search_date_string(then, now)
+    arg_dict = {"siteSearch":"'reddit.com'", "sort":sort_str}
     lr, li = get_search_results_list("Feldman", engine, key, arg_dict)
     gi:GoogleCSEInfo
     for gi in li:
@@ -102,6 +122,10 @@ def main():
     for gr in lr:
         #print("\n{}".format(g.to_html()))
         print("result: {}".format(gr.to_string()))
+
+
+def main():
+    exercise_cse_key()
 
 if __name__ == "__main__":
     main()
