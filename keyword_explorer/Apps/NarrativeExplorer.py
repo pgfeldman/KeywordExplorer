@@ -46,7 +46,10 @@ class NarrativeExplorer(AppBase):
     mr: ManifoldReduction
     embed_model_combo: TopicComboExt
     generate_model_combo: TopicComboExt
-    generate_tokens: DataField
+    tokens_param: LabeledParam
+    temp_param: LabeledParam
+    presence_param: LabeledParam
+    frequency_param: LabeledParam
     experiment_combo: TopicComboExt
     new_experiment_button:Buttons
     pca_dim_param: LabeledParam
@@ -55,6 +58,7 @@ class NarrativeExplorer(AppBase):
     perplexity_param: LabeledParam
     prompt_text_field:TextField
     response_text_field:TextField
+    embed_state_text_field:TextField
     regex_field:DataField
 
     def __init__(self, *args, **kwargs):
@@ -117,15 +121,14 @@ class NarrativeExplorer(AppBase):
 
     def build_generator_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
         engine_list = self.oai.list_models(keep_list = ["davinci"], exclude_list = ["embed", "similarity", "code", "edit", "search", "audio", "instruct", "2020", "if", "insert"])
+        engine_list = sorted(engine_list)
         row = 0
         self.generate_model_combo = TopicComboExt(tab, row, "Model:", self.dp, entry_width=25, combo_width=25)
-        self.generate_model_combo.set_combo_list(sorted(engine_list))
+        self.generate_model_combo.set_combo_list(engine_list)
         self.generate_model_combo.set_text(engine_list[0])
         self.generate_model_combo.tk_combo.current(0)
         row = self.generate_model_combo.get_next_row()
-        self.generate_tokens = DataField(tab, row, "Tokens")
-        self.generate_tokens.set_text("256")
-        row = self.generate_tokens.get_next_row()
+        row = self.build_generate_params(tab, row)
 
         self.prompt_text_field = TextField(tab, row, "Prompt:", text_width, height=6, label_width=label_width)
         self.prompt_text_field.set_text("Once upon a time there was")
@@ -142,8 +145,8 @@ class NarrativeExplorer(AppBase):
         row = self.regex_field.get_next_row()
 
         buttons = Buttons(tab, row, "Actions")
-        buttons.add_button("Generate", self.implement_me)
-        buttons.add_button("Add", self.implement_me)
+        buttons.add_button("Generate", self.new_prompt_callback)
+        buttons.add_button("Add", self.extend_prompt_callback)
         buttons.add_button("Parse", self.implement_me)
         buttons.add_button("Save", self.implement_me)
 
@@ -155,8 +158,12 @@ class NarrativeExplorer(AppBase):
         self.embed_model_combo.set_text(engine_list[0])
         self.embed_model_combo.tk_combo.current(0)
         row = self.embed_model_combo.get_next_row()
-        row = self.build_param_row(tab, row)
+        row = self.build_embed_params(tab, row)
+        self.embed_state_text_field = TextField(tab, row, "Embed state:", text_width, height=10, label_width=label_width)
+        ToolTip(self.embed_state_text_field.tk_text, "Embedding progess")
+        row = self.embed_state_text_field.get_next_row()
         buttons = Buttons(tab, row, "Commands", label_width=10)
+        b = buttons.add_button("GPT embed", self.implement_me, -1)
         b = buttons.add_button("Retreive", self.implement_me, -1)
         ToolTip(b, "Get the high-dimensional embeddings from the DB")
         b = buttons.add_button("Reduce", self.implement_me, -1)
@@ -169,7 +176,30 @@ class NarrativeExplorer(AppBase):
         ToolTip(b, "Use GPT to guess at topic names for clusters\n(not implemented)")
         row = buttons.get_next_row()
 
-    def build_param_row(self, parent:tk.Frame, row:int) -> int:
+    def build_generate_params(self, parent:tk.Frame, row:int) -> int:
+        f = tk.Frame(parent)
+        f.grid(row=row, column=0, columnspan=2, sticky="nsew", padx=1, pady=1)
+
+        self.tokens_param = LabeledParam(f, 0, "Tokens:")
+        self.tokens_param.set_text('256')
+        ToolTip(self.tokens_param.tk_entry, "The number of the model will generate")
+
+        self.temp_param = LabeledParam(f, 2, "Temp:")
+        self.temp_param.set_text('0.7')
+        ToolTip(self.temp_param.tk_entry, "The randomness of the response (0.0 - 1.0)")
+
+        self.presence_param = LabeledParam(f, 4, "Presence penalty:")
+        self.presence_param.set_text('0.3')
+        ToolTip(self.presence_param.tk_entry, "Increases liklihood of new topics")
+
+
+        self.frequency_param = LabeledParam(f, 6, "Frequency penalty:")
+        self.frequency_param.set_text('0.3')
+        ToolTip(self.frequency_param.tk_entry, "Supresses repeating text")
+        return row + 1
+
+
+    def build_embed_params(self, parent:tk.Frame, row:int) -> int:
         f = tk.Frame(parent)
         f.grid(row=row, column=0, columnspan=2, sticky="nsew", padx=1, pady=1)
         self.pca_dim_param = LabeledParam(f, 0, "PCA Dim:")
@@ -185,6 +215,42 @@ class NarrativeExplorer(AppBase):
         self.perplexity_param.set_text('80')
         ToolTip(self.perplexity_param.tk_entry, "T-SNE: The size of the neighborhood around each point that \nthe embedding attempts to preserve")
         return row + 1
+
+    def get_gpt3_response(self, prompt:str) -> str:
+        """
+        Method that takes a prompt and gets the response back via the OpenAI API
+        :param prompt: The prompt to be sent to the GPT-3
+        :return: The GPT-3 Response
+        """
+        if len(prompt) < 3:
+            self.dp.dprint("get_gpt3_response() Error. Prompt too short: '{}'".format(prompt))
+            return ""
+
+        # print(prompt)
+        self.oai.max_tokens = self.tokens_param.get_as_int()
+        self.oai.temperature = self.temp_param.get_as_float()
+        self.oai.frequency_penalty = self.frequency_param.get_as_float()
+        self.oai.presence_penalty = self.presence_param.get_as_float()
+        self.oai.engine = self.generate_model_combo.get_text()
+
+        results = self.oai.get_prompt_result(prompt, False)
+        self.dp.dprint("\n------------\ntokens = {}, engine = {}\nprompt = {}".format(self.oai.max_tokens, self.oai.engine, prompt))
+        self.log_action("gpt_prompt", {"tokens":self.oai.max_tokens, "engine":self.oai.engine, "prompt":prompt})
+
+        # clean up before returning
+        s = results[0].strip()
+        self.log_action("gpt_response", {"gpt_text":s})
+        return s
+
+    def new_prompt_callback(self):
+        prompt = self.prompt_text_field.get_text()
+        response = self.get_gpt3_response(prompt)
+        self.response_text_field.set_text(response)
+
+    def extend_prompt_callback(self):
+        prompt = "{} {}".format(self.prompt_text_field.get_text(), self.response_text_field.get_text())
+        self.prompt_text_field.set_text(prompt)
+        self.response_text_field.clear()
 
 def main():
     app = NarrativeExplorer()
