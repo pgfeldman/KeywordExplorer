@@ -53,14 +53,19 @@ class NarrativeExplorer(AppBase):
     eps_param: LabeledParam
     min_samples_param: LabeledParam
     perplexity_param: LabeledParam
+    prompt_text_field:TextField
+    response_text_field:TextField
+    regex_field:DataField
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         print("NarrativeExplorer")
+        self.text_width = 60
+        self.label_width = 15
 
     def setup_app(self):
         self.app_name = "NarrativeExplorer"
-        self.app_version = "1.17.2023"
+        self.app_version = "1.20.2023"
         self.geom = (600, 620)
         self.oai = OpenAIComms()
         self.msi = MySqlInterface(user_name="root", db_name="narrative_maps")
@@ -89,7 +94,7 @@ class NarrativeExplorer(AppBase):
         self.experiment_combo.set_callback(self.experiment_callback)
         row = self.experiment_combo.get_next_row()
         buttons = Buttons(self, row, "Experiments")
-        buttons.add_button("Create New", self.implement_me)
+        buttons.add_button("Create", self.implement_me)
         buttons.add_button("Update", self.implement_me)
         row = buttons.get_next_row()
 
@@ -101,16 +106,16 @@ class NarrativeExplorer(AppBase):
         tab_control.grid(column=0, row=row, columnspan=2, sticky="nsew")
         gpt_tab = ttk.Frame(tab_control)
         tab_control.add(gpt_tab, text='Generate')
-        self.build_generator_tab(gpt_tab)
+        self.build_generator_tab(gpt_tab, text_width, label_width)
 
         embed_tab = ttk.Frame(tab_control)
         tab_control.add(embed_tab, text='Embedding')
-        self.build_embed_tab(embed_tab)
+        self.build_embed_tab(embed_tab, text_width, label_width)
 
         row += 1
         return row
 
-    def build_generator_tab(self, tab: ttk.Frame):
+    def build_generator_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
         engine_list = self.oai.list_models(keep_list = ["davinci"], exclude_list = ["embed", "similarity", "code", "edit", "search", "audio", "instruct", "2020", "if", "insert"])
         row = 0
         self.generate_model_combo = TopicComboExt(tab, row, "Model:", self.dp, entry_width=25, combo_width=25)
@@ -122,7 +127,27 @@ class NarrativeExplorer(AppBase):
         self.generate_tokens.set_text("256")
         row = self.generate_tokens.get_next_row()
 
-    def build_embed_tab(self, tab: ttk.Frame):
+        self.prompt_text_field = TextField(tab, row, "Prompt:", text_width, height=6, label_width=label_width)
+        self.prompt_text_field.set_text("Once upon a time there was")
+        ToolTip(self.prompt_text_field.tk_text, "The prompt that the GPT will use to generate text from")
+        row = self.prompt_text_field.get_next_row()
+
+        self.response_text_field = TextField(tab, row, 'Response:', text_width, height=11, label_width=label_width)
+        ToolTip(self.response_text_field.tk_text, "The response from the GPT will be displayed here")
+        row = self.response_text_field.get_next_row()
+
+        self.regex_field = DataField(tab, row, 'Parse regex:', text_width, label_width=label_width)
+        self.regex_field.set_text(r"\n|[\.!?] |([\.!?]\")")
+        ToolTip(self.regex_field.tk_entry, "The regex used to parse the GPT response. Editable")
+        row = self.regex_field.get_next_row()
+
+        buttons = Buttons(tab, row, "Actions")
+        buttons.add_button("Generate", self.implement_me)
+        buttons.add_button("Add", self.implement_me)
+        buttons.add_button("Parse", self.implement_me)
+        buttons.add_button("Save", self.implement_me)
+
+    def build_embed_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
         engine_list = self.oai.list_models(keep_list = ["embedding"])
         row = 0
         self.embed_model_combo = TopicComboExt(tab, row, "Engine:", self.dp, entry_width=25, combo_width=25)
@@ -130,6 +155,36 @@ class NarrativeExplorer(AppBase):
         self.embed_model_combo.set_text(engine_list[0])
         self.embed_model_combo.tk_combo.current(0)
         row = self.embed_model_combo.get_next_row()
+        row = self.build_param_row(tab, row)
+        buttons = Buttons(tab, row, "Commands", label_width=10)
+        b = buttons.add_button("Retreive", self.implement_me, -1)
+        ToolTip(b, "Get the high-dimensional embeddings from the DB")
+        b = buttons.add_button("Reduce", self.implement_me, -1)
+        ToolTip(b, "Reduce to 2 dimensions with PCS and TSNE")
+        b = buttons.add_button("Cluster", self.implement_me, -1)
+        ToolTip(b, "Compute clusters on reduced data")
+        b = buttons.add_button("Plot", self.implement_me, -1)
+        ToolTip(b, "Plot the clustered points using PyPlot")
+        b = buttons.add_button("Topics", self.implement_me, -1)
+        ToolTip(b, "Use GPT to guess at topic names for clusters\n(not implemented)")
+        row = buttons.get_next_row()
+
+    def build_param_row(self, parent:tk.Frame, row:int) -> int:
+        f = tk.Frame(parent)
+        f.grid(row=row, column=0, columnspan=2, sticky="nsew", padx=1, pady=1)
+        self.pca_dim_param = LabeledParam(f, 0, "PCA Dim:")
+        self.pca_dim_param.set_text('10')
+        ToolTip(self.pca_dim_param.tk_entry, "The number of dimensions that the PCA\nwill reduce the original vectors to")
+        self.eps_param = LabeledParam(f, 2, "EPS:")
+        self.eps_param.set_text('8')
+        ToolTip(self.eps_param.tk_entry, "DBSCAN: Specifies how close points should be to each other to be considered a part of a \ncluster. It means that if the distance between two points is lower or equal to \nthis value (eps), these points are considered neighbors.")
+        self.min_samples_param = LabeledParam(f, 4, "Min Samples:")
+        self.min_samples_param.set_text('5')
+        ToolTip(self.min_samples_param.tk_entry, "DBSCAN: The minimum number of points to form a dense region. For \nexample, if we set the minPoints parameter as 5, then we need at least 5 points \nto form a dense region.")
+        self.perplexity_param = LabeledParam(f, 6, "Perplex:")
+        self.perplexity_param.set_text('80')
+        ToolTip(self.perplexity_param.tk_entry, "T-SNE: The size of the neighborhood around each point that \nthe embedding attempts to preserve")
+        return row + 1
 
 def main():
     app = NarrativeExplorer()
