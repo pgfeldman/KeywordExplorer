@@ -13,34 +13,114 @@ Save - stores the text on a sentence-by sentence bases with clustering info
 Generate Graph - runs through each narrative in an experiment to produce a directed graph of nodes. The output is all the narratives threaded together. Used as an input to Gephi
 '''
 
-import getpass
+import re
 import tkinter as tk
+from tkinter import ttk
 import tkinter.messagebox as message
-from datetime import datetime, timedelta
+from datetime import datetime
 from tkinter import filedialog
+from matplotlib import pyplot as plt
+import matplotlib.colors as mcolors
 
 import pandas as pd
 
 from keyword_explorer.Apps.AppBase import AppBase
-from keyword_explorer.TwitterV2.TwitterV2Counts import TwitterV2Counts, TwitterV2Count
 from keyword_explorer.tkUtils.Buttons import Buttons
 from keyword_explorer.tkUtils.ToolTip import ToolTip
 from keyword_explorer.tkUtils.DateEntryField import DateEntryField
 from keyword_explorer.tkUtils.ListField import ListField
 from keyword_explorer.tkUtils.TextField import TextField
 from keyword_explorer.tkUtils.DataField import DataField
+from keyword_explorer.tkUtils.TopicComboExt import TopicComboExt
+
+from keyword_explorer.OpenAI.OpenAIComms import OpenAIComms
+from keyword_explorer.utils.MySqlInterface import MySqlInterface
+from keyword_explorer.utils.ManifoldReduction import ManifoldReduction, EmbeddedText
+from keyword_explorer.tkUtils.LabeledParam import LabeledParam
 
 from typing import List
 
 class NarrativeExplorer(AppBase):
+    oai: OpenAIComms
+    msi: MySqlInterface
+    mr: ManifoldReduction
+    embed_model_combo: TopicComboExt
+    experiment_combo: TopicComboExt
+    pca_dim_param: LabeledParam
+    eps_param: LabeledParam
+    min_samples_param: LabeledParam
+    perplexity_param: LabeledParam
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         print("NarrativeExplorer")
 
+
+
     def setup_app(self):
         self.app_name = "NarrativeExplorer"
         self.app_version = "1.17.2023"
-        self.geom = (600, 150)
+        self.geom = (600, 620)
+        self.oai = OpenAIComms()
+        self.msi = MySqlInterface(user_name="root", db_name="narrative_maps")
+        self.mr = ManifoldReduction()
+
+        if not self.oai.key_exists():
+            message.showwarning("Key Error", "Could not find Environment key 'OPENAI_KEY'")
+
+    def experiment_callback(self, event:tk.Event):
+        print("experiment_callback: event = {}".format(event))
+        num_regex = re.compile(r"\d+")
+        s = self.experiment_combo.tk_combo.get()
+        self.experiment_combo.set_text(s)
+        self.experiment_id = num_regex.findall(s)[0]
+        print("experiment_callback: experiment_id = {}".format(self.experiment_id))
+
+    def build_app_view(self, row: int, text_width: int, label_width: int) -> int:
+        experiments = ["1 exp_1", "2 exp_2", "3 exp_3"]
+        print("build_app_view")
+
+        self.experiment_combo = TopicComboExt(self, row, "Saved Experiments:", self.dp, entry_width=20, combo_width=20)
+        self.experiment_combo.set_combo_list(experiments)
+        self.experiment_combo.set_callback(self.experiment_callback)
+        row = self.experiment_combo.get_next_row()
+
+        s = ttk.Style()
+        s.configure('TNotebook.Tab', font=self.default_font)
+
+        # Add the tabs
+        tab_control = ttk.Notebook(self)
+        tab_control.grid(column=0, row=row, columnspan=2, sticky="nsew")
+        gpt_tab = ttk.Frame(tab_control)
+        tab_control.add(gpt_tab, text='GPT')
+        embed_tab = ttk.Frame(tab_control)
+        tab_control.add(embed_tab, text='Embedding')
+
+        return row
+
+    def build_generator_tab(self, tab: ttk.Frame):
+        engine_list = ['text-similarity-ada-001',
+                       'text-similarity-babbage-001',
+                       'text-similarity-curie-001',
+                       'text-similarity-davinci-001']
+        row = 0
+        self.embed_model_combo = TopicComboExt(tab, row, "Engine:", self.dp, entry_width=20, combo_width=20)
+        self.embed_model_combo.set_combo_list(engine_list)
+        self.embed_model_combo.set_text(engine_list[0])
+        self.embed_model_combo.tk_combo.current(0)
+        row = self.embed_model_combo.get_next_row()
+
+    def build_embed_tab(self, tab: ttk.Frame):
+        engine_list = ['text-similarity-ada-001',
+                       'text-similarity-babbage-001',
+                       'text-similarity-curie-001',
+                       'text-similarity-davinci-001']
+        row = 0
+        self.embed_model_combo = TopicComboExt(tab, row, "Engine:", self.dp, entry_width=20, combo_width=20)
+        self.embed_model_combo.set_combo_list(engine_list)
+        self.embed_model_combo.set_text(engine_list[0])
+        self.embed_model_combo.tk_combo.current(0)
+        row = self.embed_model_combo.get_next_row()
 
 def main():
     app = NarrativeExplorer()

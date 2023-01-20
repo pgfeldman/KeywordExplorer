@@ -78,7 +78,7 @@ class ManifoldReduction:
     max_y: float
 
     def __init__(self, dim:int = 2):
-        print("ManifoldReduction.__init__()")
+        # print("ManifoldReduction.__init__()")
         self.target_dim:int = min(dim, 3)
         self.clear()
         self.min_x = self.min_y = self.max_x = self.max_y = 0

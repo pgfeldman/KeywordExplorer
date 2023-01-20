@@ -46,7 +46,7 @@ class OpenAIComms:
 
         return to_return
 
-    def get_embedding(self, text:str, engine="davinci-similarity"):
+    def get_embedding(self, text:str, engine="text-embedding-ada-002"):
         # from https://beta.openai.com/docs/guides/embeddings/what-are-embeddings
         # replace newlines, which can negatively affect performance.
         text = text.replace("\n", " ")
@@ -62,9 +62,22 @@ class OpenAIComms:
     def get_engine(self) -> str:
         return self.engine
 
-    def list_engines(self):
-        result = openai.Engine.list()
-        print(result)
+    def list_models(self, keep_list:List = [""], exclude_list:List = []) -> List:
+        result:openai.OpenAIObject = openai.Model.list()
+        dl = result.data
+        name_set = set()
+        for d in dl:
+            s = d['id']
+            exclude = False
+            for e in exclude_list:
+                if e in s:
+                    exclude = True
+                    break
+            if not exclude:
+                for k in keep_list:
+                    if k in s:
+                        name_set.add(s)
+        return list(name_set)
 
     def key_exists(self) -> bool:
         val = os.environ.get("OPENAI_KEY")
@@ -75,9 +88,25 @@ class OpenAIComms:
 
 def main():
     oai = OpenAIComms()
-    # oai.list_engines()
-    result = oai.get_embedding('hello, world', 'text-similarity-ada-001')
+
+    print("\navailable embedding models:")
+    lm = oai.list_models(keep_list = ["embed", "similarity"])
+    for m in sorted(lm):
+        print(m)
+
+    print("\navailable text models:")
+    lm = oai.list_models(exclude_list = ["embed", "similarity", "code", "edit", "search", "audio", "instruct", "2020", "if", "insert"])
+    for m in sorted(lm):
+        print(m)
+
+
+    print("\nembedding:")
+    result = oai.get_embedding('hello, world', 'text-embedding-ada-002')
     print(result)
+
+    return
+
+    print("\ngeneration")
     for name in oai.engines:
         oai.set_engine(name=name)
         print("engine = {}".format(oai.get_engine()))
