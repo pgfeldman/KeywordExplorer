@@ -45,7 +45,10 @@ class NarrativeExplorer(AppBase):
     msi: MySqlInterface
     mr: ManifoldReduction
     embed_model_combo: TopicComboExt
+    generate_model_combo: TopicComboExt
+    generate_tokens: DataField
     experiment_combo: TopicComboExt
+    new_experiment_button:Buttons
     pca_dim_param: LabeledParam
     eps_param: LabeledParam
     min_samples_param: LabeledParam
@@ -54,8 +57,6 @@ class NarrativeExplorer(AppBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         print("NarrativeExplorer")
-
-
 
     def setup_app(self):
         self.app_name = "NarrativeExplorer"
@@ -68,11 +69,14 @@ class NarrativeExplorer(AppBase):
         if not self.oai.key_exists():
             message.showwarning("Key Error", "Could not find Environment key 'OPENAI_KEY'")
 
+        self.experiment_id = -1
+
     def experiment_callback(self, event:tk.Event):
         print("experiment_callback: event = {}".format(event))
         num_regex = re.compile(r"\d+")
         s = self.experiment_combo.tk_combo.get()
         self.experiment_combo.set_text(s)
+        self.experiment_field.set_text(s)
         self.experiment_id = num_regex.findall(s)[0]
         print("experiment_callback: experiment_id = {}".format(self.experiment_id))
 
@@ -84,6 +88,10 @@ class NarrativeExplorer(AppBase):
         self.experiment_combo.set_combo_list(experiments)
         self.experiment_combo.set_callback(self.experiment_callback)
         row = self.experiment_combo.get_next_row()
+        buttons = Buttons(self, row, "Experiments")
+        buttons.add_button("Create New", self.implement_me)
+        buttons.add_button("Update", self.implement_me)
+        row = buttons.get_next_row()
 
         s = ttk.Style()
         s.configure('TNotebook.Tab', font=self.default_font)
@@ -92,31 +100,32 @@ class NarrativeExplorer(AppBase):
         tab_control = ttk.Notebook(self)
         tab_control.grid(column=0, row=row, columnspan=2, sticky="nsew")
         gpt_tab = ttk.Frame(tab_control)
-        tab_control.add(gpt_tab, text='GPT')
+        tab_control.add(gpt_tab, text='Generate')
+        self.build_generator_tab(gpt_tab)
+
         embed_tab = ttk.Frame(tab_control)
         tab_control.add(embed_tab, text='Embedding')
+        self.build_embed_tab(embed_tab)
 
+        row += 1
         return row
 
     def build_generator_tab(self, tab: ttk.Frame):
-        engine_list = ['text-similarity-ada-001',
-                       'text-similarity-babbage-001',
-                       'text-similarity-curie-001',
-                       'text-similarity-davinci-001']
+        engine_list = self.oai.list_models(keep_list = ["davinci"], exclude_list = ["embed", "similarity", "code", "edit", "search", "audio", "instruct", "2020", "if", "insert"])
         row = 0
-        self.embed_model_combo = TopicComboExt(tab, row, "Engine:", self.dp, entry_width=20, combo_width=20)
-        self.embed_model_combo.set_combo_list(engine_list)
-        self.embed_model_combo.set_text(engine_list[0])
-        self.embed_model_combo.tk_combo.current(0)
-        row = self.embed_model_combo.get_next_row()
+        self.generate_model_combo = TopicComboExt(tab, row, "Model:", self.dp, entry_width=25, combo_width=25)
+        self.generate_model_combo.set_combo_list(sorted(engine_list))
+        self.generate_model_combo.set_text(engine_list[0])
+        self.generate_model_combo.tk_combo.current(0)
+        row = self.generate_model_combo.get_next_row()
+        self.generate_tokens = DataField(tab, row, "Tokens")
+        self.generate_tokens.set_text("256")
+        row = self.generate_tokens.get_next_row()
 
     def build_embed_tab(self, tab: ttk.Frame):
-        engine_list = ['text-similarity-ada-001',
-                       'text-similarity-babbage-001',
-                       'text-similarity-curie-001',
-                       'text-similarity-davinci-001']
+        engine_list = self.oai.list_models(keep_list = ["embedding"])
         row = 0
-        self.embed_model_combo = TopicComboExt(tab, row, "Engine:", self.dp, entry_width=20, combo_width=20)
+        self.embed_model_combo = TopicComboExt(tab, row, "Engine:", self.dp, entry_width=25, combo_width=25)
         self.embed_model_combo.set_combo_list(engine_list)
         self.embed_model_combo.set_text(engine_list[0])
         self.embed_model_combo.tk_combo.current(0)
