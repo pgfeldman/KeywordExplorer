@@ -60,6 +60,8 @@ class NarrativeExplorer(AppBase):
     response_text_field:TextField
     embed_state_text_field:TextField
     regex_field:DataField
+    saved_prompt_text:str
+    saved_response_text:str
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -79,6 +81,8 @@ class NarrativeExplorer(AppBase):
             message.showwarning("Key Error", "Could not find Environment key 'OPENAI_KEY'")
 
         self.experiment_id = -1
+        self.saved_prompt_text = "unset"
+        self.saved_response_text = "unset"
 
     def experiment_callback(self, event:tk.Event):
         print("experiment_callback: event = {}".format(event))
@@ -147,8 +151,9 @@ class NarrativeExplorer(AppBase):
         buttons = Buttons(tab, row, "Actions")
         buttons.add_button("Generate", self.new_prompt_callback)
         buttons.add_button("Add", self.extend_prompt_callback)
-        buttons.add_button("Parse", self.implement_me)
+        buttons.add_button("Parse", self.parse_response_callback)
         buttons.add_button("Save", self.implement_me)
+        buttons.add_button("Test Data", self.test_data_callback)
 
     def build_embed_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
         engine_list = self.oai.list_models(keep_list = ["embedding"])
@@ -251,6 +256,64 @@ class NarrativeExplorer(AppBase):
         prompt = "{} {}".format(self.prompt_text_field.get_text(), self.response_text_field.get_text())
         self.prompt_text_field.set_text(prompt)
         self.response_text_field.clear()
+
+    def get_list(self, to_parse:str, regex_str:str = ",") -> List:
+        rlist = re.split(regex_str, to_parse)
+        to_return = []
+        for t in rlist:
+            if t != None:
+                to_return.append(t.strip())
+        to_return = [x for x in to_return if x] # filter out the blanks
+        return to_return
+
+    def parse_response_callback(self):
+        # get the regex
+        split_regex = self.regex_field.get_text()
+
+        # get the prompt and respnse text blocks
+        self.saved_prompt_text = self.prompt_text_field.get_text()
+        self.saved_response_text = self.response_text_field.get_text()
+        full_text = self.saved_prompt_text + self.saved_response_text
+
+        # build the list of parsed text
+        full_list = self.get_list(full_text, split_regex)
+        # print(response_list)
+
+        if len(full_list) > 1:
+            self.response_text_field.clear()
+            s = ""
+            count = 0
+            for r in full_list:
+                if len(r) > 1:
+                    s = "{}\n[{}] {}".format(s, count, r)
+                    count += 1
+
+            self.response_text_field.set_text(s)
+        else:
+            message.showwarning("Parse Error",
+                                "Could not parse [{}]".format(self.response_text_field.get_text()))
+
+    # make this a "restore" button?
+    def test_data_callback(self):
+        prompt_text = '''Once upon a time there was a man who had been a soldier, and who had fought in the wars. After some years he became tired of fighting, and he stopped his soldiering and went away to live by himself in the mountains. He built a hut for himself, and there he lived for many years. At last one day there was a knocking at his door. He opened it and found no one there.
+
+The next day, and the next, and the next after that there was a knocking at his door, but when he opened it no one was ever there.
+
+At last he got so cross that he could not keep away from home any more than usual. When he opened the door and found no one there, he was so angry that he threw a great stone after whoever it was that knocked.
+
+Presently a voice called out to him and said: “I am coming back soon again; you must be careful not to throw stones at me then”; but the voice did not say who it was that spoke.
+
+The second time the man’s heart failed him as soon as he opened his door; but when he heard the voice saying: “Be careful not to throw stones this time,” he felt quite sure that'''
+        response_text = '''it was the same voice. Then he knew that it was his Guardian Spirit that spoke to him.
+
+The third time the man was not afraid, but as soon as he opened the door and saw no one, he threw stones at it.
+
+Then a great storm arose and the thunder rolled among the mountains, and the lightning flashed in his eyes and blinded him, and all about him there were voices shouting: “It is your Guardian Spirit that you have killed!”
+
+And when he could see again, he looked up and saw that the hut had disappeared and that in its place stood a dark pine-tree. He ran to look for his hut, but it was nowhere to be found; he looked up and down the valley, but there was no sign of it anywhere. He called out loudly for his hut to come back,—but it never came back again. The hut had become a big pine-tree, and even the Guardian Spirit could not make it come back again.'''
+        self.prompt_text_field.set_text(prompt_text)
+        self.response_text_field.set_text(response_text)
+
 
 def main():
     app = NarrativeExplorer()

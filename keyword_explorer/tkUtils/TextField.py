@@ -100,8 +100,9 @@ class TextField:
         rlist = re.split(regex_str, to_return)
         to_return = []
         for t in rlist:
-            to_return.append(t.strip())
-        to_return = [x for x in to_return if x] # filter out the blanks
+            if t != None:
+                to_return.append(t.strip())
+        #to_return = [x for x in to_return if x] # filter out the blanks
         return to_return
 
     def get_selected(self, get_everything:bool = True) -> str:
