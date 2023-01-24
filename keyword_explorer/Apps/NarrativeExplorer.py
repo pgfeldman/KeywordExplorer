@@ -60,8 +60,11 @@ class NarrativeExplorer(AppBase):
     response_text_field:TextField
     embed_state_text_field:TextField
     regex_field:DataField
+    auto_field:DataField
     saved_prompt_text:str
     saved_response_text:str
+    experiment_id:int
+    run_id:int
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -69,10 +72,12 @@ class NarrativeExplorer(AppBase):
         self.text_width = 60
         self.label_width = 15
 
+        self.test_data_callback()
+
     def setup_app(self):
         self.app_name = "NarrativeExplorer"
         self.app_version = "1.20.2023"
-        self.geom = (600, 620)
+        self.geom = (600, 650)
         self.oai = OpenAIComms()
         self.msi = MySqlInterface(user_name="root", db_name="narrative_maps")
         self.mr = ManifoldReduction()
@@ -80,30 +85,25 @@ class NarrativeExplorer(AppBase):
         if not self.oai.key_exists():
             message.showwarning("Key Error", "Could not find Environment key 'OPENAI_KEY'")
 
-        self.experiment_id = -1
         self.saved_prompt_text = "unset"
         self.saved_response_text = "unset"
-
-    def experiment_callback(self, event:tk.Event):
-        print("experiment_callback: event = {}".format(event))
-        num_regex = re.compile(r"\d+")
-        s = self.experiment_combo.tk_combo.get()
-        self.experiment_combo.set_text(s)
-        self.experiment_field.set_text(s)
-        self.experiment_id = num_regex.findall(s)[0]
-        print("experiment_callback: experiment_id = {}".format(self.experiment_id))
+        self.experiment_id = -1
+        self.run_id = -1
 
     def build_app_view(self, row: int, text_width: int, label_width: int) -> int:
-        experiments = ["1 exp_1", "2 exp_2", "3 exp_3"]
         print("build_app_view")
-
+        experiments = []
+        results = self.msi.read_data("select name from table_experiment")
+        for r in results:
+            experiments.append(r['name'])
         self.experiment_combo = TopicComboExt(self, row, "Saved Experiments:", self.dp, entry_width=20, combo_width=20)
         self.experiment_combo.set_combo_list(experiments)
-        self.experiment_combo.set_callback(self.experiment_callback)
         row = self.experiment_combo.get_next_row()
         buttons = Buttons(self, row, "Experiments")
-        buttons.add_button("Create", self.implement_me)
-        buttons.add_button("Update", self.implement_me)
+        b = buttons.add_button("Create", self.create_experiment_callback)
+        ToolTip(b, "Create a new, named experiment")
+        b = buttons.add_button("Load", self.load_experiment_callback)
+        ToolTip(b, "Load an existing experiment")
         row = buttons.get_next_row()
 
         s = ttk.Style()
@@ -131,6 +131,8 @@ class NarrativeExplorer(AppBase):
         self.generate_model_combo.set_combo_list(engine_list)
         self.generate_model_combo.set_text(engine_list[0])
         self.generate_model_combo.tk_combo.current(0)
+        ToolTip(self.generate_model_combo.tk_combo, "The GPT-3 model used to generate text")
+
         row = self.generate_model_combo.get_next_row()
         row = self.build_generate_params(tab, row)
 
@@ -148,12 +150,22 @@ class NarrativeExplorer(AppBase):
         ToolTip(self.regex_field.tk_entry, "The regex used to parse the GPT response. Editable")
         row = self.regex_field.get_next_row()
 
+        self.auto_field = DataField(tab, row, 'Run count:', text_width, label_width=label_width)
+        self.auto_field.set_text("10")
+        ToolTip(self.auto_field.tk_entry, "The number of times the prompt will be run by 'Automate'")
+        row = self.auto_field.get_next_row()
+
         buttons = Buttons(tab, row, "Actions")
-        buttons.add_button("Generate", self.new_prompt_callback)
-        buttons.add_button("Add", self.extend_prompt_callback)
-        buttons.add_button("Parse", self.parse_response_callback)
-        buttons.add_button("Save", self.implement_me)
-        buttons.add_button("Test Data", self.test_data_callback)
+        b = buttons.add_button("Generate", self.new_prompt_callback)
+        ToolTip(b, "Sends the prompt to the GPT")
+        b = buttons.add_button("Add", self.extend_prompt_callback)
+        ToolTip(b, "Adds the response to the prompt")
+        b = buttons.add_button("Parse", self.parse_response_callback)
+        ToolTip(b, "Parses the response into a list for embeddings")
+        b = buttons.add_button("Save", self.implement_me)
+        ToolTip(b, "Manually saves the result to the database")
+        b = buttons.add_button("Automate", self.implement_me)
+        ToolTip(b, "Automatically runs probes, parses, and stores the results\n the number of times in the 'Run Count' field")
 
     def build_embed_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
         engine_list = self.oai.list_models(keep_list = ["embedding"])
@@ -187,7 +199,7 @@ class NarrativeExplorer(AppBase):
 
         self.tokens_param = LabeledParam(f, 0, "Tokens:")
         self.tokens_param.set_text('256')
-        ToolTip(self.tokens_param.tk_entry, "The number of the model will generate")
+        ToolTip(self.tokens_param.tk_entry, "The number of tokens the model will generate")
 
         self.temp_param = LabeledParam(f, 2, "Temp:")
         self.temp_param.set_text('0.7')
@@ -265,6 +277,28 @@ class NarrativeExplorer(AppBase):
                 to_return.append(t.strip())
         to_return = [x for x in to_return if x] # filter out the blanks
         return to_return
+
+    def create_experiment_callback(self):
+        print("create_experiment_callback")
+        cur_date = datetime.now()
+        experiment_name = self.experiment_field.get_text()
+        if "id =" in experiment_name:
+            tk.messagebox.showwarning("Duplicate Experiment", "{} exists in db".format(experiment_name))
+            return
+
+        sql = "insert into table_experiment (name, date) values (%s, %s)"
+        vals = (experiment_name, cur_date)
+        self.msi.write_sql_values_get_row(sql, vals)
+
+
+    def load_experiment_callback(self):
+        print("load_experiment_callback")
+        s = self.experiment_combo.tk_combo.get()
+        results = self.msi.read_data("select id from table_experiment where name = %s", (s,))
+        if len(results) > 0:
+            self.experiment_id = results[0]['id']
+            self.experiment_field.set_text(" id = {}: {}".format(self.experiment_id, s))
+        print("experiment_callback: experiment_id = {}".format(self.experiment_id))
 
     def parse_response_callback(self):
         # get the regex
