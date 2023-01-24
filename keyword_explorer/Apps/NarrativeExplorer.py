@@ -14,6 +14,7 @@ Generate Graph - runs through each narrative in an experiment to produce a direc
 '''
 
 import re
+import getpass
 import tkinter as tk
 from tkinter import ttk
 import tkinter.messagebox as message
@@ -65,6 +66,7 @@ class NarrativeExplorer(AppBase):
     saved_response_text:str
     experiment_id:int
     run_id:int
+    parsed_full_text_list:List
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -72,6 +74,9 @@ class NarrativeExplorer(AppBase):
         self.text_width = 60
         self.label_width = 15
 
+        dt = datetime.now()
+        experiment_str = "{}_{}_{}".format(self.app_name, getpass.getuser(), dt.strftime("%H:%M:%S"))
+        self.experiment_field.set_text(experiment_str)
         self.test_data_callback()
 
     def setup_app(self):
@@ -89,6 +94,8 @@ class NarrativeExplorer(AppBase):
         self.saved_response_text = "unset"
         self.experiment_id = -1
         self.run_id = -1
+        self.parsed_full_text_list = []
+
 
     def build_app_view(self, row: int, text_width: int, label_width: int) -> int:
         print("build_app_view")
@@ -98,6 +105,7 @@ class NarrativeExplorer(AppBase):
             experiments.append(r['name'])
         self.experiment_combo = TopicComboExt(self, row, "Saved Experiments:", self.dp, entry_width=20, combo_width=20)
         self.experiment_combo.set_combo_list(experiments)
+        self.experiment_combo.set_callback(self.load_experiment_callback)
         row = self.experiment_combo.get_next_row()
         buttons = Buttons(self, row, "Experiments")
         b = buttons.add_button("Create", self.create_experiment_callback)
@@ -162,7 +170,7 @@ class NarrativeExplorer(AppBase):
         ToolTip(b, "Adds the response to the prompt")
         b = buttons.add_button("Parse", self.parse_response_callback)
         ToolTip(b, "Parses the response into a list for embeddings")
-        b = buttons.add_button("Save", self.implement_me)
+        b = buttons.add_button("Save", self.save_text_list_callback)
         ToolTip(b, "Manually saves the result to the database")
         b = buttons.add_button("Automate", self.implement_me)
         ToolTip(b, "Automatically runs probes, parses, and stores the results\n the number of times in the 'Run Count' field")
@@ -282,7 +290,13 @@ class NarrativeExplorer(AppBase):
         print("create_experiment_callback")
         cur_date = datetime.now()
         experiment_name = self.experiment_field.get_text()
-        if "id =" in experiment_name:
+
+        if self.app_name in experiment_name:
+            result = tk.messagebox.askyesno("Warning!", "You are about to creat an experiment\nwith the default name{}\nProceed?".format(experiment_name))
+            print("result = {}".format(result))
+            if not result:
+                return
+        if "experiment" in experiment_name:
             tk.messagebox.showwarning("Duplicate Experiment", "{} exists in db".format(experiment_name))
             return
 
@@ -291,13 +305,14 @@ class NarrativeExplorer(AppBase):
         self.msi.write_sql_values_get_row(sql, vals)
 
 
-    def load_experiment_callback(self):
+    def load_experiment_callback(self, event = None):
         print("load_experiment_callback")
         s = self.experiment_combo.tk_combo.get()
+        self.experiment_combo.set_text(s)
         results = self.msi.read_data("select id from table_experiment where name = %s", (s,))
         if len(results) > 0:
             self.experiment_id = results[0]['id']
-            self.experiment_field.set_text(" id = {}: {}".format(self.experiment_id, s))
+            self.experiment_field.set_text(" experiment {}: {}".format(self.experiment_id, s))
         print("experiment_callback: experiment_id = {}".format(self.experiment_id))
 
     def parse_response_callback(self):
@@ -310,22 +325,51 @@ class NarrativeExplorer(AppBase):
         full_text = self.saved_prompt_text + self.saved_response_text
 
         # build the list of parsed text
-        full_list = self.get_list(full_text, split_regex)
+        self.parsed_full_text_list = self.get_list(full_text, split_regex)
         # print(response_list)
 
-        if len(full_list) > 1:
-            self.response_text_field.clear()
-            s = ""
+        if len(self.parsed_full_text_list) > 1:
             count = 0
-            for r in full_list:
+            for r in self.parsed_full_text_list:
                 if len(r) > 1:
-                    s = "{}\n[{}] {}".format(s, count, r)
+                    self.dp.dprint("line {}: {}".format(count, r))
                     count += 1
-
-            self.response_text_field.set_text(s)
         else:
             message.showwarning("Parse Error",
                                 "Could not parse [{}]".format(self.response_text_field.get_text()))
+
+    def save_text_list_callback(self):
+        print("save_text_list_callback")
+
+        if self.experiment_id == -1:
+            result = tk.messagebox.showwarning("Warning!", "Please create or select a database first")
+            return
+
+        if len(self.parsed_full_text_list) > 0:
+            # create the run
+            run_id = 1
+            sql = "select MAX(run_id) as max from table_run where experiment_id = %s"
+            vals = (self.experiment_id,)
+            results = self.msi.read_data(sql, vals)
+            print(results)
+            if results[0]['max'] != None:
+                run_id = results[0]['max'] + 1
+
+            sql = "insert into table_run (experiment_id, run_id, prompt, response, generator_model) values (%s, %s, %s, %s, %s)"
+            vals = (self.experiment_id, run_id, self.saved_prompt_text,
+                    self.saved_response_text, self.generate_model_combo.get_text())
+            self.msi.write_sql_values_get_row(sql, vals)
+
+            # store the text
+            s:str
+            for s in self.parsed_full_text_list:
+                sql = "insert into table_parsed_text (run_id, parsed_text) values (%s, %s)"
+                vals = (run_id, s)
+                self.msi.write_sql_values_get_row(sql, vals)
+
+        #reset the list
+        self.parsed_full_text_list = []
+
 
     # make this a "restore" button?
     def test_data_callback(self):

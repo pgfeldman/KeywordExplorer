@@ -55,12 +55,13 @@ DROP TABLE IF EXISTS `table_parsed_text`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `table_parsed_text` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
+  `run_id` int(11) DEFAULT NULL,
   `parsed_text` text DEFAULT NULL,
   `embedding` text DEFAULT NULL,
   `mapped` varchar(255) DEFAULT NULL,
   `cluster_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=35 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -79,7 +80,7 @@ CREATE TABLE `table_run` (
   `generator_model` varchar(255) DEFAULT NULL,
   `embedding_model` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -91,4 +92,4 @@ CREATE TABLE `table_run` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-01-24 10:10:19
+-- Dump completed on 2023-01-24 17:03:03
