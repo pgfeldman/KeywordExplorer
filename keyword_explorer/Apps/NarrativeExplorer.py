@@ -62,6 +62,8 @@ class NarrativeExplorer(AppBase):
     embed_state_text_field:TextField
     regex_field:DataField
     auto_field:DataField
+    runs_field:DataField
+    parsed_field:DataField
     saved_prompt_text:str
     saved_response_text:str
     experiment_id:int
@@ -82,7 +84,7 @@ class NarrativeExplorer(AppBase):
     def setup_app(self):
         self.app_name = "NarrativeExplorer"
         self.app_version = "1.20.2023"
-        self.geom = (600, 650)
+        self.geom = (840, 670)
         self.oai = OpenAIComms()
         self.msi = MySqlInterface(user_name="root", db_name="narrative_maps")
         self.mr = ManifoldReduction()
@@ -99,15 +101,40 @@ class NarrativeExplorer(AppBase):
 
     def build_app_view(self, row: int, text_width: int, label_width: int) -> int:
         print("build_app_view")
+        lf = tk.LabelFrame(self, text="GPT")
+        lf.grid(row=row, column=0, columnspan = 2, sticky="nsew", padx=5, pady=2)
+        self.build_gpt(lf, text_width, label_width)
+
+        lf = tk.LabelFrame(self, text="Params")
+        lf.grid(row=row, column=2, sticky="nsew", padx=5, pady=2)
+        self.build_params(lf, int(text_width/3), int(label_width/2))
+
+        return row + 1
+
+    def build_menus(self):
+        print("building menus")
+        self.option_add('*tearOff', tk.FALSE)
+        menubar = tk.Menu(self)
+        self['menu'] = menubar
+        menu_file = tk.Menu(menubar)
+        menubar.add_cascade(menu=menu_file, label='File')
+        menu_file.add_command(label='Load experiment', command=self.load_experiment_callback)
+        menu_file.add_command(label='Save experiment', command=self.save_experiment_callback)
+        menu_file.add_command(label='Load IDs', command=self.load_ids_callback)
+        menu_file.add_command(label='Test data', command=self.test_data_callback)
+        menu_file.add_command(label='Exit', command=self.terminate)
+
+    def build_gpt(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         experiments = []
         results = self.msi.read_data("select name from table_experiment")
         for r in results:
             experiments.append(r['name'])
-        self.experiment_combo = TopicComboExt(self, row, "Saved Experiments:", self.dp, entry_width=20, combo_width=20)
+        row = 0
+        self.experiment_combo = TopicComboExt(lf, row, "Saved Experiments:", self.dp, entry_width=20, combo_width=20)
         self.experiment_combo.set_combo_list(experiments)
         self.experiment_combo.set_callback(self.load_experiment_callback)
         row = self.experiment_combo.get_next_row()
-        buttons = Buttons(self, row, "Experiments")
+        buttons = Buttons(lf, row, "Experiments")
         b = buttons.add_button("Create", self.create_experiment_callback)
         ToolTip(b, "Create a new, named experiment")
         b = buttons.add_button("Load", self.load_experiment_callback)
@@ -118,7 +145,7 @@ class NarrativeExplorer(AppBase):
         s.configure('TNotebook.Tab', font=self.default_font)
 
         # Add the tabs
-        tab_control = ttk.Notebook(self)
+        tab_control = ttk.Notebook(lf)
         tab_control.grid(column=0, row=row, columnspan=2, sticky="nsew")
         gpt_tab = ttk.Frame(tab_control)
         tab_control.add(gpt_tab, text='Generate')
@@ -130,6 +157,13 @@ class NarrativeExplorer(AppBase):
 
         row += 1
         return row
+
+    def build_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
+        row = 0
+        self.runs_field = DataField(lf, row, 'Runs:', text_width, label_width=label_width)
+        row = self.runs_field.get_next_row()
+        self.parsed_field = DataField(lf, row, 'Parsed:', text_width, label_width=label_width)
+        self.row = self.parsed_field.get_next_row()
 
     def build_generator_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
         engine_list = self.oai.list_models(keep_list = ["davinci"], exclude_list = ["embed", "similarity", "code", "edit", "search", "audio", "instruct", "2020", "if", "insert"])
@@ -267,6 +301,14 @@ class NarrativeExplorer(AppBase):
         self.log_action("gpt_response", {"gpt_text":s})
         return s
 
+    def count_parsed(self, experiment_id):
+        sql = "select distinct run_id from run_parsed_view where experiment_id = %s"
+        vals = (experiment_id,)
+        results = self.msi.read_data(sql, vals)
+        print(results)
+        parsed_count = len(results)
+        self.parsed_field.set_text(parsed_count)
+
     def new_prompt_callback(self):
         prompt = self.prompt_text_field.get_text()
         response = self.get_gpt3_response(prompt)
@@ -321,8 +363,11 @@ class NarrativeExplorer(AppBase):
             results = self.msi.read_data(sql, vals)
             print(results)
             self.prompt_text_field.set_text("No prompt available in database")
+            self.runs_field.set_text('0')
+            self.count_parsed(self.experiment_id)
             if results[0]['max'] != None:
                 run_id = results[0]['max']
+                self.runs_field.set_text(run_id)
                 sql = "select * from table_run where run_id = %s and experiment_id = %s"
                 vals = (run_id, self.experiment_id)
                 results = self.msi.read_data(sql, vals)
