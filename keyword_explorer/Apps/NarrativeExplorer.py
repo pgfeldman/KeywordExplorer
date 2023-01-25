@@ -64,6 +64,8 @@ class NarrativeExplorer(AppBase):
     auto_field:DataField
     runs_field:DataField
     parsed_field:DataField
+    embedded_field:DataField
+    reduced_field:DataField
     saved_prompt_text:str
     saved_response_text:str
     experiment_id:int
@@ -163,7 +165,11 @@ class NarrativeExplorer(AppBase):
         self.runs_field = DataField(lf, row, 'Runs:', text_width, label_width=label_width)
         row = self.runs_field.get_next_row()
         self.parsed_field = DataField(lf, row, 'Parsed:', text_width, label_width=label_width)
-        self.row = self.parsed_field.get_next_row()
+        row = self.parsed_field.get_next_row()
+        self.embedded_field = DataField(lf, row, 'Embeds:', text_width, label_width=label_width)
+        row = self.embedded_field.get_next_row()
+        self.reduced_field = DataField(lf, row, 'Reduced:', text_width, label_width=label_width)
+        row = self.reduced_field.get_next_row()
 
     def build_generator_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
         engine_list = self.oai.list_models(keep_list = ["davinci"], exclude_list = ["embed", "similarity", "code", "edit", "search", "audio", "instruct", "2020", "if", "insert"])
