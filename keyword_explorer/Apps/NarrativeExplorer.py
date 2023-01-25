@@ -77,7 +77,7 @@ class NarrativeExplorer(AppBase):
         dt = datetime.now()
         experiment_str = "{}_{}_{}".format(self.app_name, getpass.getuser(), dt.strftime("%H:%M:%S"))
         self.experiment_field.set_text(experiment_str)
-        self.test_data_callback()
+        # self.test_data_callback()
 
     def setup_app(self):
         self.app_name = "NarrativeExplorer"
@@ -308,12 +308,27 @@ class NarrativeExplorer(AppBase):
     def load_experiment_callback(self, event = None):
         print("load_experiment_callback")
         s = self.experiment_combo.tk_combo.get()
+        self.experiment_combo.clear()
         self.experiment_combo.set_text(s)
         results = self.msi.read_data("select id from table_experiment where name = %s", (s,))
         if len(results) > 0:
             self.experiment_id = results[0]['id']
             self.experiment_field.set_text(" experiment {}: {}".format(self.experiment_id, s))
         print("experiment_callback: experiment_id = {}".format(self.experiment_id))
+        if self.experiment_id != -1:
+            sql = "select MAX(run_id) as max from table_run where experiment_id = %s"
+            vals = (self.experiment_id,)
+            results = self.msi.read_data(sql, vals)
+            print(results)
+            self.prompt_text_field.set_text("No prompt available in database")
+            if results[0]['max'] != None:
+                run_id = results[0]['max']
+                sql = "select * from table_run where run_id = %s and experiment_id = %s"
+                vals = (run_id, self.experiment_id)
+                results = self.msi.read_data(sql, vals)
+                d = results[0]
+                if d['prompt'] != None:
+                    self.prompt_text_field.set_text(d['prompt'])
 
     def parse_response_callback(self):
         # get the regex

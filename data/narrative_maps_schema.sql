@@ -16,6 +16,25 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Temporary table structure for view `run_view`
+--
+
+DROP TABLE IF EXISTS `run_view`;
+/*!50001 DROP VIEW IF EXISTS `run_view`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `run_view` (
+  `experiment_id` tinyint NOT NULL,
+  `run_id` tinyint NOT NULL,
+  `prompt` tinyint NOT NULL,
+  `response` tinyint NOT NULL,
+  `generator_model` tinyint NOT NULL,
+  `line_id` tinyint NOT NULL,
+  `parsed_text` tinyint NOT NULL
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
 -- Table structure for table `table_experiment`
 --
 
@@ -82,6 +101,25 @@ CREATE TABLE `table_run` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Final view structure for view `run_view`
+--
+
+/*!50001 DROP TABLE IF EXISTS `run_view`*/;
+/*!50001 DROP VIEW IF EXISTS `run_view`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_unicode_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
+/*!50001 VIEW `run_view` AS select `r`.`experiment_id` AS `experiment_id`,`r`.`id` AS `run_id`,`r`.`prompt` AS `prompt`,`r`.`response` AS `response`,`r`.`generator_model` AS `generator_model`,`pt`.`id` AS `line_id`,`pt`.`parsed_text` AS `parsed_text` from (`table_run` `r` join `table_parsed_text` `pt` on(`r`.`run_id` = `pt`.`run_id`)) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -92,4 +130,4 @@ CREATE TABLE `table_run` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-01-24 17:03:03
+-- Dump completed on 2023-01-25  9:32:09
