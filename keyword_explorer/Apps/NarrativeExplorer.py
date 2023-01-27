@@ -120,8 +120,8 @@ class NarrativeExplorer(AppBase):
         self['menu'] = menubar
         menu_file = tk.Menu(menubar)
         menubar.add_cascade(menu=menu_file, label='File')
-        menu_file.add_command(label='Load experiment', command=self.load_experiment_callback)
-        menu_file.add_command(label='Save experiment', command=self.save_experiment_callback)
+        menu_file.add_command(label='Load params', command=self.load_params_callback)
+        menu_file.add_command(label='Save params', command=self.save_params_callback)
         menu_file.add_command(label='Load IDs', command=self.load_ids_callback)
         menu_file.add_command(label='Test data', command=self.test_data_callback)
         menu_file.add_command(label='Exit', command=self.terminate)
@@ -374,12 +374,21 @@ class NarrativeExplorer(AppBase):
             if results[0]['max'] != None:
                 run_id = results[0]['max']
                 self.runs_field.set_text(run_id)
-                sql = "select * from table_run where run_id = %s and experiment_id = %s"
+                sql = "select * from run_params_view where run_id = %s and experiment_id = %s"
                 vals = (run_id, self.experiment_id)
                 results = self.msi.read_data(sql, vals)
                 d = results[0]
-                if d['prompt'] != None:
-                    self.prompt_text_field.set_text(d['prompt'])
+                # safe_dict_read(self, d:Dict, key:str, default:Any) -> Any:
+                self.prompt_text_field.set_text(self.safe_dict_read(d, 'prompt', self.prompt_text_field.get_text()))
+                self.generate_model_combo.set_text(self.safe_dict_read(d, 'generate_model', self.generate_model_combo.get_text()))
+                self.tokens_param.set_text(self.safe_dict_read(d, 'tokens', self.tokens_param.get_text()))
+                self.presence_param.set_text(self.safe_dict_read(d, 'presence_penalty', self.presence_param.get_text()))
+                self.frequency_param.set_text(self.safe_dict_read(d, 'frequency_penalty', self.frequency_param.get_text()))
+                self.embed_model_combo.set_text(self.safe_dict_read(d, 'embedding_model', self.embed_model_combo.get_text()))
+                self.pca_dim_param.set_text(self.safe_dict_read(d, 'PCA_dim', self.pca_dim_param.get_text()))
+                self.eps_param.set_text(self.safe_dict_read(d, 'EPS', self.eps_param.get_text()))
+                self.min_samples_param.set_text(self.safe_dict_read(d, 'min_samples', self.min_samples_param.get_text()))
+                self.perplexity_param.set_text(self.safe_dict_read(d, 'perplexity', self.perplexity_param.get_text()))
 
     def parse_response_callback(self):
         # get the regex
@@ -420,10 +429,21 @@ class NarrativeExplorer(AppBase):
             print(results)
             if results[0]['max'] != None:
                 run_id = results[0]['max'] + 1
+            # get the language model params entry
+            sql = "insert into table_generate_params (tokens, presence_penalty, frequency_penalty, model) values (%s, %s, %s, %s)"
+            vals = (self.tokens_param.get_as_int(), self.presence_param.get_as_float(),
+                    self.frequency_param.get_as_float(), self.generate_model_combo.get_text())
+            lang_param_id = self.msi.write_sql_values_get_row(sql, vals)
 
-            sql = "insert into table_run (experiment_id, run_id, prompt, response, generator_model) values (%s, %s, %s, %s, %s)"
+            # get the embedding model entry
+            sql = "insert into table_embedding_params (model, PCA_dim, EPS, min_samples, perplexity) values (%s, %s, %s, %s, %s)"
+            vals = (self.embed_model_combo.get_text(), self.pca_dim_param.get_as_int(), self.eps_param.get_as_float(),
+                    self.min_samples_param.get_as_int(), self.perplexity_param.get_as_int())
+            embed_param_id = self.msi.write_sql_values_get_row(sql, vals)
+
+            sql = "insert into table_run (experiment_id, run_id, prompt, response, generator_params, embedding_params) values (%s, %s, %s, %s, %s, %s)"
             vals = (self.experiment_id, run_id, self.saved_prompt_text,
-                    self.saved_response_text, self.generate_model_combo.get_text())
+                    self.saved_response_text, lang_param_id, embed_param_id)
             self.msi.write_sql_values_get_row(sql, vals)
 
             # store the text
@@ -436,6 +456,48 @@ class NarrativeExplorer(AppBase):
         #reset the list
         self.parsed_full_text_list = []
 
+    def load_params_callback(self):
+        defaults = {
+            "probe_str": self.prompt_text_field.get_text(),
+            "name": self.experiment_field.get_text(),
+            "automated_runs": self.auto_field.get_as_int(),
+            "tokens": self.tokens_param.get_as_int(),
+            "temp": self.temp_param.get_as_float(),
+            "presence_penalty": self.presence_param.get_as_float(),
+            "frequency_penalty": self.frequency_param.get_as_float(),
+            "PCA_dimensions": self.pca_dim_param.get_as_int(),
+            "EPS": self.eps_param.get_as_float(),
+            "min_samples": self.min_samples_param.get_as_int(),
+            "perplexity": self.perplexity_param.get_as_int()
+        }
+        param_dict = self.load_json(defaults)
+        self.prompt_text_field.set_text(param_dict['probe_str'])
+        self.experiment_field.set_text(param_dict['name'])
+        self.auto_field.set_text(param_dict['automated_runs'])
+        self.tokens_param.set_text(param_dict['tokens'])
+        self.temp_param.set_text(param_dict['temp'])
+        self.presence_param.set_text(param_dict['presence_penalty'])
+        self.frequency_param.set_text(param_dict['frequency_penalty'])
+        self.pca_dim_param.set_text(param_dict['PCA_dimensions'])
+        self.eps_param.set_text(param_dict['EPS'])
+        self.min_samples_param.set_text(param_dict['min_samples'])
+        self.perplexity_param.set_text(param_dict['perplexity'])
+
+    def save_params_callback(self):
+        params = {
+            "probe_str": self.prompt_text_field.get_text(),
+            "name": self.experiment_field.get_text(),
+            "automated_runs": self.auto_field.get_as_int(),
+            "tokens": self.tokens_param.get_as_int(),
+            "temp": self.temp_param.get_as_float(),
+            "presence_penalty": self.presence_param.get_as_float(),
+            "frequency_penalty": self.frequency_param.get_as_float(),
+            "PCA_dimensions": self.pca_dim_param.get_as_int(),
+            "EPS": self.eps_param.get_as_float(),
+            "min_samples": self.min_samples_param.get_as_int(),
+            "perplexity": self.perplexity_param.get_as_int()
+        }
+        self.save_experiment_json(params)
 
     # make this a "restore" button?
     def test_data_callback(self):

@@ -29,7 +29,11 @@ class SharedObjects:
         """
         print("loading{}".format(filename))
         with open(filename) as f:
-            d = json.load(f)
+            d = {}
+            try:
+                json.load(f)
+            except json.decoder.JSONDecodeError as e:
+                print("json.decoder.JSONDecodeError: {}".format(e.msg))
             for key, val in d.items():
                 self.add_object(key, val, str)
 

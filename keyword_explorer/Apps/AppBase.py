@@ -85,6 +85,17 @@ class AppBase(tk.Tk):
         menu_file.add_command(label='Load IDs', command=self.load_ids_callback)
         menu_file.add_command(label='Exit', command=self.terminate)
 
+    def load_json(self, key_dict:Dict) -> Dict:
+        so = SharedObjects()
+        result = filedialog.askopenfile(filetypes=(("JSON files", "*.json"),("All Files", "*.*")), title="Load json ID file")
+        if result:
+            so.load_from_file(result.name)
+            for key in key_dict.keys():
+                val = so.get_object(key)
+                if val != None:
+                    key_dict[key] = val
+        return key_dict
+
     def load_ids_callback(self):
         result = filedialog.askopenfile(filetypes=(("JSON files", "*.json"),("All Files", "*.*")), title="Load json ID file")
         if result:
@@ -132,7 +143,7 @@ class AppBase(tk.Tk):
                 json.dump(d, f, indent=4)
 
     def safe_dict_read(self, d:Dict, key:str, default:Any) -> Any:
-        if key in d:
+        if key in d and d[key] != None:
             return d[key]
         return default
 
