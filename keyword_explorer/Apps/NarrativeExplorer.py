@@ -461,10 +461,12 @@ class NarrativeExplorer(AppBase):
             "probe_str": self.prompt_text_field.get_text(),
             "name": self.experiment_field.get_text(),
             "automated_runs": self.auto_field.get_as_int(),
+            "generate_model": self.generate_model_combo.get_text(),
             "tokens": self.tokens_param.get_as_int(),
             "temp": self.temp_param.get_as_float(),
             "presence_penalty": self.presence_param.get_as_float(),
             "frequency_penalty": self.frequency_param.get_as_float(),
+            "embedding_model": self.embed_model_combo.get_text(),
             "PCA_dimensions": self.pca_dim_param.get_as_int(),
             "EPS": self.eps_param.get_as_float(),
             "min_samples": self.min_samples_param.get_as_int(),
@@ -475,9 +477,11 @@ class NarrativeExplorer(AppBase):
         self.experiment_field.set_text(param_dict['name'])
         self.auto_field.set_text(param_dict['automated_runs'])
         self.tokens_param.set_text(param_dict['tokens'])
+        self.generate_model_combo.set_text(param_dict['generate_model'])
         self.temp_param.set_text(param_dict['temp'])
         self.presence_param.set_text(param_dict['presence_penalty'])
         self.frequency_param.set_text(param_dict['frequency_penalty'])
+        self.embed_model_combo.set_text(param_dict['embedding_model'])
         self.pca_dim_param.set_text(param_dict['PCA_dimensions'])
         self.eps_param.set_text(param_dict['EPS'])
         self.min_samples_param.set_text(param_dict['min_samples'])
@@ -488,10 +492,12 @@ class NarrativeExplorer(AppBase):
             "probe_str": self.prompt_text_field.get_text(),
             "name": self.experiment_field.get_text(),
             "automated_runs": self.auto_field.get_as_int(),
+            "generate_model": self.generate_model_combo.get_text(),
             "tokens": self.tokens_param.get_as_int(),
             "temp": self.temp_param.get_as_float(),
             "presence_penalty": self.presence_param.get_as_float(),
             "frequency_penalty": self.frequency_param.get_as_float(),
+            "embedding_model": self.embed_model_combo.get_text(),
             "PCA_dimensions": self.pca_dim_param.get_as_int(),
             "EPS": self.eps_param.get_as_float(),
             "min_samples": self.min_samples_param.get_as_int(),
