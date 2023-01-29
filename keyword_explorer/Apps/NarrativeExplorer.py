@@ -85,7 +85,7 @@ class NarrativeExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "NarrativeExplorer"
-        self.app_version = "1.20.2023"
+        self.app_version = "1.29.2023"
         self.geom = (840, 670)
         self.oai = OpenAIComms()
         self.msi = MySqlInterface(user_name="root", db_name="narrative_maps")
@@ -304,6 +304,7 @@ class NarrativeExplorer(AppBase):
 
         # clean up before returning
         s = results[0].strip()
+        self.dp.dprint("gpt_response: {}".format(s))
         self.log_action("gpt_response", {"gpt_text":s})
         return s
 
@@ -316,10 +317,11 @@ class NarrativeExplorer(AppBase):
         self.parsed_field.set_text(parsed_count)
 
     def new_prompt_callback(self):
+        split_regex = re.compile(r"[\n]+")
         prompt = self.prompt_text_field.get_text()
         response = self.get_gpt3_response(prompt)
-        # strip multiple carriage returns. TODO: verify!
-        response = re.sub(r"(\r\n){2,}", "\r\n", response)
+        l = split_regex.split(response)
+        response = "\n".join(l)
         self.response_text_field.set_text(response)
 
     def extend_prompt_callback(self):
@@ -465,7 +467,7 @@ class NarrativeExplorer(AppBase):
             prompt = self.prompt_text_field.get_text()
             print("{}: prompting: {}".format(i, prompt))
             self.new_prompt_callback()
-            response = self.get_gpt3_response(prompt)
+            response = self.response_text_field.get_text()
             print("\tgetting response: {}".format(response))
             print("\tparsing response")
             print("\tstoring data")
