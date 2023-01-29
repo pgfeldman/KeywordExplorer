@@ -31,7 +31,7 @@ class SharedObjects:
         with open(filename) as f:
             d = {}
             try:
-                json.load(f)
+                d = json.load(f)
             except json.decoder.JSONDecodeError as e:
                 print("json.decoder.JSONDecodeError: {}".format(e.msg))
             for key, val in d.items():

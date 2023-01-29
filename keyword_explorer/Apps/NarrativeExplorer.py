@@ -212,7 +212,7 @@ class NarrativeExplorer(AppBase):
         ToolTip(b, "Parses the response into a list for embeddings")
         b = buttons.add_button("Save", self.save_text_list_callback)
         ToolTip(b, "Manually saves the result to the database")
-        b = buttons.add_button("Automate", self.implement_me)
+        b = buttons.add_button("Automate", self.automate_callback)
         ToolTip(b, "Automatically runs probes, parses, and stores the results\n the number of times in the 'Run Count' field")
 
     def build_embed_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
@@ -318,6 +318,8 @@ class NarrativeExplorer(AppBase):
     def new_prompt_callback(self):
         prompt = self.prompt_text_field.get_text()
         response = self.get_gpt3_response(prompt)
+        # strip multiple carriage returns. TODO: verify!
+        response = re.sub(r"(\r\n){2,}", "\r\n", response)
         self.response_text_field.set_text(response)
 
     def extend_prompt_callback(self):
@@ -456,6 +458,20 @@ class NarrativeExplorer(AppBase):
         #reset the list
         self.parsed_full_text_list = []
 
+    def automate_callback(self):
+        print("automate_callback():")
+        num_runs = self.auto_field.get_as_int()
+        for i in range(num_runs):
+            prompt = self.prompt_text_field.get_text()
+            print("{}: prompting: {}".format(i, prompt))
+            self.new_prompt_callback()
+            response = self.get_gpt3_response(prompt)
+            print("\tgetting response: {}".format(response))
+            print("\tparsing response")
+            print("\tstoring data")
+            print("\tresetting")
+        print("done")
+
     def load_params_callback(self):
         defaults = {
             "probe_str": self.prompt_text_field.get_text(),
@@ -472,7 +488,24 @@ class NarrativeExplorer(AppBase):
             "min_samples": self.min_samples_param.get_as_int(),
             "perplexity": self.perplexity_param.get_as_int()
         }
+
         param_dict = self.load_json(defaults)
+        print(param_dict)
+
+        self.prompt_text_field.clear()
+        self.experiment_field.clear()
+        self.auto_field.clear()
+        self.tokens_param.clear()
+        self.generate_model_combo.clear()
+        self.temp_param.clear()
+        self.presence_param.clear()
+        self.frequency_param.clear()
+        self.embed_model_combo.clear()
+        self.pca_dim_param.clear()
+        self.eps_param.clear()
+        self.min_samples_param.clear()
+        self.perplexity_param.clear()
+
         self.prompt_text_field.set_text(param_dict['probe_str'])
         self.experiment_field.set_text(param_dict['name'])
         self.auto_field.set_text(param_dict['automated_runs'])
