@@ -27,7 +27,7 @@ class SharedObjects:
         """Load the dictionary from a JSON file. Currently sets the type as str
         filename: The name of the file
         """
-        print("loading{}".format(filename))
+        #print("loading {}".format(filename))
         with open(filename) as f:
             d = {}
             try:

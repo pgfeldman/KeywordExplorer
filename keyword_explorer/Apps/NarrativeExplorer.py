@@ -81,11 +81,12 @@ class NarrativeExplorer(AppBase):
         dt = datetime.now()
         experiment_str = "{}_{}_{}".format(self.app_name, getpass.getuser(), dt.strftime("%H:%M:%S"))
         self.experiment_field.set_text(experiment_str)
+        self.load_experiment_list()
         # self.test_data_callback()
 
     def setup_app(self):
         self.app_name = "NarrativeExplorer"
-        self.app_version = "1.29.2023"
+        self.app_version = "1.30.2023"
         self.geom = (840, 670)
         self.oai = OpenAIComms()
         self.msi = MySqlInterface(user_name="root", db_name="narrative_maps")
@@ -126,14 +127,16 @@ class NarrativeExplorer(AppBase):
         menu_file.add_command(label='Test data', command=self.test_data_callback)
         menu_file.add_command(label='Exit', command=self.terminate)
 
-    def build_gpt(self, lf:tk.LabelFrame, text_width:int, label_width:int):
+    def load_experiment_list(self):
         experiments = []
         results = self.msi.read_data("select name from table_experiment")
         for r in results:
             experiments.append(r['name'])
+        self.experiment_combo.set_combo_list(experiments)
+
+    def build_gpt(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
         self.experiment_combo = TopicComboExt(lf, row, "Saved Experiments:", self.dp, entry_width=20, combo_width=20)
-        self.experiment_combo.set_combo_list(experiments)
         self.experiment_combo.set_callback(self.load_experiment_callback)
         row = self.experiment_combo.get_next_row()
         buttons = Buttons(lf, row, "Experiments")
@@ -354,7 +357,11 @@ class NarrativeExplorer(AppBase):
 
         sql = "insert into table_experiment (name, date) values (%s, %s)"
         vals = (experiment_name, cur_date)
-        self.msi.write_sql_values_get_row(sql, vals)
+        self.experiment_id = self.msi.write_sql_values_get_row(sql, vals)
+        self.load_experiment_list()
+        self.experiment_combo.clear()
+        self.experiment_combo.set_text(experiment_name)
+
 
 
     def load_experiment_callback(self, event = None):
@@ -470,8 +477,12 @@ class NarrativeExplorer(AppBase):
             response = self.response_text_field.get_text()
             print("\tgetting response: {}".format(response))
             print("\tparsing response")
+            self.parse_response_callback()
             print("\tstoring data")
+            self.save_text_list_callback()
             print("\tresetting")
+            self.parsed_full_text_list = []
+            self.response_text_field.clear()
         print("done")
 
     def load_params_callback(self):
@@ -492,7 +503,7 @@ class NarrativeExplorer(AppBase):
         }
 
         param_dict = self.load_json(defaults)
-        print(param_dict)
+        # print(param_dict)
 
         self.prompt_text_field.clear()
         self.experiment_field.clear()
