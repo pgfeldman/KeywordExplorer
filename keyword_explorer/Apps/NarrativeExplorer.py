@@ -39,7 +39,7 @@ from keyword_explorer.utils.MySqlInterface import MySqlInterface
 from keyword_explorer.utils.ManifoldReduction import ManifoldReduction, EmbeddedText
 from keyword_explorer.tkUtils.LabeledParam import LabeledParam
 
-from typing import List
+from typing import List, Dict
 
 class NarrativeExplorer(AppBase):
     oai: OpenAIComms
@@ -231,7 +231,7 @@ class NarrativeExplorer(AppBase):
         ToolTip(self.embed_state_text_field.tk_text, "Embedding progess")
         row = self.embed_state_text_field.get_next_row()
         buttons = Buttons(tab, row, "Commands", label_width=10)
-        b = buttons.add_button("GPT embed", self.implement_me, -1)
+        b = buttons.add_button("GPT embed", self.get_oai_embeddings_callback, -1)
         b = buttons.add_button("Retreive", self.implement_me, -1)
         ToolTip(b, "Get the high-dimensional embeddings from the DB")
         b = buttons.add_button("Reduce", self.implement_me, -1)
@@ -362,8 +362,6 @@ class NarrativeExplorer(AppBase):
         self.experiment_combo.clear()
         self.experiment_combo.set_text(experiment_name)
 
-
-
     def load_experiment_callback(self, event = None):
         print("load_experiment_callback")
         s = self.experiment_combo.tk_combo.get()
@@ -408,7 +406,7 @@ class NarrativeExplorer(AppBase):
         # get the prompt and respnse text blocks
         self.saved_prompt_text = self.prompt_text_field.get_text()
         self.saved_response_text = self.response_text_field.get_text()
-        full_text = self.saved_prompt_text + self.saved_response_text
+        full_text = self.saved_prompt_text + " " + self.saved_response_text
 
         # build the list of parsed text
         self.parsed_full_text_list = self.get_list(full_text, split_regex)
@@ -484,6 +482,31 @@ class NarrativeExplorer(AppBase):
             self.parsed_full_text_list = []
             self.response_text_field.clear()
         print("done")
+
+    def get_oai_embeddings_callback(self):
+        print("get_oai_embeddings_callback")
+        if self.experiment_id == -1:
+            tk.messagebox.showwarning("Warning!", "Please create or select a database first")
+            return
+        # get all the embeddings for text that we don't have yet
+        sql = "select experiment_id, id, parsed_text, embedding_model from parsed_view where experiment_id = %s and embedding IS NULL"
+        vals = (self.experiment_id,)
+        results = self.msi.read_data(sql, vals)
+        d:Dict
+        count = 1
+        for d in results:
+            id = d['id']
+            text = d['parsed_text']
+            engine = d['embedding_model']
+            self.embed_state_text_field.insert_text("[{}] - {}\n".format(count, text))
+            embd = self.oai.get_embedding(text, engine)
+            embd_s = ",".join(map(str, embd))
+            sql = "update table_parsed_text set embedding = %s where id = %s"
+            vals = (embd_s, id)
+            self.msi.write_sql_values_get_row(sql, vals)
+
+            print("[{}]: {} [{}]".format(id, text, embd_s))
+            count += 1
 
     def load_params_callback(self):
         defaults = {

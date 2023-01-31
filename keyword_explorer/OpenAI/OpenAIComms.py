@@ -102,7 +102,9 @@ def main():
 
     print("\nembedding:")
     result = oai.get_embedding('hello, world', 'text-embedding-ada-002')
-    print(result)
+    #s = ",".join(str(e) for e in result)
+    s = ",".join(map(str, result))
+    print(s)
 
     return
 

@@ -65,6 +65,10 @@ class TextField:
         self.tk_text.delete('1.0', tk.END)
         self.tk_text.insert("1.0", text)
 
+    def insert_text(self, text:str, pos:int = 0):
+        self.reference_text = text
+        self.tk_text.insert("1.0", text)
+
     def set_animate_text(self, text:str, animate_delay:int = 30):
         self.reference_text = text
         self.animate_delay_ms = animate_delay

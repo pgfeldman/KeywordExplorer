@@ -16,6 +16,27 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Temporary table structure for view `parsed_view`
+--
+
+DROP TABLE IF EXISTS `parsed_view`;
+/*!50001 DROP VIEW IF EXISTS `parsed_view`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `parsed_view` (
+  `experiment_id` tinyint NOT NULL,
+  `run_index` tinyint NOT NULL,
+  `id` tinyint NOT NULL,
+  `run_id` tinyint NOT NULL,
+  `parsed_text` tinyint NOT NULL,
+  `embedding` tinyint NOT NULL,
+  `mapped` tinyint NOT NULL,
+  `cluster_id` tinyint NOT NULL,
+  `embedding_model` tinyint NOT NULL
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
 -- Temporary table structure for view `run_params_view`
 --
 
@@ -77,7 +98,7 @@ CREATE TABLE `table_embedding_params` (
   `min_samples` int(11) DEFAULT NULL,
   `perplexity` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -92,7 +113,7 @@ CREATE TABLE `table_experiment` (
   `name` varchar(255) DEFAULT NULL,
   `date` datetime DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -109,7 +130,7 @@ CREATE TABLE `table_generate_params` (
   `frequency_penalty` float DEFAULT NULL,
   `model` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -143,7 +164,7 @@ CREATE TABLE `table_parsed_text` (
   `mapped` varchar(255) DEFAULT NULL,
   `cluster_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=35 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -164,6 +185,25 @@ CREATE TABLE `table_run` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Final view structure for view `parsed_view`
+--
+
+/*!50001 DROP TABLE IF EXISTS `parsed_view`*/;
+/*!50001 DROP VIEW IF EXISTS `parsed_view`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_unicode_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
+/*!50001 VIEW `parsed_view` AS select `tr`.`experiment_id` AS `experiment_id`,`tr`.`id` AS `run_index`,`pt`.`id` AS `id`,`pt`.`run_id` AS `run_id`,`pt`.`parsed_text` AS `parsed_text`,`pt`.`embedding` AS `embedding`,`pt`.`mapped` AS `mapped`,`pt`.`cluster_id` AS `cluster_id`,`ep`.`model` AS `embedding_model` from ((`table_parsed_text` `pt` join `table_run` `tr` on(`pt`.`run_id` = `tr`.`id`)) join `table_embedding_params` `ep` on(`tr`.`embedding_params` = `ep`.`id`)) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
 
 --
 -- Final view structure for view `run_params_view`
@@ -198,7 +238,7 @@ CREATE TABLE `table_run` (
 /*!50001 SET collation_connection      = utf8mb4_unicode_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `run_parsed_view` AS select `r`.`experiment_id` AS `experiment_id`,`r`.`id` AS `id`,`r`.`run_id` AS `run_id`,`r`.`prompt` AS `prompt`,`r`.`response` AS `response`,`gp`.`model` AS `generate_model`,`ep`.`model` AS `embedding_model`,`pt`.`id` AS `line_index`,`pt`.`parsed_text` AS `parsed_text` from (((`table_run` `r` join `table_parsed_text` `pt` on(`r`.`id` = `pt`.`run_id`)) join `table_generate_params` `gp` on(`r`.`generator_params` = `gp`.`id`)) join `table_embedding_params` `ep` on(`r`.`generator_params` = `ep`.`id`)) */;
+/*!50001 VIEW `run_parsed_view` AS select `r`.`experiment_id` AS `experiment_id`,`r`.`id` AS `id`,`r`.`run_id` AS `run_id`,`r`.`prompt` AS `prompt`,`r`.`response` AS `response`,`gp`.`model` AS `generate_model`,`ep`.`model` AS `embedding_model`,`pt`.`id` AS `line_index`,`pt`.`parsed_text` AS `parsed_text` from (((`table_run` `r` join `table_parsed_text` `pt` on(`r`.`id` = `pt`.`run_id`)) join `table_generate_params` `gp` on(`r`.`generator_params` = `gp`.`id`)) join `table_embedding_params` `ep` on(`r`.`embedding_params` = `ep`.`id`)) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -212,4 +252,4 @@ CREATE TABLE `table_run` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-01-27 10:00:39
+-- Dump completed on 2023-01-31 10:26:56
