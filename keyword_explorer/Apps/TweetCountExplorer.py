@@ -118,15 +118,20 @@ class TweetCountExplorer(AppBase):
         start_dt = self.start_date_field.get_date()
         end_dt = self.end_date_field.get_date()
 
+        clean_list = []
+        keyword:str
         for keyword in key_list:
-            if len(keyword) < 3:
-                message.showwarning("Keyword too short",
-                                    "Please enter something longer than [{}] text area".format(keyword))
-                return
+            if len(keyword) > 2:
+                clean_list.append(keyword.strip())
+
+        if len(clean_list) == 0:
+            message.showwarning("Keyword(s) too short",
+                                "Please enter something longer than [{}] text area".format(keyword))
+            return
         tweet_options = self.query_options_field.get_text()
         granularity = self.sample_list.get_selected()
         log_dict = {"granularity":granularity, "twitter_start": start_dt.strftime("%Y-%m-%d"), "twitter_end":end_dt.strftime("%Y-%m-%d")}
-        for keyword in key_list:
+        for keyword in clean_list:
             if granularity == 'day':
                 self.tvc.get_counts(keyword, start_dt, end_time=end_dt, granularity=granularity, tweet_options=tweet_options)
                 print("testing keyword {} between {} and {} - granularity = {}".format(keyword, start_dt, end_dt, granularity))

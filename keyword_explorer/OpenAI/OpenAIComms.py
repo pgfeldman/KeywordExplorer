@@ -33,16 +33,20 @@ class OpenAIComms:
 
 
     def get_prompt_result(self, prompt:str, print_result:bool = False) -> List:
-        response = openai.Completion.create(engine=self.engine, prompt=prompt, max_tokens=self.max_tokens,
-                                            temperature=self.temperature, top_p=self.top_p, logprobs=self.logprobs,
-                                            presence_penalty=self.presence_penalty, frequency_penalty=self.frequency_penalty,
-                                            n=self.num_responses)
-        if print_result:
-            print(response)
         to_return = []
-        choices = response['choices']
-        for c in choices:
-            to_return.append(c['text'])
+        try:
+            response = openai.Completion.create(engine=self.engine, prompt=prompt, max_tokens=self.max_tokens,
+                                                temperature=self.temperature, top_p=self.top_p, logprobs=self.logprobs,
+                                                presence_penalty=self.presence_penalty, frequency_penalty=self.frequency_penalty,
+                                                n=self.num_responses)
+            if print_result:
+                print(response)
+            choices = response['choices']
+            for c in choices:
+                to_return.append(c['text'])
+        except openai.error.APIConnectionError as e:
+            print("OpenAIComms.get_prompt_result(): {}".format(e.user_message))
+            to_return.append("Error reaching OpenAI completion endpoint")
 
         return to_return
 

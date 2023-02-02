@@ -25,12 +25,16 @@ class EmbeddedText:
     reg:Pattern
     source_regex:Pattern
 
-    def __init__(self, row_id:int, raw_str:str):
+    def __init__(self, row_id:int, raw_str:str, source_regex:str = r"\w+-\w+-\w+-\d+:", reg:str = r"-?\d+\.\d+"):
         self.row_id = row_id
         self.raw_str = raw_str
-        self.source_regex = re.compile(r"\w+-\w+-\w+-\d+:")
-        self.reg = re.compile(r"-?\d+\.\d+")
-        self.parse()
+
+        if source_regex == None or reg == None:
+            self.parse_2()
+        else:
+            self.source_regex = re.compile(source_regex)
+            self.reg = re.compile(reg)
+            self.parse()
         self.reduced = [0, 0]
         self.cluster_id = -1
         self.cluster_name = "unset"
@@ -47,10 +51,15 @@ class EmbeddedText:
         # for v in self.original:
         #     print(v)
 
+    def parse_2(self):
+        list_str = "["+self.raw_str+"]"
+        self.original = ast.literal_eval(list_str)
+
     def safe_assign(self, val:Any, default:Any) -> Any:
         if val != None:
             return val
         return default
+
     def set_optional(self, reduced_str:str, cluster_id:int, cluster_name:str):
         #print("set_optional: reduced = {}".format(reduced_str))
         if reduced_str != None:
@@ -86,8 +95,8 @@ class ManifoldReduction:
     def clear(self):
         self.embedding_list = []
 
-    def load_row(self, tweet_row:int, row_str:str) -> EmbeddedText:
-        et = EmbeddedText(int(tweet_row), row_str)
+    def load_row(self, text_row:int, row_str:str) -> EmbeddedText:
+        et = EmbeddedText(int(text_row), row_str)
         self.embedding_list.append(et)
         return et
 
@@ -236,6 +245,14 @@ def main():
         i += 1
     plt.show()
 
+def parse_main(num_rows = 10, scalar = 10.0):
+    for i in range(num_rows):
+        l = np.random.rand(100) *  scalar
+        row_str = ', '.join(map(str,l))
+        et = EmbeddedText(i, row_str, None, None)
+        print(et.original)
+
+
 if __name__ == "__main__":
     #tsne_main()
-    main()
+    parse_main()

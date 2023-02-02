@@ -232,7 +232,8 @@ class NarrativeExplorer(AppBase):
         row = self.embed_state_text_field.get_next_row()
         buttons = Buttons(tab, row, "Commands", label_width=10)
         b = buttons.add_button("GPT embed", self.get_oai_embeddings_callback, -1)
-        b = buttons.add_button("Retreive", self.implement_me, -1)
+        ToolTip(b, "Get source embeddings from the GPT")
+        b = buttons.add_button("Retreive", self.get_db_embeddings_callback, -1)
         ToolTip(b, "Get the high-dimensional embeddings from the DB")
         b = buttons.add_button("Reduce", self.implement_me, -1)
         ToolTip(b, "Reduce to 2 dimensions with PCS and TSNE")
@@ -507,6 +508,16 @@ class NarrativeExplorer(AppBase):
 
             print("[{}]: {} [{}]".format(id, text, embd_s))
             count += 1
+
+    def get_db_embeddings_callback(self):
+        print("get_db_embeddings_callback")
+        if self.experiment_id == -1:
+            message.showwarning("DB Error", "get_db_embeddings_callback(): Please set database")
+            return
+
+        print("Loading from DB")
+        sql = "select * from parsed_view where experiment_id = %s"
+        vals = (self.experiment_id,)
 
     def load_params_callback(self):
         defaults = {
