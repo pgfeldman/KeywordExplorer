@@ -22,12 +22,13 @@ class EmbeddedText:
     reduced:List
     vis_dim:List
     mnode:Union[None, MovableNode]
-    reg:Pattern
+    reg:[None, Pattern]
     source_regex:Pattern
 
     def __init__(self, row_id:int, raw_str:str, source_regex:str = r"\w+-\w+-\w+-\d+:", reg:str = r"-?\d+\.\d+"):
         self.row_id = row_id
         self.raw_str = raw_str
+        self.reg = None
 
         if source_regex == None or reg == None:
             self.parse_2()
@@ -63,8 +64,10 @@ class EmbeddedText:
     def set_optional(self, reduced_str:str, cluster_id:int, cluster_name:str):
         #print("set_optional: reduced = {}".format(reduced_str))
         if reduced_str != None:
-            l = self.reg.findall(reduced_str)
-            ls = "[{}]".format(", ".join(l))
+            ls = reduced_str
+            if self.reg != None:
+                l = self.reg.findall(reduced_str)
+                ls = "[{}]".format(", ".join(l))
             self.reduced = ast.literal_eval(ls)
 
         if cluster_id != None:
@@ -75,7 +78,7 @@ class EmbeddedText:
 
 
     def to_string(self) -> str:
-        return "Tweet row = {}, Cluster ID = {}, Cluster Name = {}, Reduced = {}, Text = {}".format(
+        return "Text row = {}, Cluster ID = {}, Cluster Name = {}, Reduced = {}, Text = {}".format(
             self.row_id, self.cluster_id, self.cluster_name, self.reduced, self.text)
 
 class ManifoldReduction:
@@ -95,8 +98,8 @@ class ManifoldReduction:
     def clear(self):
         self.embedding_list = []
 
-    def load_row(self, text_row:int, row_str:str) -> EmbeddedText:
-        et = EmbeddedText(int(text_row), row_str)
+    def load_row(self, text_row:int, row_str:str, source_regex:str = r"\w+-\w+-\w+-\d+:", reg:str = r"-?\d+\.\d+") -> EmbeddedText:
+        et = EmbeddedText(int(text_row), row_str, source_regex, reg)
         self.embedding_list.append(et)
         return et
 
@@ -221,9 +224,12 @@ def main():
         print("creating data set [{}]".format(scalar))
         for i in range(num_rows):
             l = np.random.rand(100) *  scalar
-            row_str = "random_synthesized:{}".format( ', '.join(map(str,l)))
+            # testing tweet embedding
+            # row_str = "random_synthesized:{}".format( ', '.join(map(str,l)))
+            # testing narrative embedding
+            row_str =  ','.join(map(str,l))
             # print(row_str)
-            et = mr.load_row(row_str)
+            et = mr.load_row(i, row_str, None, None)
             et.cluster_id = 1
             et.cluster_name = "cluster {}".format(1)
 
@@ -245,14 +251,6 @@ def main():
         i += 1
     plt.show()
 
-def parse_main(num_rows = 10, scalar = 10.0):
-    for i in range(num_rows):
-        l = np.random.rand(100) *  scalar
-        row_str = ', '.join(map(str,l))
-        et = EmbeddedText(i, row_str, None, None)
-        print(et.original)
-
 
 if __name__ == "__main__":
-    #tsne_main()
-    parse_main()
+    main()

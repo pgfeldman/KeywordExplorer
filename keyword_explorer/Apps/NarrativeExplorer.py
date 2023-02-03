@@ -516,8 +516,23 @@ class NarrativeExplorer(AppBase):
             return
 
         print("Loading from DB")
+        print("\tClearing ManifoldReduction")
+        self.mr.clear()
         sql = "select * from parsed_view where experiment_id = %s"
         vals = (self.experiment_id,)
+        results = self.msi.read_data(sql, vals)
+        d:Dict
+        et:EmbeddedText
+        for d in results:
+            embed_s = d['embedding']
+            id = d['id']
+            et = self.mr.load_row(id, embed_s, None, None)
+            et.text = self.safe_dict_read(d, 'parsed_text', 'unset')
+            mapped = self.safe_dict_read(d, 'mapped', None)
+            cluster_id = self.safe_dict_read(d, 'cluster_id', None)
+            cluster_name = None
+            et.set_optional(mapped, cluster_id, cluster_name)
+            print(et.to_string())
 
     def load_params_callback(self):
         defaults = {
