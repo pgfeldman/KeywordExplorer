@@ -144,6 +144,8 @@ class NarrativeExplorer(AppBase):
         ToolTip(b, "Create a new, named experiment")
         b = buttons.add_button("Load", self.load_experiment_callback)
         ToolTip(b, "Load an existing experiment")
+        b = buttons.add_button("Update", self.update_experiment_callback)
+        ToolTip(b, "Update an existing experiment")
         row = buttons.get_next_row()
 
         s = ttk.Style()
@@ -235,11 +237,11 @@ class NarrativeExplorer(AppBase):
         ToolTip(b, "Get source embeddings from the GPT")
         b = buttons.add_button("Retreive", self.get_db_embeddings_callback, -1)
         ToolTip(b, "Get the high-dimensional embeddings from the DB")
-        b = buttons.add_button("Reduce", self.implement_me, -1)
+        b = buttons.add_button("Reduce", self.reduce_dimensions_callback, -1)
         ToolTip(b, "Reduce to 2 dimensions with PCS and TSNE")
-        b = buttons.add_button("Cluster", self.implement_me, -1)
+        b = buttons.add_button("Cluster", self.cluster_callback, -1)
         ToolTip(b, "Compute clusters on reduced data")
-        b = buttons.add_button("Plot", self.implement_me, -1)
+        b = buttons.add_button("Plot", self.plot_callback, -1)
         ToolTip(b, "Plot the clustered points using PyPlot")
         b = buttons.add_button("Topics", self.implement_me, -1)
         ToolTip(b, "Use GPT to guess at topic names for clusters\n(not implemented)")
@@ -313,12 +315,28 @@ class NarrativeExplorer(AppBase):
         return s
 
     def count_parsed(self, experiment_id):
-        sql = "select distinct run_id from run_parsed_view where experiment_id = %s"
+        sql = "select * from parsed_view where experiment_id = %s"
         vals = (experiment_id,)
         results = self.msi.read_data(sql, vals)
-        print(results)
-        parsed_count = len(results)
-        self.parsed_field.set_text(parsed_count)
+        run_set = set()
+        parsed_set = set()
+        embed_set = set()
+        reduced_set = set()
+        d:Dict
+        for d in results:
+            if d['run_index'] != None:
+                run_set.add(d['run_index'])
+            if d['embedding'] != None:
+                embed_set.add(d['embedding'])
+            if d['parsed_text'] != None:
+                parsed_set.add(d['parsed_text'])
+            if d['mapped'] != None:
+                reduced_set.add(d['mapped'])
+
+        self.runs_field.set_text(len(run_set))
+        self.parsed_field.set_text(len(parsed_set))
+        self.embedded_field.set_text(len(embed_set))
+        self.reduced_field.set_text(len(reduced_set))
 
     def new_prompt_callback(self):
         split_regex = re.compile(r"[\n]+")
@@ -383,7 +401,7 @@ class NarrativeExplorer(AppBase):
             self.count_parsed(self.experiment_id)
             if results[0]['max'] != None:
                 run_id = results[0]['max']
-                self.runs_field.set_text(run_id)
+                #self.runs_field.set_text(run_id)
                 sql = "select * from run_params_view where run_id = %s and experiment_id = %s"
                 vals = (run_id, self.experiment_id)
                 results = self.msi.read_data(sql, vals)
@@ -399,6 +417,13 @@ class NarrativeExplorer(AppBase):
                 self.eps_param.set_text(self.safe_dict_read(d, 'EPS', self.eps_param.get_text()))
                 self.min_samples_param.set_text(self.safe_dict_read(d, 'min_samples', self.min_samples_param.get_text()))
                 self.perplexity_param.set_text(self.safe_dict_read(d, 'perplexity', self.perplexity_param.get_text()))
+
+    def update_experiment_callback(self):
+        print("update_experiment_callback()")
+        # TODO: Finish this
+        # update the table_embedding_params for this experiment/runs
+        # update table_parsed_text with the reduced/mapped data
+
 
     def parse_response_callback(self):
         # get the regex
@@ -533,6 +558,32 @@ class NarrativeExplorer(AppBase):
             cluster_name = None
             et.set_optional(mapped, cluster_id, cluster_name)
             print(et.to_string())
+
+    def reduce_dimensions_callback(self):
+        pca_dim = self.pca_dim_param.get_as_int()
+        perplexity = self.perplexity_param.get_as_int()
+        self.dp.dprint("Reducing: PCA dim = {}  perplexity = {}".format(pca_dim, perplexity))
+        self.mr.calc_embeding(perplexity=perplexity, pca_components=pca_dim)
+        print("\tFinished dimension reduction")
+        message.showinfo("reduce_dimensions_callback", "Reduced to {} dimensions".format(pca_dim))
+
+    def cluster_callback(self):
+        print("Clustering")
+        eps = self.eps_param.get_as_float()
+        min_samples = self.min_samples_param.get_as_int()
+        self.mr.dbscan(eps=eps, min_samples=min_samples)
+        self.dp.dprint("Finished clustering")
+
+    def plot_callback(self):
+        print("Plotting")
+        title = self.experiment_field.get_text()
+        perplexity = self.perplexity_param.get_as_int()
+        eps = self.eps_param.get_as_int()
+        min_samples = self.min_samples_param.get_as_int()
+        pca_dim = self.pca_dim_param.get_as_int()
+        self.mr.plot("{}\ndim: {}, eps: {}, min_sample: {}, perplex = {}".format(
+            title, pca_dim, eps, min_samples, perplexity))
+        plt.show()
 
     def load_params_callback(self):
         defaults = {
