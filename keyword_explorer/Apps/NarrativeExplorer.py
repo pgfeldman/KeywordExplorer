@@ -175,6 +175,8 @@ class NarrativeExplorer(AppBase):
         row = self.embedded_field.get_next_row()
         self.reduced_field = DataField(lf, row, 'Reduced:', text_width, label_width=label_width)
         row = self.reduced_field.get_next_row()
+        self.clusters_field = DataField(lf, row, 'Clusters:', text_width, label_width=label_width)
+        row = self.clusters_field.get_next_row()
 
     def build_generator_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
         engine_list = self.oai.list_models(keep_list = ["davinci"], exclude_list = ["embed", "similarity", "code", "edit", "search", "audio", "instruct", "2020", "if", "insert"])
@@ -322,6 +324,7 @@ class NarrativeExplorer(AppBase):
         parsed_set = set()
         embed_set = set()
         reduced_set = set()
+        clusters_set = set()
         d:Dict
         for d in results:
             if d['run_index'] != None:
@@ -332,11 +335,14 @@ class NarrativeExplorer(AppBase):
                 parsed_set.add(d['parsed_text'])
             if d['mapped'] != None:
                 reduced_set.add(d['mapped'])
+            if d['cluster_id'] != None:
+                clusters_set.add(d['cluster_id'])
 
         self.runs_field.set_text(len(run_set))
         self.parsed_field.set_text(len(parsed_set))
         self.embedded_field.set_text(len(embed_set))
         self.reduced_field.set_text(len(reduced_set))
+        self.clusters_field.set_text(len(clusters_set))
 
     def new_prompt_callback(self):
         split_regex = re.compile(r"[\n]+")
@@ -408,10 +414,12 @@ class NarrativeExplorer(AppBase):
                 d = results[0]
                 # safe_dict_read(self, d:Dict, key:str, default:Any) -> Any:
                 self.prompt_text_field.set_text(self.safe_dict_read(d, 'prompt', self.prompt_text_field.get_text()))
+                self.generate_model_combo.clear()
                 self.generate_model_combo.set_text(self.safe_dict_read(d, 'generate_model', self.generate_model_combo.get_text()))
                 self.tokens_param.set_text(self.safe_dict_read(d, 'tokens', self.tokens_param.get_text()))
                 self.presence_param.set_text(self.safe_dict_read(d, 'presence_penalty', self.presence_param.get_text()))
                 self.frequency_param.set_text(self.safe_dict_read(d, 'frequency_penalty', self.frequency_param.get_text()))
+                self.embed_model_combo.clear()
                 self.embed_model_combo.set_text(self.safe_dict_read(d, 'embedding_model', self.embed_model_combo.get_text()))
                 self.pca_dim_param.set_text(self.safe_dict_read(d, 'PCA_dim', self.pca_dim_param.get_text()))
                 self.eps_param.set_text(self.safe_dict_read(d, 'EPS', self.eps_param.get_text()))
@@ -420,9 +428,31 @@ class NarrativeExplorer(AppBase):
 
     def update_experiment_callback(self):
         print("update_experiment_callback()")
-        # TODO: Finish this
+        if self.experiment_id == -1:
+            result = tk.messagebox.showwarning("Warning!", "Please create or select a database first")
+            return
+        params = self.get_current_params()
         # update the table_embedding_params for this experiment/runs
+        sql = "select distinct emb_id from index_view where experiment_id = %s"
+        vals = (self.experiment_id,)
+        results = self.msi.read_data(sql, vals)
+        d:Dict
+        for d in results:
+            embed_id = d['emb_id']
+            sql = "update table_embedding_params set model = %s, PCA_dim = %s, EPS = %s, min_samples = %s, perplexity = %s where id = %s"
+            vals = (params['embedding_model'], params['PCA_dimensions'], params['EPS'], params['min_samples'], params['perplexity'], embed_id)
+            self.msi.write_sql_values_get_row(sql, vals)
+
         # update table_parsed_text with the reduced/mapped data
+        et:EmbeddedText
+        for et in self.mr.embedding_list:
+            reduced_s = ",".join(map(str, et.reduced))
+            sql = "update table_parsed_text set mapped = '{}', cluster_id = {} where id = {}".format(
+                reduced_s, et.cluster_id, et.row_id)
+
+            self.msi.write_data(sql)
+
+        self.count_parsed(self.experiment_id)
 
 
     def parse_response_callback(self):
@@ -564,6 +594,7 @@ class NarrativeExplorer(AppBase):
         perplexity = self.perplexity_param.get_as_int()
         self.dp.dprint("Reducing: PCA dim = {}  perplexity = {}".format(pca_dim, perplexity))
         self.mr.calc_embeding(perplexity=perplexity, pca_components=pca_dim)
+        self.reduced_field.set_text(len(self.mr.embedding_list))
         print("\tFinished dimension reduction")
         message.showinfo("reduce_dimensions_callback", "Reduced to {} dimensions".format(pca_dim))
 
@@ -572,6 +603,7 @@ class NarrativeExplorer(AppBase):
         eps = self.eps_param.get_as_float()
         min_samples = self.min_samples_param.get_as_int()
         self.mr.dbscan(eps=eps, min_samples=min_samples)
+        self.clusters_field.set_text(len(self.mr.embedding_list))
         self.dp.dprint("Finished clustering")
 
     def plot_callback(self):
@@ -585,8 +617,8 @@ class NarrativeExplorer(AppBase):
             title, pca_dim, eps, min_samples, perplexity))
         plt.show()
 
-    def load_params_callback(self):
-        defaults = {
+    def get_current_params(self) -> Dict:
+        d = {
             "probe_str": self.prompt_text_field.get_text(),
             "name": self.experiment_field.get_text(),
             "automated_runs": self.auto_field.get_as_int(),
@@ -601,6 +633,10 @@ class NarrativeExplorer(AppBase):
             "min_samples": self.min_samples_param.get_as_int(),
             "perplexity": self.perplexity_param.get_as_int()
         }
+        return d
+
+    def load_params_callback(self):
+        defaults = self.get_current_params()
 
         param_dict = self.load_json(defaults)
         # print(param_dict)
@@ -634,21 +670,7 @@ class NarrativeExplorer(AppBase):
         self.perplexity_param.set_text(param_dict['perplexity'])
 
     def save_params_callback(self):
-        params = {
-            "probe_str": self.prompt_text_field.get_text(),
-            "name": self.experiment_field.get_text(),
-            "automated_runs": self.auto_field.get_as_int(),
-            "generate_model": self.generate_model_combo.get_text(),
-            "tokens": self.tokens_param.get_as_int(),
-            "temp": self.temp_param.get_as_float(),
-            "presence_penalty": self.presence_param.get_as_float(),
-            "frequency_penalty": self.frequency_param.get_as_float(),
-            "embedding_model": self.embed_model_combo.get_text(),
-            "PCA_dimensions": self.pca_dim_param.get_as_int(),
-            "EPS": self.eps_param.get_as_float(),
-            "min_samples": self.min_samples_param.get_as_int(),
-            "perplexity": self.perplexity_param.get_as_int()
-        }
+        params = self.get_current_params()
         self.save_experiment_json(params)
 
     # make this a "restore" button?

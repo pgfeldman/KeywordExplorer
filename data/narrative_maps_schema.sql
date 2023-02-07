@@ -16,6 +16,23 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Temporary table structure for view `index_view`
+--
+
+DROP TABLE IF EXISTS `index_view`;
+/*!50001 DROP VIEW IF EXISTS `index_view`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `index_view` (
+  `experiment_id` tinyint NOT NULL,
+  `run_id` tinyint NOT NULL,
+  `parsed_text_id` tinyint NOT NULL,
+  `gen_id` tinyint NOT NULL,
+  `emb_id` tinyint NOT NULL
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
 -- Temporary table structure for view `parsed_view`
 --
 
@@ -187,6 +204,25 @@ CREATE TABLE `table_run` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Final view structure for view `index_view`
+--
+
+/*!50001 DROP TABLE IF EXISTS `index_view`*/;
+/*!50001 DROP VIEW IF EXISTS `index_view`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_unicode_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
+/*!50001 VIEW `index_view` AS select `e`.`id` AS `experiment_id`,`r`.`id` AS `run_id`,`p`.`id` AS `parsed_text_id`,`g`.`id` AS `gen_id`,`ep`.`id` AS `emb_id` from ((((`table_experiment` `e` join `table_run` `r` on(`e`.`id` = `r`.`experiment_id`)) join `table_parsed_text` `p` on(`r`.`run_id` = `p`.`run_id`)) join `table_generate_params` `g` on(`r`.`embedding_params` = `g`.`id`)) join `table_embedding_params` `ep` on(`r`.`embedding_params` <> 0)) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
 -- Final view structure for view `parsed_view`
 --
 
@@ -252,4 +288,4 @@ CREATE TABLE `table_run` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-01-31 10:26:56
+-- Dump completed on 2023-02-07 15:40:33
