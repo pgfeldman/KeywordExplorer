@@ -57,6 +57,18 @@ class OpenAIComms:
         #return openai.Engine(id=engine).embeddings(input = [text])['data'][0]['embedding']
         return openai.Embedding.create(input = [text], model=engine)['data'][0]['embedding']
 
+    def get_embedding_list(self, text_list:List, engine="text-embedding-ada-002") -> List:
+        # from https://beta.openai.com/docs/guides/embeddings/what-are-embeddings
+        results =  openai.Embedding.create(input = text_list, model=engine)
+        d_list = []
+        data_list = results['data']
+        d:Dict
+        i = 0
+        for d in data_list:
+            d_list.append({"text":text_list[i], "embedding":d["embedding"]})
+            i += 1
+        return d_list
+
     def set_engine(self, id:int = -1, name:str = None):
         if id != -1:
             self.engine = self.engines[id]
@@ -109,6 +121,23 @@ def main():
     #s = ",".join(str(e) for e in result)
     s = ",".join(map(str, result))
     print(s)
+
+    print("\nembedding list:")
+    text_list = ["Supplied by a Late Consumptive Usher to a Grammar School",
+                 "The pale Usher—threadbare in coat, heart, body, and brain; I see him now",
+                 "He was ever dusting his old lexicons and grammars, with a queer handkerchief, mockingly embellished with all the gay flags of all the known nations of the world",
+                 "He loved to dust his old grammars; it somehow mildly reminded him of his mortality",
+                "While you take in hand to school others, and to teach them by what name a whale-fish is to be called in our tongue, leaving out, through ignorance, the letter H, which almost alone maketh up the signification of the word, you deliver that which is not true",
+                "This animal is named from roundness or rolling; for in Dan",
+                "hvalt is arched or vaulted",
+                "—Webster’s Dictionary",
+                "* * * It is more immediately from the Dut",
+                "Walw-ian, to roll, to wallow"
+    ]
+    result = oai.get_embedding_list(text_list, 'text-embedding-ada-002')
+    d:Dict
+    for d in result:
+        print(d)
 
     return
 

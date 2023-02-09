@@ -15,41 +15,10 @@ from typing import List, Dict, Pattern
 class OpenAIEmbeddings:
     oac:OpenAIComms
 
+
     def __init__(self):
         print("OpenAIEmbeddings")
         self.oac = OpenAIComms()
-
-    def create_context(self, question:str, df:pd.DataFrame, max_len=1800, size="ada") -> str:
-        """
-        Create a context for a question by finding the most similar context from the dataframe
-        """
-
-        # Get the embeddings for the question
-        q_embeddings = openai.Embedding.create(input=question, engine='text-embedding-ada-002')['data'][0]['embedding']
-
-        # Get the distances from the embeddings
-        embeddings_list= list(df['embeddings'].values)
-        df['distances'] = oaiu.distances_from_embeddings(q_embeddings, embeddings_list, distance_metric='cosine')
-
-
-        returns = []
-        cur_len = 0
-
-        # Sort by distance and add the text to the context until the context is too long
-        for i, row in df.sort_values('distances', ascending=True).iterrows():
-
-            # Add the length of the text to the current length
-            cur_len += row['n_tokens'] + 4
-
-            # If the context is too long, break
-            if cur_len > max_len:
-                break
-
-            # Else add it to the text that is being returned
-            returns.append(row["text"])
-
-        # Return the context
-        return "\n\n###\n\n".join(returns)
 
     def answer_question(self,
             df:pd.DataFrame,
@@ -133,6 +102,40 @@ class OpenAIEmbeddings:
         df = pd.DataFrame(d_list)
         return df
 
+    def create_context(self, question:str, df:pd.DataFrame, max_len=300, size="ada"):
+        """
+        Create a context for a question by finding the most similar context from the dataframe
+        """
+
+        # Get the embeddings for the question
+        q_embeddings = openai.Embedding.create(input=question, engine='text-embedding-ada-002')['data'][0]['embedding']
+
+        # Get the distances from the embeddings
+        df['distances'] = oaiu.distances_from_embeddings(q_embeddings, list(df['embedding'].values), distance_metric='cosine')
+
+
+        returns = []
+        cur_len = 0
+
+        # Sort by distance and add the text to the context until the context is too long
+        for i, row in df.sort_values('distances', ascending=True).iterrows():
+
+            # Add the length of the text to the current length
+            text = str(row['parsed_text'])
+            words = text.split()
+            cur_len += len(words)
+
+            # If the context is too long, break
+            if cur_len > max_len:
+                break
+
+            # Else add it to the text that is being returned
+            print("distance = {} text = {}, ".format(row['distances'], text))
+            returns.append(text)
+
+        # Return the context
+        return "\n\n###\n\n".join(returns)
+
     def store_project_data(self, text_name:str, group_name_str, df:pd.DataFrame, database="gpt_summary", user="root"):
         msi = MySqlInterface(user, database)
         sql = "select * from table_source where text_name = %s and group_name = %s"
@@ -166,7 +169,7 @@ class OpenAIEmbeddings:
         else:
             source_id = results[0]['id']
 
-        print("source_id = {}".format(source_id))
+        print("OpenAIEmbeddings.load_project_data(): pulling text for '{}'".format(text_name))
         sql = "select * from gpt_summary.table_parsed_text where source = {}".format(source_id)
         if limit > 0:
             sql += " limit {}".format(limit)
@@ -175,14 +178,16 @@ class OpenAIEmbeddings:
 
         msi.close()
 
+        print("\tProcessing {} lines".format(len(results)))
         d:Dict
         for d in results:
             emb = d['embedding']
             emb_l = ast.literal_eval(emb)
             d['embedding'] = np.array(emb_l)
-            print(d)
+            # print(d)
 
         df = pd.DataFrame(results)
+        print("\tDone")
         return df
 
 
@@ -219,8 +224,9 @@ def store_embeddings_main():
 
 def load_data_main():
     oae = OpenAIEmbeddings()
-    df = oae.load_project_data("moby-dick", "melville", limit=10)
-    print(df)
+    df = oae.load_project_data("moby-dick", "melville", limit=1000)
+    cs = oae.create_context("There go the ships; there is that Leviathan whom thou hast made to play therein", df)
+    print(cs)
 
 if __name__ == "__main__":
     # create_csv_main()
