@@ -1,10 +1,16 @@
+import time
+
 import numpy as np
 import openai
 import openai.embeddings_utils as oaiu
 import pandas as pd
 import re
+import ast
 
 from keyword_explorer.OpenAI.OpenAIComms import OpenAIComms
+from keyword_explorer.utils.MySqlInterface import MySqlInterface
+
+from typing import List, Dict, Pattern
 
 class OpenAIEmbeddings:
     oac:OpenAIComms
@@ -81,8 +87,8 @@ class OpenAIEmbeddings:
             print(e)
             return ""
 
-    def parse_text_file(self, filename:str, min_len:int = 5, r_str:str = r"\n+|[\.!?()“”]+") -> bool: # |([\.!?]\")") -> bool:
-
+    def parse_text_file(self, filename:str, min_len:int = 5, r_str:str = r"\n+|[\.!?()“”]+", default_print:int = 0) -> List:
+        s_list = []
         reg = re.compile(r_str)
         with open(filename, mode="r", encoding="utf-8") as f:
             s = f.read()
@@ -93,16 +99,130 @@ class OpenAIEmbeddings:
                 if len(s) > min_len:
                     s_list.append(s.strip())
 
-            for i in range(25):
+            for i in range(default_print):
                 print("{}: {}".format(i, s_list[i]))
 
-            return True
+        return s_list
 
-        return False
+    def get_embeddings(self, text_list:List, max:int = -1) -> pd.DataFrame:
+        d_list = []
+        count = 0
 
-def main():
+        for s in text_list:
+            percent_done = float(count/len(text_list)) * 100
+            try:
+                result = self.oac.get_embedding('hello, world', 'text-embedding-ada-002')
+                d = {"text":s, "embedding":result}
+                d_list.append(d)
+                print("{:2f}%: {}".format(percent_done, s))
+                if max > 0 and count > max:
+                    break
+                count += 1
+                waitcount = 0
+            except openai.error.APIError as e:
+                waitcount += 1
+                time_to_wait = 5 * waitcount
+                print("OpenAIEmbeddings.get_embeddings error, returning early. Message = {}".format(e.user_message))
+                if waitcount > 5:
+                    df = pd.DataFrame(d_list)
+                    return df
+                print("waiting {} seconds".format(time_to_wait))
+                time.sleep(time_to_wait)
+
+        #return normally
+        df = pd.DataFrame(d_list)
+        return df
+
+    def store_project_data(self, text_name:str, group_name_str, df:pd.DataFrame, database="gpt_summary", user="root"):
+        msi = MySqlInterface(user, database)
+        sql = "select * from table_source where text_name = %s and group_name = %s"
+        vals = (text_name, group_name_str)
+        results = msi.read_data(sql, vals)
+        if len(results) == 0:
+            print("No db entry for '{}' '{}': creating entry")
+            sql = "insert into table_source (text_name, group_name) values (%s, %s)"
+            source_id = msi.write_sql_values_get_row(sql, vals)
+        else:
+            source_id = results[0]['id']
+
+        print("source_id = {}".format(source_id))
+        for index, row in df.iterrows():
+            text = row['text']
+            embedding = row['embedding']
+            sql = "insert into gpt_summary.table_parsed_text (source, parsed_text, embedding) values (%s, %s, %s)"
+            vals = (source_id, text, embedding)
+            msi.write_sql_values_get_row(sql, vals)
+
+        msi.close()
+
+    def load_project_data(self, text_name:str, group_name_str, database="gpt_summary", user="root", limit = -1) -> pd.DataFrame:
+        msi = MySqlInterface(user, database, enable_writes = False)
+        sql = "select * from table_source where text_name = %s and group_name = %s"
+        vals = (text_name, group_name_str)
+        results = msi.read_data(sql, vals)
+        if len(results) == 0:
+            print("No db entry for '{}' '{}': creating entry")
+            return pd.DataFrame() # Return an empty DataFrame
+        else:
+            source_id = results[0]['id']
+
+        print("source_id = {}".format(source_id))
+        sql = "select * from gpt_summary.table_parsed_text where source = {}".format(source_id)
+        if limit > 0:
+            sql += " limit {}".format(limit)
+
+        results = msi.read_data(sql)
+
+        msi.close()
+
+        d:Dict
+        for d in results:
+            emb = d['embedding']
+            emb_l = ast.literal_eval(emb)
+            d['embedding'] = np.array(emb_l)
+            print(d)
+
+        df = pd.DataFrame(results)
+        return df
+
+
+    def write_csv(self, filename:str, df:pd.DataFrame):
+        df.to_csv(filename)
+
+    def read_csv(self, filename:str) -> pd.DataFrame:
+        print("OpenAIEmbeddings.read_csv(): reading {}".format(filename))
+        df = pd.read_csv(filename, index_col=0)
+        print("\tconverting")
+        d = df.to_dict()
+        de = d['embedding']
+        for key, val in de.items():
+            l = ast.literal_eval(val)
+            de[key] = l
+        df = pd.DataFrame(d)
+        print("\tready")
+        return df
+
+
+
+def create_csv_main():
     oae = OpenAIEmbeddings()
-    oae.parse_text_file("../../corpora/moby-dick.txt", 10) # can be obtained here: https://www.gutenberg.org/files/2701/2701-h/2701-h.htm
+    s_list = oae.parse_text_file("../../corpora/moby-dick-3.txt", 10, default_print=10) # can be obtained here: https://www.gutenberg.org/files/2701/2701-h/2701-h.htm
+    df = oae.get_embeddings(s_list)
+    print(df)
+    df.to_csv("../../data/moby-dick-embeddings_3.csv")
+    print("done writing file")
+
+def store_embeddings_main():
+    df = pd.DataFrame()
+    oae = OpenAIEmbeddings()
+    oae.store_project_data("moby-dick", "melville", df)
+
+def load_data_main():
+    oae = OpenAIEmbeddings()
+    df = oae.load_project_data("moby-dick", "melville", limit=10)
+    print(df)
 
 if __name__ == "__main__":
-    main()
+    # create_csv_main()
+    # store_embeddings_main()
+    load_data_main()
