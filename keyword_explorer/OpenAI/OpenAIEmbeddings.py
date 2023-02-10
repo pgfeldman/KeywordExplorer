@@ -21,25 +21,11 @@ class OpenAIEmbeddings:
         print("OpenAIEmbeddings")
         self.oac = OpenAIComms()
 
-    def answer_question(self,
-            df:pd.DataFrame,
-            model="text-davinci-003",
-            question="Am I allowed to publish model outputs to Twitter, without a human review?",
-            max_len=1800,
-            size="ada",
-            debug=False,
-            max_tokens=150,
-            stop_sequence=None
-    ):
+    def answer_question(self, question:str, context:str, model="text-davinci-003", max_len=1800,
+            size="ada", debug=False, max_tokens=150, stop_sequence=None) -> str:
         """
         Answer a question based on the most similar context from the dataframe texts
         """
-        context = self.create_context(question, df, max_len=max_len, size=size)
-        # If debug, print the raw model response
-        if debug:
-            print("Context:\n" + context)
-            print("\n\n")
-
         try:
             # Create a completions using the question and context
             response = openai.Completion.create(
@@ -77,7 +63,6 @@ class OpenAIEmbeddings:
     def get_embeddings(self, text_list:List, submit_size:int = 10, max:int = -1) -> pd.DataFrame:
         d_list = []
         d:Dict
-        waitcount = 0
         num_text = len(text_list)
         # TODO: Note that this will cut off the last few lines. I think it needs to be:
         # for i in range(0, num_text+submit_size-1, submit_size):
@@ -85,26 +70,31 @@ class OpenAIEmbeddings:
         for i in range(0, num_text, submit_size):
             s_list = text_list[i:i+submit_size]
             percent_done = float(i/num_text) * 100
-            try:
-                result = self.oac.get_embedding_list(s_list, 'text-embedding-ada-002')
-                for d in result:
-                    text = d['text']
-                    embedding = np.array(d['embedding'])
-                    d = {"text":text, "embedding":embedding}
-                    d_list.append(d)
-                print("{:2f}%: {}".format(percent_done, s_list[0]))
-                if max > 0 and i > max:
-                    break
-                waitcount = 0
-            except openai.error.APIError as e:
-                waitcount += 1
-                time_to_wait = 5 * waitcount
-                print("OpenAIEmbeddings.get_embeddings error, returning early. Message = {}".format(e.user_message))
-                if waitcount > 5:
-                    df = pd.DataFrame(d_list)
-                    return df
-                print("waiting {} seconds".format(time_to_wait))
-                time.sleep(time_to_wait)
+            good_read = False
+            waitcount = 0
+            while not good_read:
+                try:
+                    result = self.oac.get_embedding_list(s_list, 'text-embedding-ada-002')
+                    for d in result:
+                        text = d['text']
+                        embedding = np.array(d['embedding'])
+                        d = {"text":text, "embedding":embedding}
+                        d_list.append(d)
+                    print("{:2f}%: {}".format(percent_done, s_list[0]))
+                    if max > 0 and i > max:
+                        break
+                    waitcount = 0
+                    good_read = True
+                except openai.error.APIError as e:
+                    waitcount += 1
+                    time_to_wait = 5 * waitcount
+                    print("OpenAIEmbeddings.get_embeddings error, returning early. Message = {}".format(e.user_message))
+                    if waitcount > 5:
+                        print("OpenAIEmbeddings.get_embeddings error, returning early.")
+                        df = pd.DataFrame(d_list)
+                        return df
+                    print("OpenAIEmbeddings.get_embeddings waiting {} seconds".format(time_to_wait))
+                    time.sleep(time_to_wait)
 
         #return normally
         df = pd.DataFrame(d_list)
@@ -234,11 +224,21 @@ def store_embeddings_main():
 def load_data_main():
     oae = OpenAIEmbeddings()
     df = oae.load_project_data("moby-dick", "melville", limit=1000)
-    question = "There go the ships; there is that Leviathan whom thou hast made to play therein"
+    question = "what are best ways to hunt whales"
     cs = oae.create_context(question, df)
     print("Context string:\n{}".format(cs))
+
+def ask_question_main():
+    oae = OpenAIEmbeddings()
+    df = oae.load_project_data("moby-dick", "melville", limit=1000)
+    question = "what are best ways to hunt whales"
+    cs = oae.create_context(question, df)
+    # print("Context string:\n{}".format(cs))
+    answer = oae.answer_question(question=question, context=cs)
+    print("\nAnswer:\n{}".format(answer))
 
 if __name__ == "__main__":
     # create_csv_main()
     # store_embeddings_main()
-    load_data_main()
+    # load_data_main()
+    ask_question_main()
