@@ -6,6 +6,7 @@ import openai.embeddings_utils as oaiu
 import pandas as pd
 import re
 import ast
+import pickle
 
 from keyword_explorer.OpenAI.OpenAIComms import OpenAIComms
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
@@ -73,20 +74,27 @@ class OpenAIEmbeddings:
 
         return s_list
 
-    def get_embeddings(self, text_list:List, max:int = -1) -> pd.DataFrame:
+    def get_embeddings(self, text_list:List, submit_size:int = 10, max:int = -1) -> pd.DataFrame:
         d_list = []
-        count = 0
-
-        for s in text_list:
-            percent_done = float(count/len(text_list)) * 100
+        d:Dict
+        waitcount = 0
+        num_text = len(text_list)
+        # TODO: Note that this will cut off the last few lines. I think it needs to be:
+        # for i in range(0, num_text+submit_size-1, submit_size):
+        #    s_list = text_list[i:min(num_text, i+submit_size])
+        for i in range(0, num_text, submit_size):
+            s_list = text_list[i:i+submit_size]
+            percent_done = float(i/num_text) * 100
             try:
-                result = self.oac.get_embedding('hello, world', 'text-embedding-ada-002')
-                d = {"text":s, "embedding":result}
-                d_list.append(d)
-                print("{:2f}%: {}".format(percent_done, s))
-                if max > 0 and count > max:
+                result = self.oac.get_embedding_list(s_list, 'text-embedding-ada-002')
+                for d in result:
+                    text = d['text']
+                    embedding = np.array(d['embedding'])
+                    d = {"text":text, "embedding":embedding}
+                    d_list.append(d)
+                print("{:2f}%: {}".format(percent_done, s_list[0]))
+                if max > 0 and i > max:
                     break
-                count += 1
                 waitcount = 0
             except openai.error.APIError as e:
                 waitcount += 1
@@ -106,9 +114,11 @@ class OpenAIEmbeddings:
         """
         Create a context for a question by finding the most similar context from the dataframe
         """
-
+        print("Question: [{}]".format(question))
         # Get the embeddings for the question
-        q_embeddings = openai.Embedding.create(input=question, engine='text-embedding-ada-002')['data'][0]['embedding']
+        # return openai.Embedding.create(input = [text], model=engine)['data'][0]['embedding']
+        #q_embeddings = openai.Embedding.create(input=question, engine='text-embedding-ada-002')['data'][0]['embedding']
+        q_embeddings = self.oac.get_embedding(question)
 
         # Get the distances from the embeddings
         df['distances'] = oaiu.distances_from_embeddings(q_embeddings, list(df['embedding'].values), distance_metric='cosine')
@@ -130,7 +140,7 @@ class OpenAIEmbeddings:
                 break
 
             # Else add it to the text that is being returned
-            print("distance = {} text = {}, ".format(row['distances'], text))
+            print("distance = {} text = [{}]".format(row['distances'], text))
             returns.append(text)
 
         # Return the context
@@ -153,7 +163,7 @@ class OpenAIEmbeddings:
             text = row['text']
             embedding = row['embedding']
             sql = "insert into gpt_summary.table_parsed_text (source, parsed_text, embedding) values (%s, %s, %s)"
-            vals = (source_id, text, embedding)
+            vals = (source_id, text, embedding.dumps())
             msi.write_sql_values_get_row(sql, vals)
 
         msi.close()
@@ -182,8 +192,7 @@ class OpenAIEmbeddings:
         d:Dict
         for d in results:
             emb = d['embedding']
-            emb_l = ast.literal_eval(emb)
-            d['embedding'] = np.array(emb_l)
+            d['embedding'] = pickle.loads(emb)
             # print(d)
 
         df = pd.DataFrame(results)
@@ -207,26 +216,27 @@ class OpenAIEmbeddings:
         print("\tready")
         return df
 
-
-
 def create_csv_main():
     oae = OpenAIEmbeddings()
-    s_list = oae.parse_text_file("../../corpora/moby-dick-3.txt", 10, default_print=10) # can be obtained here: https://www.gutenberg.org/files/2701/2701-h/2701-h.htm
+    s_list = oae.parse_text_file("../../corpora/moby-dick-3.txt", 10, default_print=100) # can be obtained here: https://www.gutenberg.org/files/2701/2701-h/2701-h.htm
     df = oae.get_embeddings(s_list)
     print(df)
     df.to_csv("../../data/moby-dick-embeddings_3.csv")
     print("done writing file")
 
 def store_embeddings_main():
-    df = pd.DataFrame()
     oae = OpenAIEmbeddings()
+    s_list = oae.parse_text_file("../../corpora/moby-dick-3.txt", 10, default_print=10) # can be obtained here: https://www.gutenberg.org/files/2701/2701-h/2701-h.htm
+    df = oae.get_embeddings(s_list[:100])
+    print(df)
     oae.store_project_data("moby-dick", "melville", df)
 
 def load_data_main():
     oae = OpenAIEmbeddings()
     df = oae.load_project_data("moby-dick", "melville", limit=1000)
-    cs = oae.create_context("There go the ships; there is that Leviathan whom thou hast made to play therein", df)
-    print(cs)
+    question = "There go the ships; there is that Leviathan whom thou hast made to play therein"
+    cs = oae.create_context(question, df)
+    print("Context string:\n{}".format(cs))
 
 if __name__ == "__main__":
     # create_csv_main()

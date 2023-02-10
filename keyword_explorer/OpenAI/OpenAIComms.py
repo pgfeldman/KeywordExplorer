@@ -1,4 +1,5 @@
 from datetime import datetime
+import numpy as np
 import openai
 import os
 from typing import List, Dict, Set, Pattern
@@ -55,7 +56,7 @@ class OpenAIComms:
         # replace newlines, which can negatively affect performance.
         text = text.replace("\n", " ")
         #return openai.Engine(id=engine).embeddings(input = [text])['data'][0]['embedding']
-        return openai.Embedding.create(input = [text], model=engine)['data'][0]['embedding']
+        return openai.Embedding.create(input = text, model=engine)['data'][0]['embedding']
 
     def get_embedding_list(self, text_list:List, engine="text-embedding-ada-002") -> List:
         # from https://beta.openai.com/docs/guides/embeddings/what-are-embeddings
@@ -65,7 +66,8 @@ class OpenAIComms:
         d:Dict
         i = 0
         for d in data_list:
-            d_list.append({"text":text_list[i], "embedding":d["embedding"]})
+            a = np.array(d["embedding"])
+            d_list.append({"text":text_list[i], "embedding":a})
             i += 1
         return d_list
 
