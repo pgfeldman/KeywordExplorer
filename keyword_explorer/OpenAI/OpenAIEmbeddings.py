@@ -130,7 +130,7 @@ class OpenAIEmbeddings:
                 break
 
             # Else add it to the text that is being returned
-            print("distance = {} text = [{}]".format(row['distances'], text))
+            # print("row [{}] distance = {} text = [{}]".format(row['row_id'], row['distances'], text))
             returns.append(text)
 
         # Return the context
@@ -170,7 +170,7 @@ class OpenAIEmbeddings:
             source_id = results[0]['id']
 
         print("OpenAIEmbeddings.load_project_data(): pulling text for '{}'".format(text_name))
-        sql = "select * from gpt_summary.table_parsed_text where source = {}".format(source_id)
+        sql = "select id as row_id, parsed_text, embedding from gpt_summary.table_parsed_text where source = {}".format(source_id)
         if limit > 0:
             sql += " limit {}".format(limit)
 
@@ -236,6 +236,15 @@ def ask_question_main():
     # print("Context string:\n{}".format(cs))
     answer = oae.answer_question(question=question, context=cs)
     print("\nAnswer:\n{}".format(answer))
+
+    top_texts = 5
+    print("Supporting top {} text:".format(top_texts))
+    count = 0
+    for index, row in df.sort_values('distances', ascending=True).iterrows():
+        print("\trow [{}] distance = {} text = [{}]".format(row['row_id'], row['distances'], row['parsed_text']))
+        if count > top_texts:
+            break
+        count += 1
 
 if __name__ == "__main__":
     # create_csv_main()
