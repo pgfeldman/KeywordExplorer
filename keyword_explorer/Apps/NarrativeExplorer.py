@@ -15,6 +15,7 @@ Generate Graph - runs through each narrative in an experiment to produce a direc
 
 import re
 import getpass
+import numpy as np
 import tkinter as tk
 from tkinter import ttk
 import tkinter.messagebox as message
@@ -446,11 +447,11 @@ class NarrativeExplorer(AppBase):
         # update table_parsed_text with the reduced/mapped data
         et:EmbeddedText
         for et in self.mr.embedding_list:
-            reduced_s = ",".join(map(str, et.reduced))
-            sql = "update table_parsed_text set mapped = '{}', cluster_id = {} where id = {}".format(
-                reduced_s, et.cluster_id, et.row_id)
+            reduced_s = np.array(et.reduced).dumps()
+            sql = "update table_parsed_text set mapped = %s, cluster_id = %s where id = %s"
+            vals = (reduced_s, int(et.cluster_id), int(et.row_id))
 
-            self.msi.write_data(sql)
+            self.msi.write_sql_values_get_row(sql, vals)
 
         self.count_parsed(self.experiment_id)
 
@@ -556,9 +557,9 @@ class NarrativeExplorer(AppBase):
             engine = d['embedding_model']
             self.embed_state_text_field.insert_text("[{}] - {}\n".format(count, text))
             embd = self.oai.get_embedding(text, engine)
-            embd_s = ",".join(map(str, embd))
+            embd_s = np.array(embd)
             sql = "update table_parsed_text set embedding = %s where id = %s"
-            vals = (embd_s, id)
+            vals = (embd_s.dumps(), id)
             self.msi.write_sql_values_get_row(sql, vals)
 
             print("[{}]: {} [{}]".format(id, text, embd_s))
@@ -585,7 +586,9 @@ class NarrativeExplorer(AppBase):
             et.text = self.safe_dict_read(d, 'parsed_text', 'unset')
             mapped = self.safe_dict_read(d, 'mapped', None)
             cluster_id = self.safe_dict_read(d, 'cluster_id', None)
-            cluster_name = None
+            cluster_name = "None"
+            if cluster_id != None:
+                cluster_name = "clstr_{}".format(cluster_id)
             et.set_optional(mapped, cluster_id, cluster_name)
             print(et.to_string())
 

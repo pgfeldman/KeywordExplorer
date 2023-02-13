@@ -1,6 +1,7 @@
 #import umap
 import re
 import ast
+import pickle
 import numpy as np
 from sklearn.manifold import TSNE
 from sklearn.cluster import DBSCAN
@@ -13,7 +14,7 @@ from typing import List, Dict, Union, Any, Pattern
 
 class EmbeddedText:
     row_id:int
-    raw_str:str
+    raw_str:[str, bytes]
     source:str
     text:Union[None, str]
     cluster_id:int
@@ -25,7 +26,7 @@ class EmbeddedText:
     reg:[None, Pattern]
     source_regex:Pattern
 
-    def __init__(self, row_id:int, raw_str:str, source_regex:str = r"\w+-\w+-\w+-\d+:", reg:str = r"-?\d+\.\d+"):
+    def __init__(self, row_id:int, raw_str:Any, source_regex:str = r"\w+-\w+-\w+-\d+:", reg:str = r"-?\d+\.\d+"):
         self.row_id = row_id
         self.raw_str = raw_str
         self.reg = None
@@ -53,22 +54,17 @@ class EmbeddedText:
         #     print(v)
 
     def parse_2(self):
-        list_str = "["+self.raw_str+"]"
-        self.original = ast.literal_eval(list_str)
+        self.original = pickle.loads(self.raw_str)
 
     def safe_assign(self, val:Any, default:Any) -> Any:
         if val != None:
             return val
         return default
 
-    def set_optional(self, reduced_str:str, cluster_id:int, cluster_name:str):
+    def set_optional(self, reduced_str:bytes, cluster_id:int, cluster_name:str):
         #print("set_optional: reduced = {}".format(reduced_str))
         if reduced_str != None:
-            ls = reduced_str
-            if self.reg != None:
-                l = self.reg.findall(reduced_str)
-                ls = "[{}]".format(", ".join(l))
-            self.reduced = ast.literal_eval(ls)
+            self.reduced = pickle.loads(reduced_str)
 
         if cluster_id != None:
             self.cluster_id = cluster_id

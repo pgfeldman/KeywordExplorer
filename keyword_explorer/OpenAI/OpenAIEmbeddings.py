@@ -46,7 +46,7 @@ class OpenAIEmbeddings:
     def parse_text_file(self, filename:str, min_len:int = 5, r_str:str = r"\n+|[\.!?()“”]+", default_print:int = 0) -> List:
         s_list = []
         reg = re.compile(r_str)
-        with open(filename, mode="r", encoding="utf-8") as f:
+        with open(filename, mode="r", encoding="G-8") as f:
             s = f.read()
             s_list = reg.split(s)
             s_iter = filter(None, s_list)
@@ -116,9 +116,10 @@ class OpenAIEmbeddings:
 
         returns = []
         cur_len = 0
-
+        df2 = df.sort_values('distances', ascending=True)
+        d = df2.to_dict()
         # Sort by distance and add the text to the context until the context is too long
-        for i, row in df.sort_values('distances', ascending=True).iterrows():
+        for i, row in df2.iterrows():
 
             # Add the length of the text to the current length
             text = str(row['parsed_text'])
@@ -216,8 +217,9 @@ def create_csv_main():
 
 def store_embeddings_main():
     oae = OpenAIEmbeddings()
-    s_list = oae.parse_text_file("../../corpora/moby-dick-3.txt", 10, default_print=10) # can be obtained here: https://www.gutenberg.org/files/2701/2701-h/2701-h.htm
-    df = oae.get_embeddings(s_list[:100])
+    s_list = oae.parse_text_file("../../corpora/moby-dick.txt", 10, default_print=10) # can be obtained here: https://www.gutenberg.org/files/2701/2701-h/2701-h.htm
+    # df = oae.get_embeddings(s_list[:100])
+    df = oae.get_embeddings(s_list)
     print(df)
     oae.store_project_data("moby-dick", "melville", df)
 
@@ -230,8 +232,8 @@ def load_data_main():
 
 def ask_question_main():
     oae = OpenAIEmbeddings()
-    df = oae.load_project_data("moby-dick", "melville", limit=1000)
-    question = "what are best ways to hunt whales"
+    df = oae.load_project_data("moby-dick", "melville")
+    question = "What's the best way to hunt whales?"
     cs = oae.create_context(question, df)
     # print("Context string:\n{}".format(cs))
     answer = oae.answer_question(question=question, context=cs)
@@ -247,7 +249,9 @@ def ask_question_main():
         count += 1
 
 if __name__ == "__main__":
+    start_time = time.time()
     # create_csv_main()
     # store_embeddings_main()
     # load_data_main()
     ask_question_main()
+    print("execution took {:.3f} seconds".format(time.time() - start_time))
