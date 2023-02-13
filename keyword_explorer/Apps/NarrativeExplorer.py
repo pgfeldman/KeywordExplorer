@@ -87,7 +87,7 @@ class NarrativeExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "NarrativeExplorer"
-        self.app_version = "2.07.2023"
+        self.app_version = "2.13.2023"
         self.geom = (840, 670)
         self.oai = OpenAIComms()
         self.msi = MySqlInterface(user_name="root", db_name="narrative_maps")
@@ -550,20 +550,30 @@ class NarrativeExplorer(AppBase):
         vals = (self.experiment_id,)
         results = self.msi.read_data(sql, vals)
         d:Dict
-        count = 1
+        # create a list of text
+        s_list = []
         for d in results:
-            id = d['id']
-            text = d['parsed_text']
-            engine = d['embedding_model']
-            self.embed_state_text_field.insert_text("[{}] - {}\n".format(count, text))
-            embd = self.oai.get_embedding(text, engine)
-            embd_s = np.array(embd)
+            s_list.append(['parsed_text'])
+
+        # send that list to get embeddings
+        engine = results[0]['embedding_model']
+        d_list = self.oai.get_embedding_list(s_list, engine)
+
+        # store embeddings
+        for i in range(len(results)):
+            rd = results[i]
+            id = rd['id']
+            d = d_list[i]
+            embedding = d['embedding']
+            text = d['text']
+            embd_s = np.array(embedding)
             sql = "update table_parsed_text set embedding = %s where id = %s"
             vals = (embd_s.dumps(), id)
             self.msi.write_sql_values_get_row(sql, vals)
 
             print("[{}]: {} [{}]".format(id, text, embd_s))
-            count += 1
+            self.embed_state_text_field.insert_text("[{}] {}\n".format(id, text))
+
 
     def get_db_embeddings_callback(self):
         print("get_db_embeddings_callback")
@@ -590,6 +600,7 @@ class NarrativeExplorer(AppBase):
             if cluster_id != None:
                 cluster_name = "clstr_{}".format(cluster_id)
             et.set_optional(mapped, cluster_id, cluster_name)
+            self.embed_state_text_field.insert_text("[{}] {}\n".format(id, et.text))
             print(et.to_string())
 
     def reduce_dimensions_callback(self):
