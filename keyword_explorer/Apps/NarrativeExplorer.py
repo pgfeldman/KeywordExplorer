@@ -87,7 +87,7 @@ class NarrativeExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "NarrativeExplorer"
-        self.app_version = "2.13.2023"
+        self.app_version = "2.14.2023"
         self.geom = (840, 670)
         self.oai = OpenAIComms()
         self.msi = MySqlInterface(user_name="root", db_name="narrative_maps")
@@ -635,7 +635,7 @@ class NarrativeExplorer(AppBase):
             result = self.oai.get_prompt_result_params(prompt, temperature=0.5, max_tokens=60, top_p=1.0, frequency_penalty=0.8, presence_penalty=0)
             l = split_regex.split(result)
             response = "".join(l)
-            ci.label = response
+            ci.label = "[{}] {}".format(ci.id, response)
             print("Cluster {}:\n{}".format(ci.id, response))
         self.dp.dprint("topic_callback complete")
 
