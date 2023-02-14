@@ -6,7 +6,7 @@ from typing import List, Dict, Set, Pattern
 
 class OpenAIComms:
     openai.api_key = os.environ.get("OPENAI_KEY")
-    engines:List = ["davinci", "curie", "babbage", "ada", "text-davinci-003", "text-curie-001", "text-babbage-001", "text-ada-001"]
+    engines:List = ["text-davinci-003", "davinci", "curie", "babbage", "ada", "text-curie-001", "text-babbage-001", "text-ada-001"]
     engine:str = engines[0]
     max_tokens:int = 30 # The maximum number of tokens to generate. Requests can use up to 2048 tokens shared between prompt and completion. (One token is roughly 4 characters for normal English text)
     temperature:float = 0.4 # What sampling temperature to use. Higher values means the model will take more risks. Try 0.9 for more creative applications, and 0 (argmax sampling) for ones with a well-defined answer.
@@ -31,6 +31,20 @@ class OpenAIComms:
         self.num_responses = num_responses
         self.presence_penalty = presence_penalty
         self.frequency_penalty = frequency_penalty
+
+    def get_prompt_result_params(self, prompt:str, engine:str = "text-davinci-003", max_tokens:int = 30, temperature:float = 0.4, top_p:float = 1, logprobs:int = 1,
+                                 num_responses:int = 1, presence_penalty:float = 0.3, frequency_penalty:float = 0.3) -> str:
+        try:
+            response = openai.Completion.create(engine=engine, prompt=prompt, max_tokens=max_tokens,
+                                                temperature=temperature, top_p=top_p, logprobs=logprobs,
+                                                presence_penalty=presence_penalty, frequency_penalty=frequency_penalty,
+                                                n=num_responses)
+            choices = response['choices']
+            s = choices[0]['text']
+            return s.strip()
+        except openai.error.APIConnectionError as e:
+            print("OpenAIComms.get_prompt_result(): {}".format(e.user_message))
+            return "Error reaching OpenAI completion endpoint"
 
 
     def get_prompt_result(self, prompt:str, print_result:bool = False) -> List:

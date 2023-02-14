@@ -246,8 +246,8 @@ class NarrativeExplorer(AppBase):
         ToolTip(b, "Compute clusters on reduced data")
         b = buttons.add_button("Plot", self.plot_callback, -1)
         ToolTip(b, "Plot the clustered points using PyPlot")
-        b = buttons.add_button("Topics", self.implement_me, -1)
-        ToolTip(b, "Use GPT to guess at topic names for clusters\n(not implemented)")
+        b = buttons.add_button("Topics", self.topic_callback, -1)
+        ToolTip(b, "Use GPT to guess at topic names for clusters")
         row = buttons.get_next_row()
 
     def build_generate_params(self, parent:tk.Frame, row:int) -> int:
@@ -618,8 +618,26 @@ class NarrativeExplorer(AppBase):
         min_samples = self.min_samples_param.get_as_int()
         self.mr.dbscan(eps=eps, min_samples=min_samples)
         self.mr.calc_clusters()
-        self.clusters_field.set_text(len(self.mr.embedding_list))
+        self.clusters_field.set_text(str(len(self.mr.embedding_list)))
         self.dp.dprint("Finished clustering")
+
+    def topic_callback(self):
+        ci:ClusterInfo
+        et:EmbeddedText
+        split_regex = re.compile("\d+\)")
+
+        for ci in self.mr.cluster_list:
+            text_list = []
+            for et in ci.member_list:
+                text_list.append(et.text)
+            prompt = "Extract keywords from this text:\n\n{}\n\nTop three keywords\n1)".format(" ".join(text_list))
+            # print("\nCluster ID {} query text:\n{}".format(ci.id, prompt))
+            result = self.oai.get_prompt_result_params(prompt, temperature=0.5, max_tokens=60, top_p=1.0, frequency_penalty=0.8, presence_penalty=0)
+            l = split_regex.split(result)
+            response = "".join(l)
+            ci.label = response
+            print("Cluster {}:\n{}".format(ci.id, response))
+        self.dp.dprint("topic_callback complete")
 
     def plot_callback(self):
         print("Plotting")
