@@ -37,7 +37,7 @@ from keyword_explorer.tkUtils.TopicComboExt import TopicComboExt
 
 from keyword_explorer.OpenAI.OpenAIComms import OpenAIComms
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
-from keyword_explorer.utils.ManifoldReduction import ManifoldReduction, EmbeddedText
+from keyword_explorer.utils.ManifoldReduction import ManifoldReduction, EmbeddedText, ClusterInfo
 from keyword_explorer.tkUtils.LabeledParam import LabeledParam
 
 from typing import List, Dict
@@ -596,12 +596,12 @@ class NarrativeExplorer(AppBase):
             et.text = self.safe_dict_read(d, 'parsed_text', 'unset')
             mapped = self.safe_dict_read(d, 'mapped', None)
             cluster_id = self.safe_dict_read(d, 'cluster_id', None)
-            cluster_name = "None"
-            if cluster_id != None:
-                cluster_name = "clstr_{}".format(cluster_id)
+            cluster_name = self.safe_dict_read(d, 'cluster_name', "clstr_{}".format(cluster_id))
             et.set_optional(mapped, cluster_id, cluster_name)
             self.embed_state_text_field.insert_text("[{}] {}\n".format(id, et.text))
             print(et.to_string())
+        self.mr.calc_clusters()
+
 
     def reduce_dimensions_callback(self):
         pca_dim = self.pca_dim_param.get_as_int()
@@ -617,6 +617,7 @@ class NarrativeExplorer(AppBase):
         eps = self.eps_param.get_as_float()
         min_samples = self.min_samples_param.get_as_int()
         self.mr.dbscan(eps=eps, min_samples=min_samples)
+        self.mr.calc_clusters()
         self.clusters_field.set_text(len(self.mr.embedding_list))
         self.dp.dprint("Finished clustering")
 

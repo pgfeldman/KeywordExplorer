@@ -8,6 +8,7 @@ from sklearn.cluster import DBSCAN
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+from statistics import mean
 
 from keyword_explorer.tkUtils.MoveableNode import MovableNode
 from typing import List, Dict, Union, Any, Pattern
@@ -77,9 +78,44 @@ class EmbeddedText:
         return "Text row = {}, Cluster ID = {}, Cluster Name = {}, Reduced = {}, Text = {}".format(
             self.row_id, self.cluster_id, self.cluster_name, self.reduced, self.text)
 
+class ClusterInfo:
+    id:int
+    member_list:[List, None]
+    coordinate:List
+    reduced_coordinate:List
+    label:str
+
+    def __init__(self, id:int, members:List = None):
+        self.member_list = []
+        self.id = id
+        if members != None:
+            self.member_list = members
+
+    def add_member(self, et:EmbeddedText):
+        self.member_list.append(et)
+        self.label = et.cluster_name
+
+    def calc_cluster_info(self):
+        coordinate_list = []
+        reduced_list = []
+        et:EmbeddedText
+        for et in self.member_list:
+            coordinate_list.append(et.original)
+            reduced_list.append(et.reduced)
+        a = np.array(coordinate_list)
+        self.coordinate = np.mean(a, axis=0).tolist()
+        a = np.array(reduced_list)
+        self.reduced_coordinate = np.mean(a, axis=0).tolist()
+
+    def to_string(self):
+        return "Cluster {}\n\tLabel: {}\n\tReduced Coord: {}".format(self.id, self.label, self.reduced_coordinate)
+
+
+
 class ManifoldReduction:
     target_dim:int
     embedding_list:List
+    cluster_list:List
     min_x: float
     min_y: float
     max_x:float
@@ -93,6 +129,7 @@ class ManifoldReduction:
 
     def clear(self):
         self.embedding_list = []
+        self.cluster_list = []
 
     def load_row(self, text_row:int, row_str:str, source_regex:str = r"\w+-\w+-\w+-\d+:", reg:str = r"-?\d+\.\d+") -> EmbeddedText:
         et = EmbeddedText(int(text_row), row_str, source_regex, reg)
@@ -143,15 +180,38 @@ class ManifoldReduction:
         X = np.array(l)
         clustering = DBSCAN(eps=eps, min_samples=min_samples).fit(X)
         labels = clustering.labels_
+
         for i in range(len(labels)):
             et = self.embedding_list[i]
             et.cluster_id = labels[i]
             et.cluster_name = "cluster_{}".format(et.cluster_id)
         print("Clusters for eps = {}, min_samples = {}: {}".format(eps, min_samples, set(clustering.labels_)))
 
+    def calc_clusters(self):
+        cluster_id_set = set()
+        et:EmbeddedText
+        for et in self.embedding_list:
+            cluster_id_set.add(et.cluster_id)
+
+        for id in cluster_id_set:
+            self.cluster_list.append(ClusterInfo(id))
+
+        ci:ClusterInfo
+        for ci in self.cluster_list:
+            for et in self.embedding_list:
+                if et.cluster_id == ci.id:
+                    ci.add_member(et)
+            ci.calc_cluster_info()
+
+
+
+
+
     def get_cluster_color(self, i:int, cl:List) -> str:
         c_index = i % len(cl)
         return cl[c_index]
+
+
 
     def plot(self, title:str = None):
         et:EmbeddedText
@@ -166,6 +226,7 @@ class ManifoldReduction:
 
             d['x'].append(et.reduced[0])
             d['y'].append(et.reduced[1])
+
         if title != None:
             plt.title(title)
 
@@ -178,8 +239,13 @@ class ManifoldReduction:
             plt.scatter(x, y, s=2, c=c)
             c_index += 1
 
+        for ci in self.cluster_list:
+            print(ci.to_string())
+            plt.annotate(ci.label, ci.reduced_coordinate)
+
     def plot_reduced(self, axs, title:str = None):
         et:EmbeddedText
+        ci:ClusterInfo
         cluster_dict = {}
         for et in self.embedding_list:
             d:Dict
@@ -191,6 +257,7 @@ class ManifoldReduction:
 
             d['x'].append(et.reduced[0])
             d['y'].append(et.reduced[1])
+
         if title != None:
             axs.title.set_text(title)
 
@@ -202,6 +269,9 @@ class ManifoldReduction:
             c = self.get_cluster_color(c_index, l1)
             axs.scatter(x, y, s=2, c=c)
             c_index += 1
+        for ci in self.cluster_list:
+            print(ci.to_string())
+            axs.annotate(ci.label, ci.reduced_coordinate)
 
     def reduced_to_str(self) -> str:
         et:EmbeddedText
