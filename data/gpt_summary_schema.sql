@@ -46,7 +46,7 @@ CREATE TABLE `table_parsed_text` (
   `parsed_text` text DEFAULT NULL,
   `embedding` blob DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=101 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=10487 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -92,4 +92,4 @@ CREATE TABLE `table_source` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-02-10 17:03:18
+-- Dump completed on 2023-02-14 11:02:34

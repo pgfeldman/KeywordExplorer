@@ -115,7 +115,7 @@ CREATE TABLE `table_embedding_params` (
   `min_samples` int(11) DEFAULT NULL,
   `perplexity` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -147,23 +147,7 @@ CREATE TABLE `table_generate_params` (
   `frequency_penalty` float DEFAULT NULL,
   `model` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=latin1;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `table_name`
---
-
-DROP TABLE IF EXISTS `table_name`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `table_name` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `experiment_id` int(11) DEFAULT NULL,
-  `topic_text` text DEFAULT NULL,
-  `exclude` tinyint(1) DEFAULT 0,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -177,11 +161,12 @@ CREATE TABLE `table_parsed_text` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `run_id` int(11) DEFAULT NULL,
   `parsed_text` text DEFAULT NULL,
-  `embedding` text DEFAULT NULL,
-  `mapped` varchar(255) DEFAULT NULL,
+  `embedding` blob DEFAULT NULL,
+  `mapped` blob DEFAULT NULL,
   `cluster_id` int(11) DEFAULT NULL,
+  `cluster_name` varchar(512) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -288,4 +273,4 @@ CREATE TABLE `table_run` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-02-07 15:40:33
+-- Dump completed on 2023-02-14 11:02:41
