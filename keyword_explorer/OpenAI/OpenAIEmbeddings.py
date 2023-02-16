@@ -127,20 +127,20 @@ class OpenAIEmbeddings:
     def build_text_to_summarize(self, results:List, count:int, words_to_summarize = 200) -> Dict:
         num_lines = len(results)-1
         d:Dict
+        text:str
         query = "Summarize the following into a single sentence:\n"
         row_list = []
         word_count = 0
-        while word_count < words_to_summarize:
+        while word_count < words_to_summarize and count < num_lines:
             #print("count = {}".format(count))
             d = results[count]
             text = d['parsed_text']
-            word_count += len(text)
+            word_count += text.count(" ")
             row_list.append(d['text_id'])
             # query = "{} [{}] {}".format(query, d['text_id'], text)
             query = "{} {}.".format(query, text)
             count += 1
-            if word_count > words_to_summarize or count > num_lines:
-                break
+
         query = "{}\n\nSummary:".format(query)
         d = {'query':query, 'count':count, 'row_list':row_list}
         return d
