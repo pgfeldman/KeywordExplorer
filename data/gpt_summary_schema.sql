@@ -34,6 +34,22 @@ SET character_set_client = utf8;
 SET character_set_client = @saved_cs_client;
 
 --
+-- Temporary table structure for view `summary_text_view`
+--
+
+DROP TABLE IF EXISTS `summary_text_view`;
+/*!50001 DROP VIEW IF EXISTS `summary_text_view`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `summary_text_view` (
+  `text_id` tinyint NOT NULL,
+  `summary_id` tinyint NOT NULL,
+  `parsed_text` tinyint NOT NULL,
+  `embedding` tinyint NOT NULL
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
 -- Table structure for table `table_parsed_text`
 --
 
@@ -43,6 +59,7 @@ DROP TABLE IF EXISTS `table_parsed_text`;
 CREATE TABLE `table_parsed_text` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `source` int(11) DEFAULT NULL,
+  `summary_id` int(11) DEFAULT -1,
   `parsed_text` text DEFAULT NULL,
   `embedding` blob DEFAULT NULL,
   PRIMARY KEY (`id`)
@@ -65,6 +82,22 @@ CREATE TABLE `table_source` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `table_summary_text`
+--
+
+DROP TABLE IF EXISTS `table_summary_text`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `table_summary_text` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `summary_id` int(11) DEFAULT -1,
+  `summary_text` text DEFAULT NULL,
+  `embedding` blob DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=32 DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Final view structure for view `source_text_view`
 --
 
@@ -82,6 +115,25 @@ CREATE TABLE `table_source` (
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `summary_text_view`
+--
+
+/*!50001 DROP TABLE IF EXISTS `summary_text_view`*/;
+/*!50001 DROP VIEW IF EXISTS `summary_text_view`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_unicode_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
+/*!50001 VIEW `summary_text_view` AS select `table_summary_text`.`id` AS `text_id`,`table_summary_text`.`summary_id` AS `summary_id`,`table_summary_text`.`summary_text` AS `parsed_text`,`table_summary_text`.`embedding` AS `embedding` from `table_summary_text` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -92,4 +144,4 @@ CREATE TABLE `table_source` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-02-14 11:02:34
+-- Dump completed on 2023-02-16 16:42:29

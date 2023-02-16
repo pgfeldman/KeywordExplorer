@@ -26,22 +26,9 @@ class OpenAIEmbeddings:
         """
         Answer a question based on the most similar context from the dataframe texts
         """
-        try:
-            # Create a completions using the question and context
-            response = openai.Completion.create(
-                prompt=f"Answer the question based on the context below, and if the question can't be answered based on the context, say \"I don't know\"\n\nContext: {context}\n\n---\n\nQuestion: {question}\nAnswer:",
-                temperature=0,
-                max_tokens=max_tokens,
-                top_p=1,
-                frequency_penalty=0,
-                presence_penalty=0,
-                stop=stop_sequence,
-                model=model,
-            )
-            return response["choices"][0]["text"].strip()
-        except Exception as e:
-            print(e)
-            return ""
+        prompt=f"Answer the question based on the context below, and if the question can't be answered based on the context, say \"I don't know\"\n\nContext: {context}\n\n---\n\nQuestion: {question}\nAnswer:"
+        result = self.oac.get_prompt_result_params(prompt, max_tokens=max_tokens, temperature=0, top_p=1, frequency_penalty=0, presence_penalty=0, engine=model)
+        return result
 
     def parse_text_file(self, filename:str, min_len:int = 5, r_str:str = r"\n+|[\.!?()“”]+", default_print:int = 0) -> List:
         s_list = []
@@ -117,7 +104,6 @@ class OpenAIEmbeddings:
         returns = []
         cur_len = 0
         df2 = df.sort_values('distances', ascending=True)
-        d = df2.to_dict()
         # Sort by distance and add the text to the context until the context is too long
         for i, row in df2.iterrows():
 
@@ -132,10 +118,91 @@ class OpenAIEmbeddings:
 
             # Else add it to the text that is being returned
             # print("row [{}] distance = {} text = [{}]".format(row['row_id'], row['distances'], text))
+            # reverse the order of the context
             returns.append(text)
 
-        # Return the context
-        return "\n\n###\n\n".join(returns)
+        # Return the context so the best match is closest to the question
+        return "\n\n###\n\n".join(returns.reverse())
+
+    def build_text_to_summarize(self, results:List, count:int, words_to_summarize = 200) -> Dict:
+        num_lines = len(results)-1
+        d:Dict
+        query = "Summarize the following into a single sentence:\n"
+        row_list = []
+        word_count = 0
+        while word_count < words_to_summarize:
+            #print("count = {}".format(count))
+            d = results[count]
+            text = d['parsed_text']
+            word_count += len(text)
+            row_list.append(d['text_id'])
+            # query = "{} [{}] {}".format(query, d['text_id'], text)
+            query = "{} {}.".format(query, text)
+            count += 1
+            if word_count > words_to_summarize or count > num_lines:
+                break
+        query = "{}\n\nSummary:".format(query)
+        d = {'query':query, 'count':count, 'row_list':row_list}
+        return d
+
+    def summarize_project_data(self, text_name:str, group_name_str, max_lines = -1, words_to_summarize = 200, target_line_count = 10, database="gpt_summary", user="root"):
+        # take some set of lines from the parsed text table and produce summary lines in the summary text table
+        msi = MySqlInterface(user, database)
+        # then take those summaries and recursively summarize until the target line count is reached
+        sql = "select text_id, parsed_text from source_text_view"
+        if max_lines != -1:
+            sql = "{} limit {}".format(sql, max_lines)
+        results = msi.read_data(sql)
+        d:Dict
+        num_lines = len(results)-1
+        count = 0
+        summary_line_list = []
+        while count < num_lines:
+            d = self.build_text_to_summarize(results, count, words_to_summarize)
+            # run the query and store the result. Update the parsed text table with the summary id
+            summary = self.oac.get_prompt_result_params(d['query'], temperature=0, presence_penalty=0.8, frequency_penalty=0, max_tokens=128)
+            sql = "insert into table_summary_text (summary_text) values (%s)"
+            vals = (summary,)
+            row_id = msi.write_sql_values_get_row(sql, vals)
+            print("[{}] {}".format(row_id, summary))
+            summary_line_list.append(row_id)
+
+            for r in d['row_list']:
+                sql = "update table_parsed_text set summary_id = %s where id = %s"
+                vals = (row_id, r)
+                msi.write_sql_values_get_row(sql, vals)
+            count = d['count']
+
+        # now, recursively refine the summaries until we are below the line limit
+        summary_size = len(summary_line_list)
+        while summary_size > target_line_count:
+            print("----------- current summary = {} rows -----------------".format(summary_size))
+            start_id = summary_line_list[0]
+            stop_id = summary_line_list[-1]
+            summary_line_list = []
+            sql = "select text_id, parsed_text from summary_text_view where text_id >= %s and text_id <= %s"
+            vals = (start_id, stop_id)
+            results = msi.read_data(sql, vals)
+            num_lines = len(results)-1
+            count = 0
+            while count < num_lines:
+                d = self.build_text_to_summarize(results, count, words_to_summarize)
+                # run the query and store the result. Update the parsed text table with the summary id
+                summary = self.oac.get_prompt_result_params(d['query'], temperature=0, presence_penalty=0.8, frequency_penalty=0, max_tokens=128)
+                sql = "insert into table_summary_text (summary_text) values (%s)"
+                vals = (summary,)
+                row_id = msi.write_sql_values_get_row(sql, vals)
+                print("[{}] - {} - {}".format(row_id, d['row_list'], summary))
+                summary_line_list.append(row_id)
+
+                for r in d['row_list']:
+                    sql = "update table_summary_text set summary_id = %s where id = %s"
+                    vals = (row_id, r)
+                    msi.write_sql_values_get_row(sql, vals)
+                count = d['count']
+            summary_size = len(summary_line_list)
+
+        msi.close()
 
     def store_project_data(self, text_name:str, group_name_str, df:pd.DataFrame, database="gpt_summary", user="root"):
         msi = MySqlInterface(user, database)
@@ -230,10 +297,14 @@ def load_data_main():
     cs = oae.create_context(question, df)
     print("Context string:\n{}".format(cs))
 
+def summarize_project_main():
+    oae = OpenAIEmbeddings()
+    oae.summarize_project_data("moby-dick", "melville", 100)
+
 def ask_question_main():
     oae = OpenAIEmbeddings()
     df = oae.load_project_data("moby-dick", "melville")
-    question = "What's the best way to hunt whales?"
+    question = "What's the best way to hunt whales using space ships and ray guns?"
     cs = oae.create_context(question, df)
     # print("Context string:\n{}".format(cs))
     answer = oae.answer_question(question=question, context=cs)
@@ -253,5 +324,6 @@ if __name__ == "__main__":
     # create_csv_main()
     # store_embeddings_main()
     # load_data_main()
-    ask_question_main()
+    #ask_question_main()
+    summarize_project_main()
     print("execution took {:.3f} seconds".format(time.time() - start_time))
