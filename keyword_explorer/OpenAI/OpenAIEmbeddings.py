@@ -130,6 +130,7 @@ class OpenAIEmbeddings:
         text:str
         query = "Summarize the following into a single sentence:\n"
         row_list = []
+        origin_list = []
         word_count = 0
         while word_count < words_to_summarize and count < num_lines:
             #print("count = {}".format(count))
@@ -137,32 +138,48 @@ class OpenAIEmbeddings:
             text = d['parsed_text']
             word_count += text.count(" ")
             row_list.append(d['text_id'])
+            if 'origins' in d: # this would be from a summary
+                l = ast.literal_eval(d['origins'])
+                origin_list += l
+            else: # this is working on the original text
+                origin_list.append(d['text_id'])
+
             # query = "{} [{}] {}".format(query, d['text_id'], text)
             query = "{} {}.".format(query, text)
             count += 1
 
         query = "{}\n\nSummary:".format(query)
-        d = {'query':query, 'count':count, 'row_list':row_list}
+        d = {'query':query, 'count':count, 'row_list':row_list, 'origins':origin_list}
         return d
 
-    def summarize_project_data(self, text_name:str, group_name_str, max_lines = -1, words_to_summarize = 200, target_line_count = 10, database="gpt_summary", user="root"):
+    def summarize_project_data(self, text_name:str, group_name:str, max_lines = -1, words_to_summarize = 200, target_line_count = 10, database="gpt_summary", user="root"):
         # take some set of lines from the parsed text table and produce summary lines in the summary text table
+        d:Dict
         msi = MySqlInterface(user, database)
+        sql = "select * from table_source where text_name = %s and group_name = %s"
+        vals = (text_name, group_name)
+        results = msi.read_data(sql, vals)
+        if len(results) == 0:
+            print("Unable to find project '{}':'{}'".format(text_name, group_name))
+        d = results[0]
+        source_id = d['id']
         # then take those summaries and recursively summarize until the target line count is reached
-        sql = "select text_id, parsed_text from source_text_view"
+        sql = "select text_id, parsed_text from source_text_view where source_id = %s"
         if max_lines != -1:
             sql = "{} limit {}".format(sql, max_lines)
-        results = msi.read_data(sql)
-        d:Dict
+        vals = (source_id,)
+        results = msi.read_data(sql, vals)
+
         num_lines = len(results)-1
         count = 0
+        level = 1
         summary_line_list = []
         while count < num_lines:
             d = self.build_text_to_summarize(results, count, words_to_summarize)
             # run the query and store the result. Update the parsed text table with the summary id
             summary = self.oac.get_prompt_result_params(d['query'], temperature=0, presence_penalty=0.8, frequency_penalty=0, max_tokens=128)
-            sql = "insert into table_summary_text (summary_text) values (%s)"
-            vals = (summary,)
+            sql = "insert into table_summary_text (source, level, summary_text, origins) values (%s, %s, %s, %s)"
+            vals = (source_id, level, summary, str(d['origins']))
             row_id = msi.write_sql_values_get_row(sql, vals)
             print("[{}] {}".format(row_id, summary))
             summary_line_list.append(row_id)
@@ -176,7 +193,8 @@ class OpenAIEmbeddings:
         # now, recursively refine the summaries until we are below the line limit
         summary_size = len(summary_line_list)
         while summary_size > target_line_count:
-            print("----------- current summary = {} rows -----------------".format(summary_size))
+            print("----------- current summary = {} rows, level = {} -----------------".format(summary_size, level))
+            level += 0
             start_id = summary_line_list[0]
             stop_id = summary_line_list[-1]
             summary_line_list = []
@@ -189,8 +207,8 @@ class OpenAIEmbeddings:
                 d = self.build_text_to_summarize(results, count, words_to_summarize)
                 # run the query and store the result. Update the parsed text table with the summary id
                 summary = self.oac.get_prompt_result_params(d['query'], temperature=0, presence_penalty=0.8, frequency_penalty=0, max_tokens=128)
-                sql = "insert into table_summary_text (summary_text) values (%s)"
-                vals = (summary,)
+                sql = "insert into table_summary_text (source, level, summary_text, origins) values (%s, %s, %s, %s)"
+                vals = (source_id, level, summary, str(d['origins']))
                 row_id = msi.write_sql_values_get_row(sql, vals)
                 print("[{}] - {} - {}".format(row_id, d['row_list'], summary))
                 summary_line_list.append(row_id)
