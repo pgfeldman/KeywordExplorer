@@ -2,6 +2,7 @@ from datetime import datetime
 import numpy as np
 import openai
 import os
+import time
 from typing import List, Dict, Set, Pattern
 
 class OpenAIComms:
@@ -34,34 +35,65 @@ class OpenAIComms:
 
     def get_prompt_result_params(self, prompt:str, engine:str = "text-davinci-003", max_tokens:int = 30, temperature:float = 0.4, top_p:float = 1, logprobs:int = 1,
                                  num_responses:int = 1, presence_penalty:float = 0.3, frequency_penalty:float = 0.3) -> str:
-        try:
-            response = openai.Completion.create(engine=engine, prompt=prompt, max_tokens=max_tokens,
-                                                temperature=temperature, top_p=top_p, logprobs=logprobs,
-                                                presence_penalty=presence_penalty, frequency_penalty=frequency_penalty,
-                                                n=num_responses)
-            choices = response['choices']
-            s = choices[0]['text']
-            return s.strip()
-        except openai.error.APIConnectionError as e:
-            print("OpenAIComms.get_prompt_result(): {}".format(e.user_message))
-            return "Error reaching OpenAI completion endpoint"
+        goodread = False
+        waitcount = 0
+        waitmax = 0
+        time_to_wait = 5
+        while not goodread:
+            try:
+                response = openai.Completion.create(engine=engine, prompt=prompt, max_tokens=max_tokens,
+                                                    temperature=temperature, top_p=top_p, logprobs=logprobs,
+                                                    presence_penalty=presence_penalty, frequency_penalty=frequency_penalty,
+                                                    n=num_responses)
+                choices = response['choices']
+                s = choices[0]['text']
+                goodread = True
+                return s.strip()
+            except openai.error.APIConnectionError as e:
+                print("OpenAIComms.get_prompt_result(): {}".format(e.user_message))
+                return "Error reaching OpenAI completion endpoint"
+
+            except openai.error.RateLimitError:
+                print("OpenAIComms.get_prompt_result_params() waiting {} seconds".format(time_to_wait))
+                time.sleep(time_to_wait)
+                waitcount += 1
+                if waitcount < waitmax:
+                    return "{} is currently overloaded with other requests".format(engine)
 
 
     def get_prompt_result(self, prompt:str, print_result:bool = False) -> List:
         to_return = []
-        try:
-            response = openai.Completion.create(engine=self.engine, prompt=prompt, max_tokens=self.max_tokens,
-                                                temperature=self.temperature, top_p=self.top_p, logprobs=self.logprobs,
-                                                presence_penalty=self.presence_penalty, frequency_penalty=self.frequency_penalty,
-                                                n=self.num_responses)
-            if print_result:
-                print(response)
-            choices = response['choices']
-            for c in choices:
-                to_return.append(c['text'])
-        except openai.error.APIConnectionError as e:
-            print("OpenAIComms.get_prompt_result(): {}".format(e.user_message))
-            to_return.append("Error reaching OpenAI completion endpoint")
+        goodread = False
+        waitcount = 0
+        waitmax = 10
+        time_to_wait = 5
+        while not goodread:
+            goodread = False
+            try:
+                response = openai.Completion.create(engine=self.engine, prompt=prompt, max_tokens=self.max_tokens,
+                                                    temperature=self.temperature, top_p=self.top_p, logprobs=self.logprobs,
+                                                    presence_penalty=self.presence_penalty, frequency_penalty=self.frequency_penalty,
+                                                    n=self.num_responses)
+                if print_result:
+                    print(response)
+                choices = response['choices']
+                for c in choices:
+                    to_return.append(c['text'])
+                goodread = True
+                waitcount = 0
+
+            except openai.error.APIConnectionError as e:
+                print("OpenAIComms.get_prompt_result(): {}".format(e.user_message))
+                to_return.append("Error reaching OpenAI completion endpoint")
+                goodread = True
+
+            except openai.error.RateLimitError:
+                print("OpenAIComms.get_prompt_result_params() waiting {} seconds".format(time_to_wait))
+                time.sleep(time_to_wait)
+                waitcount += 1
+                if waitcount < waitmax:
+                    to_return.append( "{} is currently overloaded with other requests".format(self.engine))
+                    goodread = True
 
         return to_return
 
