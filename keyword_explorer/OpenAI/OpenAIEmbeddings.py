@@ -191,7 +191,7 @@ class OpenAIEmbeddings:
         d = results[0]
         project_id = d['id']
         # then take those summaries and recursively summarize until the target line count is reached
-        sql = "select text_id, parsed_text from source_text_view where source_id = %s and summary_id IS NULL"
+        sql = "select text_id, parsed_text, from source_text_view where source_id = %s and summary_id IS NULL"
         if max_lines != -1:
             sql = "{} limit {}".format(sql, max_lines)
         vals = (project_id,)
@@ -238,7 +238,7 @@ class OpenAIEmbeddings:
         # get all the items that are left to summarice in this level
         target_level = source_level +1
         # get all the lines in the source that have not been summarized yet
-        sql = "select text_id, parsed_text from summary_text_view where proj_id = %s and level = %s and summary_id = -1"
+        sql = "select text_id, parsed_text, origins from summary_text_view where proj_id = %s and level = %s and summary_id = -1"
         vals = (project_id, source_level)
         results = msi.read_data(sql, vals)
         num_lines = len(results)
@@ -390,11 +390,36 @@ def ask_question_main():
             break
         count += 1
 
+def fix_summary_origins():
+    d:Dict
+    d2:Dict
+    msi = MySqlInterface("root", "gpt_summary", enable_writes = True)
+    sql = "select distinct summary_id from table_summary_text"
+    results = msi.read_data(sql)
+
+    for d in results:
+        summary_id = d['summary_id']
+        sql = "select id, origins from table_summary_text where summary_id = %s and summary_id > 0"
+        vals = (summary_id,)
+        full_list = []
+        results2 = msi.read_data(sql, vals)
+        for d2 in results2:
+            l = ast.literal_eval(d2['origins'])
+            full_list += l
+            # print("\t[{}]: {}".format(d2['id'],l))
+        print("[{}]: {}".format(summary_id, full_list))
+        sql = "update table_summary_text set origins = %s where id = %s"
+        vals = (str(full_list), summary_id)
+        msi.write_sql_values_get_row(sql, vals)
+
+    msi.close()
+
 if __name__ == "__main__":
     start_time = time.time()
     # create_csv_main()
     # store_embeddings_main()
     # load_data_main()
     #ask_question_main()
-    summarize_project_main()
+    # summarize_project_main()
+    fix_summary_origins()
     print("execution took {:.3f} seconds".format(time.time() - start_time))
