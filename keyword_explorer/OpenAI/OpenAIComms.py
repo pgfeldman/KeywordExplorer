@@ -106,16 +106,30 @@ class OpenAIComms:
 
     def get_embedding_list(self, text_list:List, engine="text-embedding-ada-002") -> List:
         # from https://beta.openai.com/docs/guides/embeddings/what-are-embeddings
-        results =  openai.Embedding.create(input = text_list, model=engine)
-        d_list = []
-        data_list = results['data']
-        d:Dict
-        i = 0
-        for d in data_list:
-            a = np.array(d["embedding"])
-            d_list.append({"text":text_list[i], "embedding":a})
-            i += 1
-        return d_list
+        good_read = False
+        waitcount = 0
+        while not good_read:
+            try:
+                results =  openai.Embedding.create(input = text_list, model=engine)
+                d_list = []
+                data_list = results['data']
+                d:Dict
+                i = 0
+                for d in data_list:
+                    a = np.array(d["embedding"])
+                    d_list.append({"text":text_list[i], "embedding":a})
+                    i += 1
+                return d_list
+
+            except openai.error.APIError as e:
+                waitcount += 1
+                time_to_wait = 5 * waitcount
+                print("OpenAIComms.get_embedding_list error, returning early. Message = {}".format(e.user_message))
+                if waitcount > 5:
+                    print("OpenAIComms.get_embedding_list error, returning early.")
+                    return [{"text":"unset", "embedding":np.array([0, 0, 0])}]
+                print("OpenAIComms.get_embedding_list waiting {} seconds".format(time_to_wait))
+                time.sleep(time_to_wait)
 
     def set_engine(self, id:int = -1, name:str = None):
         if id != -1:

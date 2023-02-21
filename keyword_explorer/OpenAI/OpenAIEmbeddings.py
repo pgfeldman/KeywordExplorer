@@ -51,41 +51,67 @@ class OpenAIEmbeddings:
         d_list = []
         d:Dict
         num_text = len(text_list)
-        # TODO: Note that this will cut off the last few lines. I think it needs to be:
         # for i in range(0, num_text+submit_size-1, submit_size):
         #    s_list = text_list[i:min(num_text, i+submit_size])
         for i in range(0, num_text, submit_size):
             s_list = text_list[i:i+submit_size]
             percent_done = float(i/num_text) * 100
-            good_read = False
-            waitcount = 0
-            while not good_read:
-                try:
-                    result = self.oac.get_embedding_list(s_list, 'text-embedding-ada-002')
-                    for d in result:
-                        text = d['text']
-                        embedding = np.array(d['embedding'])
-                        d = {"text":text, "embedding":embedding}
-                        d_list.append(d)
-                    print("{:2f}%: {}".format(percent_done, s_list[0]))
-                    if max > 0 and i > max:
-                        break
-                    waitcount = 0
-                    good_read = True
-                except openai.error.APIError as e:
-                    waitcount += 1
-                    time_to_wait = 5 * waitcount
-                    print("OpenAIEmbeddings.get_embeddings error, returning early. Message = {}".format(e.user_message))
-                    if waitcount > 5:
-                        print("OpenAIEmbeddings.get_embeddings error, returning early.")
-                        df = pd.DataFrame(d_list)
-                        return df
-                    print("OpenAIEmbeddings.get_embeddings waiting {} seconds".format(time_to_wait))
-                    time.sleep(time_to_wait)
 
-        #return normally
+            result = self.oac.get_embedding_list(s_list, 'text-embedding-ada-002')
+            for d in result:
+                text = d['text']
+                embedding = np.array(d['embedding'])
+                d = {"text":text, "embedding":embedding}
+                d_list.append(d)
+            print("{:2f}%: {}".format(percent_done, s_list[0]))
+            if max > 0 and i > max:
+                break
+
         df = pd.DataFrame(d_list)
         return df
+
+    def set_summary_embeddings(self, text_name:str, group_name:str, limit:int = -1, database="gpt_summary", user="root") -> int:
+        d:Dict
+        msi = MySqlInterface(user, database)
+
+        # Make sure there is a project to use
+        sql = "select * from table_source where text_name = %s and group_name = %s"
+        vals = (text_name, group_name)
+        results = msi.read_data(sql, vals)
+        if len(results) == 0:
+            print("Unable to find project '{}':'{}'".format(text_name, group_name))
+            return -1
+        d = results[0]
+        project_id = d['id']
+        # take some set of lines from the parsed text table and produce summary lines in the summary text table
+
+        sql = 'select id, source, summary_text from table_summary_text where source = %s and embedding is NULL'
+        if limit != -1:
+            sql = '{} LIMIT {}'.format(sql, limit)
+        vals = (project_id, )
+
+        results = msi.read_data(sql, vals)
+        text_list = []
+        id_list = []
+        for d in results:
+            text_list.append(d['summary_text'])
+            id_list.append(d['id'])
+
+        print("OpenAIEmbeddings.set_summary_embeddings() setting up DataFrame")
+        df = self.get_embeddings(text_list)
+        df['id'] = id_list
+        emb:np.array
+        print("OpenAIEmbeddings.set_summary_embeddings() writing to DB")
+        for index, row in df.iterrows():
+            id = row['id']
+            emb = row['embedding']
+            # print("[{}], {}".format(id, emb))
+            sql = "update table_summary_text set embedding = %s where id = %s"
+            vals = (emb.dumps(), id)
+            msi.write_sql_values_get_row(sql, vals)
+
+        msi.close()
+        print("OpenAIEmbeddings.set_summary_embeddings() Processed {} embeddings".format(len(df.index)))
 
     def create_context(self, question:str, df:pd.DataFrame, max_len=300, size="ada"):
         """
@@ -194,7 +220,7 @@ class OpenAIEmbeddings:
         msi.close()
         return summary_count
 
-    def summarize_summary_text(self, text_name:str, group_name:str, source_level:int, max_lines = -1, words_to_summarize = 200, target_line_count = 10, database="gpt_summary", user="root") -> int:
+    def summarize_summary_text(self, text_name:str, group_name:str, source_level:int, max_lines = -1, words_to_summarize = 200, database="gpt_summary", user="root") -> int:
         # take some set of lines from the parsed text table and produce summary lines in the summary text table
         d:Dict
         msi = MySqlInterface(user, database)
@@ -267,10 +293,10 @@ class OpenAIEmbeddings:
 
         msi.close()
 
-    def load_project_data(self, text_name:str, group_name_str, database="gpt_summary", user="root", limit = -1) -> pd.DataFrame:
+    def load_project_data(self, text_name:str, group_name:str, database="gpt_summary", user="root", limit = -1) -> pd.DataFrame:
         msi = MySqlInterface(user, database, enable_writes = False)
         sql = "select * from table_source where text_name = %s and group_name = %s"
-        vals = (text_name, group_name_str)
+        vals = (text_name, group_name)
         results = msi.read_data(sql, vals)
         if len(results) == 0:
             print("No db entry for '{}' '{}': creating entry")
@@ -338,9 +364,13 @@ def load_data_main():
     cs = oae.create_context(question, df)
     print("Context string:\n{}".format(cs))
 
-def summarize_project_main():
+def summarize_project_main(min_rows = 10):
     oae = OpenAIEmbeddings()
-    oae.summarize_raw_text("moby-dick", "melville")
+    # num_rows = oae.summarize_raw_text("moby-dick", "melville")
+    # while num_rows > min_rows:
+    #   num_rows = oae.summarize_summary_text("moby-dick", "melville", source_level=4)
+    #   print("summarize_project_main() num_rows = {}".format(num_rows))
+    oae.set_summary_embeddings("moby-dick", "melville")
 
 def ask_question_main():
     oae = OpenAIEmbeddings()
