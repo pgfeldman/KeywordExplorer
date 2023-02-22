@@ -15,11 +15,13 @@ from typing import List, Dict, Pattern
 
 class OpenAIEmbeddings:
     oac:OpenAIComms
+    msi:MySqlInterface
 
 
-    def __init__(self):
+    def __init__(self, user="root", db="gpt_summary"):
         print("OpenAIEmbeddings")
         self.oac = OpenAIComms()
+        self.msi = MySqlInterface(user, db)
 
     def answer_question(self, question:str, context:str, model="text-davinci-003", max_len=1800,
             size="ada", debug=False, max_tokens=150, stop_sequence=None) -> str:
@@ -72,12 +74,11 @@ class OpenAIEmbeddings:
 
     def set_summary_embeddings(self, text_name:str, group_name:str, limit:int = -1, database="gpt_summary", user="root") -> int:
         d:Dict
-        msi = MySqlInterface(user, database)
 
         # Make sure there is a project to use
         sql = "select * from table_source where text_name = %s and group_name = %s"
         vals = (text_name, group_name)
-        results = msi.read_data(sql, vals)
+        results = self.msi.read_data(sql, vals)
         if len(results) == 0:
             print("Unable to find project '{}':'{}'".format(text_name, group_name))
             return -1
@@ -90,7 +91,7 @@ class OpenAIEmbeddings:
             sql = '{} LIMIT {}'.format(sql, limit)
         vals = (project_id, )
 
-        results = msi.read_data(sql, vals)
+        results = self.msi.read_data(sql, vals)
         text_list = []
         id_list = []
         for d in results:
@@ -108,9 +109,8 @@ class OpenAIEmbeddings:
             # print("[{}], {}".format(id, emb))
             sql = "update table_summary_text set embedding = %s where id = %s"
             vals = (emb.dumps(), id)
-            msi.write_sql_values_get_row(sql, vals)
+            self.msi.write_sql_values_get_row(sql, vals)
 
-        msi.close()
         print("OpenAIEmbeddings.set_summary_embeddings() Processed {} embeddings".format(len(df.index)))
 
     def create_context(self, question:str, df:pd.DataFrame, max_len=300, size="ada"):
@@ -148,7 +148,8 @@ class OpenAIEmbeddings:
             returns.append(text)
 
         # Return the context so the best match is closest to the question
-        return "\n\n###\n\n".join(returns.reverse())
+        #return "\n\n###\n\n".join(reversed(returns))
+        return "\n\n###\n\n".join(returns)
 
     def build_text_to_summarize(self, results:List, count:int, words_to_summarize = 200) -> Dict:
         num_lines = len(results)
@@ -181,21 +182,20 @@ class OpenAIEmbeddings:
     def summarize_raw_text(self, text_name:str, group_name:str, max_lines = -1, words_to_summarize = 200, target_line_count = 10, database="gpt_summary", user="root") -> int:
         # take some set of lines from the parsed text table and produce summary lines in the summary text table
         d:Dict
-        msi = MySqlInterface(user, database)
         sql = "select * from table_source where text_name = %s and group_name = %s"
         vals = (text_name, group_name)
-        results = msi.read_data(sql, vals)
+        results = self.msi.read_data(sql, vals)
         if len(results) == 0:
             print("Unable to find project '{}':'{}'".format(text_name, group_name))
             return -1
         d = results[0]
         project_id = d['id']
         # then take those summaries and recursively summarize until the target line count is reached
-        sql = "select text_id, parsed_text, from source_text_view where source_id = %s and summary_id IS NULL"
+        sql = "select text_id, parsed_text from source_text_view where source_id = %s and summary_id IS NULL"
         if max_lines != -1:
             sql = "{} limit {}".format(sql, max_lines)
         vals = (project_id,)
-        results = msi.read_data(sql, vals)
+        results = self.msi.read_data(sql, vals)
 
         num_lines = len(results)
         count = 0
@@ -207,28 +207,26 @@ class OpenAIEmbeddings:
             summary = self.oac.get_prompt_result_params(d['query'], temperature=0, presence_penalty=0.8, frequency_penalty=0, max_tokens=128)
             sql = "insert into table_summary_text (source, level, summary_text, origins) values (%s, %s, %s, %s)"
             vals = (project_id, level, summary, str(d['origins']))
-            row_id = msi.write_sql_values_get_row(sql, vals)
+            row_id = self.msi.write_sql_values_get_row(sql, vals)
             summary_count += 1
             print("[{}] {}".format(row_id, summary))
 
             for r in d['row_list']:
                 sql = "update table_parsed_text set summary_id = %s where id = %s"
                 vals = (row_id, r)
-                msi.write_sql_values_get_row(sql, vals)
+                self.msi.write_sql_values_get_row(sql, vals)
             count = d['count']
 
-        msi.close()
         return summary_count
 
     def summarize_summary_text(self, text_name:str, group_name:str, source_level:int, max_lines = -1, words_to_summarize = 200, database="gpt_summary", user="root") -> int:
         # take some set of lines from the parsed text table and produce summary lines in the summary text table
         d:Dict
-        msi = MySqlInterface(user, database)
 
         # Make sure there is a project to use
         sql = "select * from table_source where text_name = %s and group_name = %s"
         vals = (text_name, group_name)
-        results = msi.read_data(sql, vals)
+        results = self.msi.read_data(sql, vals)
         if len(results) == 0:
             print("Unable to find project '{}':'{}'".format(text_name, group_name))
             return -1
@@ -240,7 +238,7 @@ class OpenAIEmbeddings:
         # get all the lines in the source that have not been summarized yet
         sql = "select text_id, parsed_text, origins from summary_text_view where proj_id = %s and level = %s and summary_id = -1"
         vals = (project_id, source_level)
-        results = msi.read_data(sql, vals)
+        results = self.msi.read_data(sql, vals)
         num_lines = len(results)
         print("----------- lines to summarize = {} rows, source_level = {} -----------------".format(num_lines, source_level))
 
@@ -252,34 +250,32 @@ class OpenAIEmbeddings:
             summary = self.oac.get_prompt_result_params(d['query'], temperature=0, presence_penalty=0.8, frequency_penalty=0, max_tokens=128)
             sql = "insert into table_summary_text (source, level, summary_text, origins) values (%s, %s, %s, %s)"
             vals = (project_id, target_level, summary, str(d['origins']))
-            row_id = msi.write_sql_values_get_row(sql, vals)
+            row_id = self.msi.write_sql_values_get_row(sql, vals)
             print("[{}] - {} - {}".format(row_id, d['row_list'], summary))
 
             for r in d['row_list']:
                 sql = "update table_summary_text set summary_id = %s where id = %s"
                 vals = (row_id, r)
-                msi.write_sql_values_get_row(sql, vals)
+                self.msi.write_sql_values_get_row(sql, vals)
             count = d['count']
 
         # Figure out how many lines are in the new summary
         sql = "select count(*) from summary_text_view where proj_id = %s and level = %s"
         vals = (project_id, target_level)
-        results = msi.read_data(sql, vals)
+        results = self.msi.read_data(sql, vals)
         num_lines = results[0]['count(*)']
 
-        msi.close()
         return num_lines
 
 
     def store_project_data(self, text_name:str, group_name_str, df:pd.DataFrame, database="gpt_summary", user="root"):
-        msi = MySqlInterface(user, database)
         sql = "select * from table_source where text_name = %s and group_name = %s"
         vals = (text_name, group_name_str)
-        results = msi.read_data(sql, vals)
+        results = self.msi.read_data(sql, vals)
         if len(results) == 0:
             print("No db entry for '{}' '{}': creating entry")
             sql = "insert into table_source (text_name, group_name) values (%s, %s)"
-            source_id = msi.write_sql_values_get_row(sql, vals)
+            source_id = self.msi.write_sql_values_get_row(sql, vals)
         else:
             source_id = results[0]['id']
 
@@ -289,29 +285,26 @@ class OpenAIEmbeddings:
             embedding = row['embedding']
             sql = "insert into gpt_summary.table_parsed_text (source, parsed_text, embedding) values (%s, %s, %s)"
             vals = (source_id, text, embedding.dumps())
-            msi.write_sql_values_get_row(sql, vals)
+            self.msi.write_sql_values_get_row(sql, vals)
 
-        msi.close()
+        self.msi.close()
 
-    def load_project_data(self, text_name:str, group_name:str, database="gpt_summary", user="root", limit = -1) -> pd.DataFrame:
-        msi = MySqlInterface(user, database, enable_writes = False)
+    def load_project_parsed_text(self, text_name:str, group_name:str, database="gpt_summary", user="root", limit = -1) -> pd.DataFrame:
         sql = "select * from table_source where text_name = %s and group_name = %s"
         vals = (text_name, group_name)
-        results = msi.read_data(sql, vals)
+        results = self.msi.read_data(sql, vals)
         if len(results) == 0:
-            print("No db entry for '{}' '{}': creating entry")
+            print("No db entry for '{}' '{}'")
             return pd.DataFrame() # Return an empty DataFrame
         else:
             source_id = results[0]['id']
 
-        print("OpenAIEmbeddings.load_project_data(): pulling text for '{}'".format(text_name))
+        print("OpenAIEmbeddings.load_project_parsed_text(): pulling text for '{}'".format(text_name))
         sql = "select id as row_id, parsed_text, embedding from gpt_summary.table_parsed_text where source = {}".format(source_id)
         if limit > 0:
             sql += " limit {}".format(limit)
 
-        results = msi.read_data(sql)
-
-        msi.close()
+        results = self.msi.read_data(sql)
 
         print("\tProcessing {} lines".format(len(results)))
         d:Dict
@@ -324,30 +317,51 @@ class OpenAIEmbeddings:
         print("\tDone")
         return df
 
+    def load_project_summary_text(self, text_name:str, group_name:str, level = 1, limit = -1) -> pd.DataFrame:
+        sql = "select * from table_source where text_name = %s and group_name = %s"
+        vals = (text_name, group_name)
+        results = self.msi.read_data(sql, vals)
+        if len(results) == 0:
+            print("No db entry for '{}' '{}': creating entry")
+            return pd.DataFrame() # Return an empty DataFrame
+        else:
+            source_id = results[0]['id']
 
-    def write_csv(self, filename:str, df:pd.DataFrame):
-        df.to_csv(filename)
+        print("OpenAIEmbeddings.load_project_summary_text(): pulling text for '{}'".format(text_name))
+        sql = "select id as row_id, summary_text as parsed_text, embedding, origins from gpt_summary.table_summary_text where source = %s and level = %s"
+        vals = (source_id, level)
+        if limit > 0:
+            sql += " limit {}".format(limit)
 
-    def read_csv(self, filename:str) -> pd.DataFrame:
-        print("OpenAIEmbeddings.read_csv(): reading {}".format(filename))
-        df = pd.read_csv(filename, index_col=0)
-        print("\tconverting")
-        d = df.to_dict()
-        de = d['embedding']
-        for key, val in de.items():
-            l = ast.literal_eval(val)
-            de[key] = l
-        df = pd.DataFrame(d)
-        print("\tready")
+        results = self.msi.read_data(sql, vals)
+
+        print("\tProcessing {} lines".format(len(results)))
+        d:Dict
+        for d in results:
+            emb = d['embedding']
+            orig = d['origins']
+            d['embedding'] = pickle.loads(emb)
+            d['origins'] = ast.literal_eval(orig)
+            # print(d)
+
+        df = pd.DataFrame(results)
+        print("\tDone")
         return df
 
-def create_csv_main():
-    oae = OpenAIEmbeddings()
-    s_list = oae.parse_text_file("../../corpora/moby-dick-3.txt", 10, default_print=100) # can be obtained here: https://www.gutenberg.org/files/2701/2701-h/2701-h.htm
-    df = oae.get_embeddings(s_list)
-    print(df)
-    df.to_csv("../../data/moby-dick-embeddings_3.csv")
-    print("done writing file")
+    def get_source_text(self, row_id_list:List) -> List:
+        s = ", ".join(map(str,row_id_list))
+        sql = "select id, parsed_text from gpt_summary.table_parsed_text where id in ({})".format(s)
+        results = self.msi.read_data(sql)
+        d:Dict
+        to_return = []
+        for d in results:
+            to_return.append("line {}: {}".format(d['id'], d['parsed_text']))
+
+        return to_return
+
+    def close_db(self):
+        self.msi.close()
+
 
 def store_embeddings_main():
     oae = OpenAIEmbeddings()
@@ -359,7 +373,7 @@ def store_embeddings_main():
 
 def load_data_main():
     oae = OpenAIEmbeddings()
-    df = oae.load_project_data("moby-dick", "melville", limit=1000)
+    df = oae.load_project_parsed_text("moby-dick", "melville", limit=1000)
     question = "what are best ways to hunt whales"
     cs = oae.create_context(question, df)
     print("Context string:\n{}".format(cs))
@@ -374,10 +388,12 @@ def summarize_project_main(min_rows = 10):
 
 def ask_question_main():
     oae = OpenAIEmbeddings()
-    df = oae.load_project_data("moby-dick", "melville")
-    question = "What's the best way to hunt whales using space ships and ray guns?"
+    df = oae.load_project_summary_text("moby-dick", "melville")
+    question = "Why is Ahab obsessed with Mobey-Dick?"
+    print("creating context")
     cs = oae.create_context(question, df)
     # print("Context string:\n{}".format(cs))
+    print("submitting question")
     answer = oae.answer_question(question=question, context=cs)
     print("\nAnswer:\n{}".format(answer))
 
@@ -385,7 +401,10 @@ def ask_question_main():
     print("Supporting top {} text:".format(top_texts))
     count = 0
     for index, row in df.sort_values('distances', ascending=True).iterrows():
-        print("\trow [{}] distance = {} text = [{}]".format(row['row_id'], row['distances'], row['parsed_text']))
+        print("\tDist = {:.3f} Summary: {}".format(row['distances'], row['parsed_text']))
+        source_list = oae.get_source_text(row['origins'])
+        for s in source_list:
+            print("\t\t{}".format(s))
         if count > top_texts:
             break
         count += 1
@@ -416,10 +435,9 @@ def fix_summary_origins():
 
 if __name__ == "__main__":
     start_time = time.time()
-    # create_csv_main()
     # store_embeddings_main()
     # load_data_main()
-    #ask_question_main()
+    ask_question_main()
     # summarize_project_main()
-    fix_summary_origins()
+    # fix_summary_origins()
     print("execution took {:.3f} seconds".format(time.time() - start_time))
