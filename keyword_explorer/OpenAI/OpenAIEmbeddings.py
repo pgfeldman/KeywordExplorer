@@ -389,7 +389,7 @@ def summarize_project_main(min_rows = 10):
 def ask_question_main():
     oae = OpenAIEmbeddings()
     df = oae.load_project_summary_text("moby-dick", "melville")
-    question = "Why is Ahab obsessed with Mobey-Dick?"
+    question = "Why is Ahab obsessed with Moby-Dick?"
     print("creating context")
     cs = oae.create_context(question, df)
     # print("Context string:\n{}".format(cs))

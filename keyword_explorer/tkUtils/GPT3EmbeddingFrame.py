@@ -5,6 +5,7 @@ from tkinter import ttk
 import tkinter.messagebox as message
 from datetime import datetime
 from tkinter import filedialog
+from matplotlib import pyplot as plt
 
 from keyword_explorer.tkUtils.ConsoleDprint import ConsoleDprint
 from keyword_explorer.tkUtils.Buttons import Buttons
@@ -12,9 +13,10 @@ from keyword_explorer.tkUtils.ToolTip import ToolTip
 from keyword_explorer.tkUtils.TextField import TextField
 from keyword_explorer.tkUtils.DataField import DataField
 from keyword_explorer.tkUtils.TopicComboExt import TopicComboExt
-
 from keyword_explorer.OpenAI.OpenAIComms import OpenAIComms
 from keyword_explorer.tkUtils.LabeledParam import LabeledParam
+from keyword_explorer.utils.ManifoldReduction import ManifoldReduction, EmbeddedText, ClusterInfo
+from keyword_explorer.utils.SharedObjects import SharedObjects
 
 from typing import List, Dict, Callable
 
@@ -23,12 +25,15 @@ class GPT3EmbeddingSettings:
     eps:float
     min_samples:int
     perplexity:float
+    model:str
 
-    def __init__(self, pca_dim = 5, eps = 64.0, min_samples = 4, perplexity = 2):
+    def __init__(self, pca_dim = 5, eps = 64.0, min_samples = 4, perplexity = 2,
+                 model = 'text-embedding-ada-002'):
         self.pca_dim = pca_dim
         self.eps = eps
         self.min_samples = min_samples
         self.perplexity = perplexity
+        self.model = model
 
     def from_dict(self, d:Dict):
         if 'PCA_dimensions' in d:
@@ -39,10 +44,14 @@ class GPT3EmbeddingSettings:
             self.min_samples = d['min_samples']
         if 'perplexity' in d:
             self.perplexity = d['perplexity']
+        if 'embedding_model' in d:
+            self.model = d['embedding_model']
 
 
 class GPT3EmbeddingFrame:
     oai: OpenAIComms
+    mr: ManifoldReduction
+    so:SharedObjects
     dp:ConsoleDprint
     generate_model_combo: TopicComboExt
     prompt_text_field:TextField
@@ -57,9 +66,11 @@ class GPT3EmbeddingFrame:
     saved_prompt_text:str
     saved_response_text:str
 
-    def __init__(self, oai:OpenAIComms, dp:ConsoleDprint):
+    def __init__(self, oai:OpenAIComms, mr:ManifoldReduction, dp:ConsoleDprint, so:SharedObjects):
         self.oai = oai
         self.dp = dp
+        self.mr = mr
+        self.so = so
 
     def build_frame(self, frm: ttk.Frame, text_width:int, label_width:int):
         engine_list = self.oai.list_models(keep_list = ["embedding"])
@@ -73,20 +84,20 @@ class GPT3EmbeddingFrame:
         self.embed_state_text_field = TextField(frm, row, "Embed state:", text_width, height=10, label_width=label_width)
         ToolTip(self.embed_state_text_field.tk_text, "Embedding progess")
         row = self.embed_state_text_field.get_next_row()
-        buttons = Buttons(frm, row, "Commands", label_width=10)
-        b = buttons.add_button("GPT embed", self.get_oai_embeddings_callback, -1)
-        ToolTip(b, "Get source embeddings from the GPT")
-        b = buttons.add_button("Retreive", self.get_db_embeddings_callback, -1)
-        ToolTip(b, "Get the high-dimensional embeddings from the DB")
-        b = buttons.add_button("Reduce", self.reduce_dimensions_callback, -1)
+        self.buttons = Buttons(frm, row, "Commands", label_width=10)
+        b = self.buttons.add_button("Reduce", self.reduce_dimensions_callback, -1)
         ToolTip(b, "Reduce to 2 dimensions with PCS and TSNE")
-        b = buttons.add_button("Cluster", self.cluster_callback, -1)
+        b = self.buttons.add_button("Cluster", self.cluster_callback, -1)
         ToolTip(b, "Compute clusters on reduced data")
-        b = buttons.add_button("Plot", self.plot_callback, -1)
+        b = self.buttons.add_button("Plot", self.plot_callback, -1)
         ToolTip(b, "Plot the clustered points using PyPlot")
-        b = buttons.add_button("Topics", self.topic_callback, -1)
+        b = self.buttons.add_button("Topics", self.topic_callback, -1)
         ToolTip(b, "Use GPT to guess at topic names for clusters")
-        row = buttons.get_next_row()
+        row = self.buttons.get_next_row()
+
+    def add_button(self, label:str, callback:Callable, tooltip:str):
+        b = self.buttons.add_button(label, callback)
+        ToolTip(b, tooltip)
 
     def build_embed_params(self, parent:tk.Frame, row:int) -> int:
         f = tk.Frame(parent)
@@ -104,3 +115,73 @@ class GPT3EmbeddingFrame:
         self.perplexity_param.set_text('80')
         ToolTip(self.perplexity_param.tk_entry, "T-SNE: The size of the neighborhood around each point that \nthe embedding attempts to preserve")
         return row + 1
+
+    def set_params(self, settings:GPT3EmbeddingSettings):
+        self.embed_model_combo.clear()
+        self.embed_model_combo.set_text(settings.model)
+        self.pca_dim_param.set_text(str(settings.pca_dim))
+        self.eps_param.set_text(str(settings.eps))
+        self.min_samples_param.set_text(str(settings.min_samples))
+        self.perplexity_param.set_text(str(settings.perplexity))
+
+    def get_settings(self) -> GPT3EmbeddingSettings:
+        gs = GPT3EmbeddingSettings()
+        gs.model = self.embed_model_combo.get_text()
+        gs.eps = self.eps_param.get_as_float()
+        gs.pca_dim = self.pca_dim_param.get_as_int()
+        gs.min_samples = self.min_samples_param.get_as_int()
+        gs.perplexity = self.perplexity_param.get_as_int()
+        return gs
+
+    def reduce_dimensions_callback(self):
+        rf:DataField
+        rf = self.so.get_object("reduced_field")
+        pca_dim = self.pca_dim_param.get_as_int()
+        perplexity = self.perplexity_param.get_as_int()
+        self.embed_state_text_field.add_text("Reducing: PCA dim = {}  perplexity = {}".format(pca_dim, perplexity))
+        self.mr.calc_embeding(perplexity=perplexity, pca_components=pca_dim)
+        rf.set_text(len(self.mr.embedding_list))
+        print("\tFinished dimension reduction")
+        message.showinfo("reduce_dimensions_callback", "Reduced to {} dimensions".format(pca_dim))
+
+    def cluster_callback(self):
+        print("Clustering")
+        cf:DataField
+        cf = self.so.get_object("clusters_field")
+        eps = self.eps_param.get_as_float()
+        min_samples = self.min_samples_param.get_as_int()
+        self.mr.dbscan(eps=eps, min_samples=min_samples)
+        self.mr.calc_clusters()
+        cf.set_text(str(len(self.mr.embedding_list)))
+        self.embed_state_text_field.add_text("Finished clustering")
+
+    def topic_callback(self):
+        ci:ClusterInfo
+        et:EmbeddedText
+        split_regex = re.compile("\d+\)")
+
+        for ci in self.mr.cluster_list:
+            text_list = []
+            for et in ci.member_list:
+                text_list.append(et.text)
+            prompt = "Extract keywords from this text:\n\n{}\n\nTop three keywords\n1)".format(" ".join(text_list))
+            # print("\nCluster ID {} query text:\n{}".format(ci.id, prompt))
+            result = self.oai.get_prompt_result_params(prompt, temperature=0.5, max_tokens=60, top_p=1.0, frequency_penalty=0.8, presence_penalty=0)
+            l = split_regex.split(result)
+            response = "".join(l)
+            ci.label = "[{}] {}".format(ci.id, response)
+            print("Cluster {}:\n{}".format(ci.id, response))
+        self.embed_state_text_field.add_text("topic_callback complete")
+
+    def plot_callback(self):
+        print("Plotting")
+        ef:DataField
+        ef = self.so.get_object("experiment_field")
+        title = ef.get_text()
+        perplexity = self.perplexity_param.get_as_int()
+        eps = self.eps_param.get_as_int()
+        min_samples = self.min_samples_param.get_as_int()
+        pca_dim = self.pca_dim_param.get_as_int()
+        self.mr.plot("{}\ndim: {}, eps: {}, min_sample: {}, perplex = {}".format(
+            title, pca_dim, eps, min_samples, perplexity))
+        plt.show()

@@ -35,11 +35,11 @@ from keyword_explorer.tkUtils.ListField import ListField
 from keyword_explorer.tkUtils.TextField import TextField
 from keyword_explorer.tkUtils.DataField import DataField
 from keyword_explorer.tkUtils.TopicComboExt import TopicComboExt
-
+from keyword_explorer.tkUtils.LabeledParam import LabeledParam
 from keyword_explorer.OpenAI.OpenAIComms import OpenAIComms
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
 from keyword_explorer.utils.ManifoldReduction import ManifoldReduction, EmbeddedText, ClusterInfo
-from keyword_explorer.tkUtils.LabeledParam import LabeledParam
+from keyword_explorer.utils.SharedObjects import SharedObjects
 
 from typing import List, Dict
 
@@ -47,6 +47,7 @@ class NarrativeExplorer2(AppBase):
     oai: OpenAIComms
     msi: MySqlInterface
     mr: ManifoldReduction
+    so:SharedObjects
     generator_frame: GPT3GeneratorFrame
     embedding_frame: GPT3EmbeddingFrame
     embed_model_combo: TopicComboExt
@@ -73,17 +74,21 @@ class NarrativeExplorer2(AppBase):
         experiment_str = "{}_{}_{}".format(self.app_name, getpass.getuser(), dt.strftime("%H:%M:%S"))
         self.experiment_field.set_text(experiment_str)
         self.load_experiment_list()
+
+        self.so.add_object("experiment_field", self.experiment_field, DataField)
+        self.so.add_object("clusters_field", self.clusters_field, DataField)
+        self.so.add_object("reduced_field", self.reduced_field, DataField)
+        self.so.print_contents()
         # self.test_data_callback()
 
     def setup_app(self):
         self.app_name = "NarrativeExplorer2"
-        self.app_version = "2.17.2023"
+        self.app_version = "2.22.2023"
         self.geom = (840, 670)
         self.oai = OpenAIComms()
         self.msi = MySqlInterface(user_name="root", db_name="narrative_maps")
         self.mr = ManifoldReduction()
-        self.generator_frame = GPT3GeneratorFrame(self.oai, self.dp)
-        self.embedding_frame = GPT3EmbeddingFrame(self.oai, self.dp)
+        self.so = SharedObjects()
 
         if not self.oai.key_exists():
             message.showwarning("Key Error", "Could not find Environment key 'OPENAI_KEY'")
@@ -94,9 +99,10 @@ class NarrativeExplorer2(AppBase):
         self.run_id = -1
         self.parsed_full_text_list = []
 
-
     def build_app_view(self, row: int, text_width: int, label_width: int) -> int:
         print("build_app_view")
+        self.generator_frame = GPT3GeneratorFrame(self.oai, self.dp, self.so)
+        self.embedding_frame = GPT3EmbeddingFrame(self.oai, self.mr, self.dp, self.so)
         lf = tk.LabelFrame(self, text="GPT")
         lf.grid(row=row, column=0, columnspan = 2, sticky="nsew", padx=5, pady=2)
         self.build_gpt(lf, text_width, label_width)
@@ -177,31 +183,9 @@ class NarrativeExplorer2(AppBase):
         self.generator_frame.add_button("Automate", self.automate_callback, "Automatically runs probes, parses, and stores the results\n the number of times in the 'Run Count' field")
 
     def build_embed_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
-        engine_list = self.oai.list_models(keep_list = ["embedding"])
-        row = 0
-        self.embed_model_combo = TopicComboExt(tab, row, "Engine:", self.dp, entry_width=25, combo_width=25)
-        self.embed_model_combo.set_combo_list(engine_list)
-        self.embed_model_combo.set_text(engine_list[0])
-        self.embed_model_combo.tk_combo.current(0)
-        row = self.embed_model_combo.get_next_row()
-        row = self.build_embed_params(tab, row)
-        self.embed_state_text_field = TextField(tab, row, "Embed state:", text_width, height=10, label_width=label_width)
-        ToolTip(self.embed_state_text_field.tk_text, "Embedding progess")
-        row = self.embed_state_text_field.get_next_row()
-        buttons = Buttons(tab, row, "Commands", label_width=10)
-        b = buttons.add_button("GPT embed", self.get_oai_embeddings_callback, -1)
-        ToolTip(b, "Get source embeddings from the GPT")
-        b = buttons.add_button("Retreive", self.get_db_embeddings_callback, -1)
-        ToolTip(b, "Get the high-dimensional embeddings from the DB")
-        b = buttons.add_button("Reduce", self.reduce_dimensions_callback, -1)
-        ToolTip(b, "Reduce to 2 dimensions with PCS and TSNE")
-        b = buttons.add_button("Cluster", self.cluster_callback, -1)
-        ToolTip(b, "Compute clusters on reduced data")
-        b = buttons.add_button("Plot", self.plot_callback, -1)
-        ToolTip(b, "Plot the clustered points using PyPlot")
-        b = buttons.add_button("Topics", self.topic_callback, -1)
-        ToolTip(b, "Use GPT to guess at topic names for clusters")
-        row = buttons.get_next_row()
+        self.embedding_frame.build_frame(tab, text_width, label_width)
+        self.embedding_frame.add_button("GPT embed", self.get_oai_embeddings_callback, "Get source embeddings from the GPT")
+        self.embedding_frame.add_button("Retreive", self.get_db_embeddings_callback, "Get the high-dimensional embeddings from the DB")
 
     def build_embed_params(self, parent:tk.Frame, row:int) -> int:
         f = tk.Frame(parent)
@@ -303,16 +287,15 @@ class NarrativeExplorer2(AppBase):
                 vals = (run_id, self.experiment_id)
                 results = self.msi.read_data(sql, vals)
                 d = results[0]
-                # safe_dict_read(self, d:Dict, key:str, default:Any) -> Any:
+
                 ggs = GPT3GeneratorSettings()
                 ggs.from_dict(d)
                 self.generator_frame.set_params(ggs)
-                self.embed_model_combo.clear()
-                self.embed_model_combo.set_text(self.safe_dict_read(d, 'embedding_model', self.embed_model_combo.get_text()))
-                self.pca_dim_param.set_text(self.safe_dict_read(d, 'PCA_dim', self.pca_dim_param.get_text()))
-                self.eps_param.set_text(self.safe_dict_read(d, 'EPS', self.eps_param.get_text()))
-                self.min_samples_param.set_text(self.safe_dict_read(d, 'min_samples', self.min_samples_param.get_text()))
-                self.perplexity_param.set_text(self.safe_dict_read(d, 'perplexity', self.perplexity_param.get_text()))
+
+                ges = GPT3EmbeddingSettings()
+                ges.from_dict(d)
+                self.embedding_frame.set_params(ges)
+
 
     def update_experiment_callback(self):
         print("update_experiment_callback()")
@@ -332,12 +315,11 @@ class NarrativeExplorer2(AppBase):
             self.msi.write_sql_values_get_row(sql, vals)
 
         # update table_parsed_text with the reduced/mapped data
-        et:EmbeddedText
+        et: EmbeddedText
         for et in self.mr.embedding_list:
             reduced_s = np.array(et.reduced).dumps()
             sql = "update table_parsed_text set mapped = %s, cluster_id = %s where id = %s"
             vals = (reduced_s, int(et.cluster_id), int(et.row_id))
-
             self.msi.write_sql_values_get_row(sql, vals)
 
         self.count_parsed(self.experiment_id)
@@ -462,74 +444,26 @@ class NarrativeExplorer2(AppBase):
             cluster_id = self.safe_dict_read(d, 'cluster_id', None)
             cluster_name = self.safe_dict_read(d, 'cluster_name', "clstr_{}".format(cluster_id))
             et.set_optional(mapped, cluster_id, cluster_name)
-            self.embed_state_text_field.insert_text("[{}] {}\n".format(id, et.text))
             print(et.to_string())
         self.mr.calc_clusters()
 
-
-    def reduce_dimensions_callback(self):
-        pca_dim = self.pca_dim_param.get_as_int()
-        perplexity = self.perplexity_param.get_as_int()
-        self.dp.dprint("Reducing: PCA dim = {}  perplexity = {}".format(pca_dim, perplexity))
-        self.mr.calc_embeding(perplexity=perplexity, pca_components=pca_dim)
-        self.reduced_field.set_text(len(self.mr.embedding_list))
-        print("\tFinished dimension reduction")
-        message.showinfo("reduce_dimensions_callback", "Reduced to {} dimensions".format(pca_dim))
-
-    def cluster_callback(self):
-        print("Clustering")
-        eps = self.eps_param.get_as_float()
-        min_samples = self.min_samples_param.get_as_int()
-        self.mr.dbscan(eps=eps, min_samples=min_samples)
-        self.mr.calc_clusters()
-        self.clusters_field.set_text(str(len(self.mr.embedding_list)))
-        self.dp.dprint("Finished clustering")
-
-    def topic_callback(self):
-        ci:ClusterInfo
-        et:EmbeddedText
-        split_regex = re.compile("\d+\)")
-
-        for ci in self.mr.cluster_list:
-            text_list = []
-            for et in ci.member_list:
-                text_list.append(et.text)
-            prompt = "Extract keywords from this text:\n\n{}\n\nTop three keywords\n1)".format(" ".join(text_list))
-            # print("\nCluster ID {} query text:\n{}".format(ci.id, prompt))
-            result = self.oai.get_prompt_result_params(prompt, temperature=0.5, max_tokens=60, top_p=1.0, frequency_penalty=0.8, presence_penalty=0)
-            l = split_regex.split(result)
-            response = "".join(l)
-            ci.label = "[{}] {}".format(ci.id, response)
-            print("Cluster {}:\n{}".format(ci.id, response))
-        self.dp.dprint("topic_callback complete")
-
-    def plot_callback(self):
-        print("Plotting")
-        title = self.experiment_field.get_text()
-        perplexity = self.perplexity_param.get_as_int()
-        eps = self.eps_param.get_as_int()
-        min_samples = self.min_samples_param.get_as_int()
-        pca_dim = self.pca_dim_param.get_as_int()
-        self.mr.plot("{}\ndim: {}, eps: {}, min_sample: {}, perplex = {}".format(
-            title, pca_dim, eps, min_samples, perplexity))
-        plt.show()
-
     def get_current_params(self) -> Dict:
-        settings = self.generator_frame.get_settings()
+        generator_settings = self.generator_frame.get_settings()
+        embed_settings = self.embedding_frame.get_settings()
         d = {
-            "probe_str": settings.prompt,
+            "probe_str": generator_settings.prompt,
             "name": self.experiment_field.get_text(),
-            "automated_runs": settings.auto_runs,
-            "generate_model": settings.model,
-            "tokens": settings.tokens,
-            "temp": settings.temperature,
-            "presence_penalty": settings.presence_penalty,
-            "frequency_penalty": settings.frequency_penalty,
-            "embedding_model": self.embed_model_combo.get_text(),
-            "PCA_dimensions": self.pca_dim_param.get_as_int(),
-            "EPS": self.eps_param.get_as_float(),
-            "min_samples": self.min_samples_param.get_as_int(),
-            "perplexity": self.perplexity_param.get_as_int()
+            "automated_runs": generator_settings.auto_runs,
+            "generate_model": generator_settings.model,
+            "tokens": generator_settings.tokens,
+            "temp": generator_settings.temperature,
+            "presence_penalty": generator_settings.presence_penalty,
+            "frequency_penalty": generator_settings.frequency_penalty,
+            "embedding_model": embed_settings.model,
+            "PCA_dimensions": embed_settings.pca_dim,
+            "EPS": embed_settings.eps,
+            "min_samples": embed_settings.min_samples,
+            "perplexity": embed_settings.perplexity
         }
         return d
 
@@ -542,20 +476,13 @@ class NarrativeExplorer2(AppBase):
         gs.from_dict(param_dict)
         self.generator_frame.set_params(gs)
 
+        gs = GPT3EmbeddingSettings(defaults)
+        gs.from_dict(param_dict)
+        self.embedding_frame.set_params(defaults)
 
         self.experiment_field.clear()
-        self.embed_model_combo.clear()
-        self.pca_dim_param.clear()
-        self.eps_param.clear()
-        self.min_samples_param.clear()
-        self.perplexity_param.clear()
 
         self.experiment_field.set_text(param_dict['name'])
-        self.embed_model_combo.set_text(param_dict['embedding_model'])
-        self.pca_dim_param.set_text(param_dict['PCA_dimensions'])
-        self.eps_param.set_text(param_dict['EPS'])
-        self.min_samples_param.set_text(param_dict['min_samples'])
-        self.perplexity_param.set_text(param_dict['perplexity'])
 
     def save_params_callback(self):
         params = self.get_current_params()

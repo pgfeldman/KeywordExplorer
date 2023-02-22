@@ -12,9 +12,10 @@ from keyword_explorer.tkUtils.ToolTip import ToolTip
 from keyword_explorer.tkUtils.TextField import TextField
 from keyword_explorer.tkUtils.DataField import DataField
 from keyword_explorer.tkUtils.TopicComboExt import TopicComboExt
-
-from keyword_explorer.OpenAI.OpenAIComms import OpenAIComms
 from keyword_explorer.tkUtils.LabeledParam import LabeledParam
+from keyword_explorer.OpenAI.OpenAIComms import OpenAIComms
+from keyword_explorer.utils.SharedObjects import SharedObjects
+
 
 from typing import List, Dict, Callable
 
@@ -59,6 +60,7 @@ class GPT3GeneratorSettings:
 class GPT3GeneratorFrame:
     oai: OpenAIComms
     dp:ConsoleDprint
+    so:SharedObjects
     generate_model_combo: TopicComboExt
     prompt_text_field:TextField
     response_text_field:TextField
@@ -72,9 +74,10 @@ class GPT3GeneratorFrame:
     saved_prompt_text:str
     saved_response_text:str
 
-    def __init__(self, oai:OpenAIComms, dp:ConsoleDprint):
+    def __init__(self, oai:OpenAIComms, dp:ConsoleDprint, so:SharedObjects):
         self.oai = oai
         self.dp = dp
+        self.so = so
 
     def build_frame(self, frm: ttk.Frame, text_width:int, label_width:int):
         engine_list = self.oai.list_models(keep_list = ["davinci"], exclude_list = ["embed", "similarity", "code", "edit", "search", "audio", "instruct", "2020", "if", "insert"])
