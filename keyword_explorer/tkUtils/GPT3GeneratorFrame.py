@@ -39,13 +39,22 @@ class GPT3GeneratorSettings:
         self.auto_runs = auto_runs
 
     def from_dict(self, d:Dict):
-        self.prompt = d['probe_str']
-        self.model = d['generate_model']
-        self.tokens = d['tokens']
-        self.temperature = d['temp']
-        self.presence_penalty = d['presence_penalty']
-        self.frequency_penalty = d['frequency_penalty']
-        self.auto_runs = d['automated_runs']
+        if 'probe_str' in d:
+            self.prompt = d['probe_str']
+        if 'prompt' in d:
+            self.prompt = d['prompt']
+        if 'generate_model' in d:
+            self.model = d['generate_model']
+        if 'tokens' in d:
+            self.tokens = d['tokens']
+        if 'temp' in d:
+            self.temperature = d['temp']
+        if 'presence_penalty' in d:
+            self.presence_penalty = d['presence_penalty']
+        if 'frequency_penalty' in d:
+            self.frequency_penalty = d['frequency_penalty']
+        if 'automated_runs' in d:
+            self.auto_runs = d['automated_runs']
 
 class GPT3GeneratorFrame:
     oai: OpenAIComms

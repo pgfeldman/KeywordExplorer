@@ -30,6 +30,7 @@ from keyword_explorer.Apps.AppBase import AppBase
 from keyword_explorer.tkUtils.Buttons import Buttons
 from keyword_explorer.tkUtils.ToolTip import ToolTip
 from keyword_explorer.tkUtils.GPT3GeneratorFrame import GPT3GeneratorSettings, GPT3GeneratorFrame
+from keyword_explorer.tkUtils.GPT3EmbeddingFrame import GPT3EmbeddingSettings, GPT3EmbeddingFrame
 from keyword_explorer.tkUtils.ListField import ListField
 from keyword_explorer.tkUtils.TextField import TextField
 from keyword_explorer.tkUtils.DataField import DataField
@@ -46,7 +47,8 @@ class NarrativeExplorer2(AppBase):
     oai: OpenAIComms
     msi: MySqlInterface
     mr: ManifoldReduction
-    gpt_frame: GPT3GeneratorFrame
+    generator_frame: GPT3GeneratorFrame
+    embedding_frame: GPT3EmbeddingFrame
     embed_model_combo: TopicComboExt
     experiment_combo: TopicComboExt
     new_experiment_button:Buttons
@@ -80,7 +82,8 @@ class NarrativeExplorer2(AppBase):
         self.oai = OpenAIComms()
         self.msi = MySqlInterface(user_name="root", db_name="narrative_maps")
         self.mr = ManifoldReduction()
-        self.gpt_frame = GPT3GeneratorFrame(self.oai, self.dp)
+        self.generator_frame = GPT3GeneratorFrame(self.oai, self.dp)
+        self.embedding_frame = GPT3EmbeddingFrame(self.oai, self.dp)
 
         if not self.oai.key_exists():
             message.showwarning("Key Error", "Could not find Environment key 'OPENAI_KEY'")
@@ -114,7 +117,7 @@ class NarrativeExplorer2(AppBase):
         menu_file.add_command(label='Load params', command=self.load_params_callback)
         menu_file.add_command(label='Save params', command=self.save_params_callback)
         menu_file.add_command(label='Load IDs', command=self.load_ids_callback)
-        menu_file.add_command(label='Test data', command=self.gpt_frame.test_data_callback)
+        menu_file.add_command(label='Test data', command=self.generator_frame.test_data_callback)
         menu_file.add_command(label='Exit', command=self.terminate)
 
     def load_experiment_list(self):
@@ -169,9 +172,9 @@ class NarrativeExplorer2(AppBase):
         row = self.clusters_field.get_next_row()
 
     def build_generator_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
-        self.gpt_frame.build_frame(tab, text_width, label_width)
-        self.gpt_frame.add_button("Save", self.save_text_list_callback, "Manually saves the result to the database")
-        self.gpt_frame.add_button("Automate", self.automate_callback, "Automatically runs probes, parses, and stores the results\n the number of times in the 'Run Count' field")
+        self.generator_frame.build_frame(tab, text_width, label_width)
+        self.generator_frame.add_button("Save", self.save_text_list_callback, "Manually saves the result to the database")
+        self.generator_frame.add_button("Automate", self.automate_callback, "Automatically runs probes, parses, and stores the results\n the number of times in the 'Run Count' field")
 
     def build_embed_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
         engine_list = self.oai.list_models(keep_list = ["embedding"])
@@ -290,7 +293,7 @@ class NarrativeExplorer2(AppBase):
             vals = (self.experiment_id,)
             results = self.msi.read_data(sql, vals)
             print(results)
-            self.prompt_text_field.set_text("No prompt available in database")
+            self.generator_frame.set_prompt("No prompt available in database")
             self.runs_field.set_text('0')
             self.count_parsed(self.experiment_id)
             if results[0]['max'] != None:
@@ -301,12 +304,9 @@ class NarrativeExplorer2(AppBase):
                 results = self.msi.read_data(sql, vals)
                 d = results[0]
                 # safe_dict_read(self, d:Dict, key:str, default:Any) -> Any:
-                self.prompt_text_field.set_text(self.safe_dict_read(d, 'prompt', self.prompt_text_field.get_text()))
-                self.generate_model_combo.clear()
-                self.generate_model_combo.set_text(self.safe_dict_read(d, 'generate_model', self.generate_model_combo.get_text()))
-                self.tokens_param.set_text(self.safe_dict_read(d, 'tokens', self.tokens_param.get_text()))
-                self.presence_param.set_text(self.safe_dict_read(d, 'presence_penalty', self.presence_param.get_text()))
-                self.frequency_param.set_text(self.safe_dict_read(d, 'frequency_penalty', self.frequency_param.get_text()))
+                ggs = GPT3GeneratorSettings()
+                ggs.from_dict(d)
+                self.generator_frame.set_params(ggs)
                 self.embed_model_combo.clear()
                 self.embed_model_combo.set_text(self.safe_dict_read(d, 'embedding_model', self.embed_model_combo.get_text()))
                 self.pca_dim_param.set_text(self.safe_dict_read(d, 'PCA_dim', self.pca_dim_param.get_text()))
@@ -515,7 +515,7 @@ class NarrativeExplorer2(AppBase):
         plt.show()
 
     def get_current_params(self) -> Dict:
-        settings = self.gpt_frame.get_settings()
+        settings = self.generator_frame.get_settings()
         d = {
             "probe_str": settings.prompt,
             "name": self.experiment_field.get_text(),
@@ -540,7 +540,7 @@ class NarrativeExplorer2(AppBase):
         # print(param_dict)
         gs = GPT3GeneratorSettings()
         gs.from_dict(param_dict)
-        self.gpt_frame.set_params(gs)
+        self.generator_frame.set_params(gs)
 
 
         self.experiment_field.clear()
