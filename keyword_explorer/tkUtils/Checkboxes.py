@@ -9,14 +9,14 @@ class DIR(Enum):
 
 class Checkbox():
     bvar:tk.BooleanVar
+    ivar:tk.IntVar
     cb:ttk.Checkbutton
     name:str
 
     def __init__(self, wrapper:tk.Frame, name:str, command:Callable):
-        self.bvar = tk.BooleanVar()
-        self.bvar.set(False)
+        self.bvar = tk.BooleanVar(value=False)
         self.name = name
-        self.cb = ttk.Checkbutton(wrapper, text=name, command=command, variable=self.bvar)
+        self.cb = ttk.Checkbutton(wrapper, text=name, command=command, variable=self.bvar, offvalue=False, onvalue=True)
 
     def get_val(self) -> bool:
         return self.bvar.get()

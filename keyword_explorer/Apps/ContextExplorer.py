@@ -14,7 +14,7 @@ import pandas as pd
 from keyword_explorer.Apps.AppBase import AppBase
 from keyword_explorer.tkUtils.Buttons import Buttons
 from keyword_explorer.tkUtils.ToolTip import ToolTip
-from keyword_explorer.tkUtils.GPT3GeneratorFrame import GPT3GeneratorSettings, GPT3GeneratorFrame
+from keyword_explorer.tkUtils.Checkboxes import Checkboxes
 from keyword_explorer.tkUtilsExt.GPTContextFrame import GPTContextFrame, GPTContextSettings
 from keyword_explorer.tkUtils.ListField import ListField
 from keyword_explorer.tkUtils.TextField import TextField
@@ -38,6 +38,7 @@ class ContextExplorer(AppBase):
     gpt_frame: GPTContextFrame
     experiment_combo:TopicComboExt
     level_combo:TopicComboExt
+    rows_field = DataField
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -53,7 +54,7 @@ class ContextExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "ContextExplorer"
-        self.app_version = "2.22.2023"
+        self.app_version = "2.23.2023"
         self.geom = (840, 670)
         self.oai = OpenAIComms()
         self.so = SharedObjects()
@@ -71,10 +72,14 @@ class ContextExplorer(AppBase):
 
     def build_app_view(self, row: int, text_width: int, label_width: int) -> int:
         print("build_app_view")
-        self.generator_frame = GPT3GeneratorFrame(self.oai, self.dp, self.so)
+        self.generator_frame = GPTContextFrame(self.oai, self.dp, self.so)
         lf = tk.LabelFrame(self, text="GPT")
         lf.grid(row=row, column=0, columnspan = 2, sticky="nsew", padx=5, pady=2)
         self.build_gpt(lf, text_width, label_width)
+
+        lf = tk.LabelFrame(self, text="Params")
+        lf.grid(row=row, column=2, sticky="nsew", padx=5, pady=2)
+        self.build_params(lf, int(text_width/3), int(label_width/2))
         return row + 1
 
     def load_experiment_list(self):
@@ -85,7 +90,7 @@ class ContextExplorer(AppBase):
         self.experiment_combo.set_combo_list(experiments)
 
     def get_levels_list(self):
-        level_list = ['all', 'raw only']
+        level_list = ['all', 'raw only', 'all summaries']
         if self.experiment_id != -1:
             sql = "select distinct level from table_summary_text where source = %s"
             vals = self.experiment_id
@@ -104,6 +109,7 @@ class ContextExplorer(AppBase):
         self.experiment_combo.set_callback(self.load_experiment_callback)
         row = self.experiment_combo.get_next_row()
         self.level_combo = TopicComboExt(lf, row, "Summary Levels:", self.dp, entry_width=20, combo_width=20)
+        self.level_combo.set_callback(self.count_levels_callback)
         row = self.level_combo.get_next_row()
         buttons = Buttons(lf, row, "Experiments")
         b = buttons.add_button("Load", self.implement_me)
@@ -126,6 +132,12 @@ class ContextExplorer(AppBase):
 
         row += 1
         return row
+
+    def build_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
+        row = 0
+        self.rows_field = DataField(lf, row, 'Rows:', text_width, label_width=label_width)
+        row = self.rows_field.get_next_row()
+        self
 
     def build_generator_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
         self.generator_frame.build_frame(tab, text_width, label_width)
@@ -152,10 +164,51 @@ class ContextExplorer(AppBase):
         if len(results) > 0:
             self.experiment_id = results[0]['id']
             self.experiment_field.set_text(" experiment {}: {}".format(self.experiment_id, s))
-            self.get_levels_list()
-        else:
-            self.get_levels_list()
+
+        self.get_levels_list()
+        self.count_levels_callback()
         print("experiment_callback: experiment_id = {}".format(self.experiment_id))
+
+    def count_levels_callback(self, event = None):
+        if self.experiment_id == -1:
+            tk.messagebox.showwarning("Warning!", "Please create or select a database first")
+            return
+
+        level = self.level_combo.tk_combo.get()
+        self.level_combo.clear()
+        self.level_combo.set_text(level)
+        print("\nlevel = '{}'".format(level))
+
+        raw_count = 0
+        summary_count = 0
+        if level == 'raw only' or level == 'all':
+            print("'raw only' or 'all'")
+            sql = "select count(*) from gpt_summary.table_parsed_text where source = %s"
+            vals = (self.experiment_id,)
+            results = self.msi.read_data(sql, vals)
+            raw_count = int(results[0]['count(*)'])
+            self.rows_field.set_text("{:,}".format(raw_count))
+        if level == 'all summaries' or level == 'all':
+            print("'all summaries' or 'all'")
+            sql = "select count(*) from gpt_summary.table_summary_text where source = %s"
+            vals = (self.experiment_id,)
+            results = self.msi.read_data(sql, vals)
+            summary_count = int(results[0]['count(*)'])
+            self.rows_field.set_text("{:,}".format(summary_count))
+        if level == 'all':
+            print("'all'")
+            self.rows_field.set_text("{:,}".format(raw_count + summary_count))
+
+        try:
+            level = int(level)
+            print("level {}".format(level))
+            sql = "select count(*) from gpt_summary.table_summary_text where level = %s and source = %s"
+            vals = (level, self.experiment_id,)
+            results = self.msi.read_data(sql, vals)
+            count = int(results[0]['count(*)'])
+            self.rows_field.set_text("{:,}".format(count))
+        except ValueError:
+            pass
 
 def main():
     app = ContextExplorer()
