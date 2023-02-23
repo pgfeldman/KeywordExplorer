@@ -15,16 +15,17 @@ from keyword_explorer.Apps.AppBase import AppBase
 from keyword_explorer.tkUtils.Buttons import Buttons
 from keyword_explorer.tkUtils.ToolTip import ToolTip
 from keyword_explorer.tkUtils.GPT3GeneratorFrame import GPT3GeneratorSettings, GPT3GeneratorFrame
+from keyword_explorer.tkUtilsExt.GPTContextFrame import GPTContextFrame, GPTContextSettings
 from keyword_explorer.tkUtils.ListField import ListField
 from keyword_explorer.tkUtils.TextField import TextField
 from keyword_explorer.tkUtils.DataField import DataField
 from keyword_explorer.tkUtils.TopicComboExt import TopicComboExt
-
+from keyword_explorer.tkUtils.LabeledParam import LabeledParam
 from keyword_explorer.OpenAI.OpenAIComms import OpenAIComms
 from keyword_explorer.OpenAI.OpenAIEmbeddings import OpenAIEmbeddings
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
 from keyword_explorer.utils.ManifoldReduction import ManifoldReduction, EmbeddedText, ClusterInfo
-from keyword_explorer.tkUtils.LabeledParam import LabeledParam
+from keyword_explorer.utils.SharedObjects import SharedObjects
 
 from typing import List, Dict
 
@@ -33,18 +34,21 @@ class ContextExplorer(AppBase):
     oae: OpenAIEmbeddings
     msi: MySqlInterface
     mr: ManifoldReduction
-    gpt_frame: GPT3GeneratorFrame
+    so:SharedObjects
+    gpt_frame: GPTContextFrame
+    experiment_combo:TopicComboExt
+    level_combo:TopicComboExt
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        print("NarrativeExplorer")
+        print("ContextExplorer")
         self.text_width = 60
         self.label_width = 15
 
         dt = datetime.now()
         experiment_str = "{}_{}_{}".format(self.app_name, getpass.getuser(), dt.strftime("%H:%M:%S"))
-        #self.experiment_field.set_text(experiment_str)
-        #self.load_experiment_list()
+        self.experiment_field.set_text(experiment_str)
+        self.load_experiment_list()
         # self.test_data_callback()
 
     def setup_app(self):
@@ -52,8 +56,9 @@ class ContextExplorer(AppBase):
         self.app_version = "2.22.2023"
         self.geom = (840, 670)
         self.oai = OpenAIComms()
+        self.so = SharedObjects()
         self.msi = MySqlInterface(user_name="root", db_name="gpt_summary")
-        self.gpt_frame = GPT3GeneratorFrame(self.oai, self.dp)
+        self.gpt_frame = GPTContextFrame(self.oai, self.dp, self.so)
 
         if not self.oai.key_exists():
             message.showwarning("Key Error", "Could not find Environment key 'OPENAI_KEY'")
@@ -63,6 +68,94 @@ class ContextExplorer(AppBase):
         self.experiment_id = -1
         self.run_id = -1
         self.parsed_full_text_list = []
+
+    def build_app_view(self, row: int, text_width: int, label_width: int) -> int:
+        print("build_app_view")
+        self.generator_frame = GPT3GeneratorFrame(self.oai, self.dp, self.so)
+        lf = tk.LabelFrame(self, text="GPT")
+        lf.grid(row=row, column=0, columnspan = 2, sticky="nsew", padx=5, pady=2)
+        self.build_gpt(lf, text_width, label_width)
+        return row + 1
+
+    def load_experiment_list(self):
+        experiments = []
+        results = self.msi.read_data("select * from table_source")
+        for r in results:
+            experiments.append("{}:{}".format(r['text_name'], r['group_name']))
+        self.experiment_combo.set_combo_list(experiments)
+
+    def get_levels_list(self):
+        level_list = ['all', 'raw only']
+        if self.experiment_id != -1:
+            sql = "select distinct level from table_summary_text where source = %s"
+            vals = self.experiment_id
+            results = self.msi.read_data(sql, vals)
+            d:Dict
+            for d in results:
+                level_list.append(d['level'])
+        self.level_combo.set_combo_list(level_list)
+        self.level_combo.tk_combo.current(0)
+        self.level_combo.clear()
+        self.level_combo.set_text(self.level_combo.get_list()[0])
+
+    def build_gpt(self, lf:tk.LabelFrame, text_width:int, label_width:int):
+        row = 0
+        self.experiment_combo = TopicComboExt(lf, row, "Saved Projects:", self.dp, entry_width=20, combo_width=20)
+        self.experiment_combo.set_callback(self.load_experiment_callback)
+        row = self.experiment_combo.get_next_row()
+        self.level_combo = TopicComboExt(lf, row, "Summary Levels:", self.dp, entry_width=20, combo_width=20)
+        row = self.level_combo.get_next_row()
+        buttons = Buttons(lf, row, "Experiments")
+        b = buttons.add_button("Load", self.implement_me)
+        ToolTip(b, "Load a project")
+        row = buttons.get_next_row()
+
+        s = ttk.Style()
+        s.configure('TNotebook.Tab', font=self.default_font)
+
+        # Add the tabs
+        tab_control = ttk.Notebook(lf)
+        tab_control.grid(column=0, row=row, columnspan=2, sticky="nsew")
+        gpt_tab = ttk.Frame(tab_control)
+        tab_control.add(gpt_tab, text='Generate')
+        self.build_generator_tab(gpt_tab, text_width, label_width)
+
+        corpora_tab = ttk.Frame(tab_control)
+        tab_control.add(corpora_tab, text='Corpora')
+        self.build_corpora_tab(corpora_tab, text_width, label_width)
+
+        row += 1
+        return row
+
+    def build_generator_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
+        self.generator_frame.build_frame(tab, text_width, label_width)
+
+    def build_corpora_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
+        row = 0
+
+        self.regex_field = DataField(tab, row, 'Parse regex:', text_width, label_width=label_width)
+        self.regex_field.set_text(r"\n+|[\.!?()“”]+")
+        ToolTip(self.regex_field.tk_entry, "The regex used to parse the file. Editable")
+        row = self.regex_field.get_next_row()
+
+        buttons = Buttons(tab, row, "Actions")
+        b = buttons.add_button("Load File", self.implement_me())
+        ToolTip(b, "Loads new text into a project, splits into chunks and finds embeddings")
+
+    def load_experiment_callback(self, event = None):
+        print("load_experiment_callback")
+        s = self.experiment_combo.tk_combo.get()
+        l = s.split(":")
+        self.experiment_combo.clear()
+        self.experiment_combo.set_text(s)
+        results = self.msi.read_data("select id from table_source where text_name = %s and group_name = %s", (l[0],l[1]))
+        if len(results) > 0:
+            self.experiment_id = results[0]['id']
+            self.experiment_field.set_text(" experiment {}: {}".format(self.experiment_id, s))
+            self.get_levels_list()
+        else:
+            self.get_levels_list()
+        print("experiment_callback: experiment_id = {}".format(self.experiment_id))
 
 def main():
     app = ContextExplorer()

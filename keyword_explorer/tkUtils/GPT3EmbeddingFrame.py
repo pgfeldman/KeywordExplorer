@@ -135,24 +135,28 @@ class GPT3EmbeddingFrame:
 
     def reduce_dimensions_callback(self):
         rf:DataField
-        rf = self.so.get_object("reduced_field")
+
         pca_dim = self.pca_dim_param.get_as_int()
         perplexity = self.perplexity_param.get_as_int()
         self.embed_state_text_field.add_text("Reducing: PCA dim = {}  perplexity = {}".format(pca_dim, perplexity))
         self.mr.calc_embeding(perplexity=perplexity, pca_components=pca_dim)
-        rf.set_text(len(self.mr.embedding_list))
+        rf = self.so.get_object("reduced_field")
+        if rf != None:
+            rf.set_text(len(self.mr.embedding_list))
         print("\tFinished dimension reduction")
         message.showinfo("reduce_dimensions_callback", "Reduced to {} dimensions".format(pca_dim))
 
     def cluster_callback(self):
         print("Clustering")
         cf:DataField
-        cf = self.so.get_object("clusters_field")
+
         eps = self.eps_param.get_as_float()
         min_samples = self.min_samples_param.get_as_int()
         self.mr.dbscan(eps=eps, min_samples=min_samples)
         self.mr.calc_clusters()
-        cf.set_text(str(len(self.mr.embedding_list)))
+        cf = self.so.get_object("clusters_field")
+        if cf != None:
+            cf.set_text(str(len(self.mr.embedding_list)))
         self.embed_state_text_field.add_text("Finished clustering")
 
     def topic_callback(self):
@@ -176,8 +180,10 @@ class GPT3EmbeddingFrame:
     def plot_callback(self):
         print("Plotting")
         ef:DataField
+        title = "Unset Title"
         ef = self.so.get_object("experiment_field")
-        title = ef.get_text()
+        if ef != None:
+            title = ef.get_text()
         perplexity = self.perplexity_param.get_as_int()
         eps = self.eps_param.get_as_int()
         min_samples = self.min_samples_param.get_as_int()
