@@ -23,14 +23,25 @@ class OpenAIEmbeddings:
         self.oac = OpenAIComms()
         self.msi = MySqlInterface(user, db)
 
+    def create_question(self, question:str, context:str) -> str:
+        prompt=f"Answer the question based on the context below, and if the question can't be answered based on the context, say \"I don't know\"\n\nContext: {context}\n\n---\n\nQuestion: {question}\nAnswer:"
+        return prompt
+
+    def get_response(self, prompt, model="text-davinci-003", max_tokens=150):
+        try:
+            result = self.oac.get_prompt_result_params(prompt, max_tokens=max_tokens, temperature=0, top_p=1, frequency_penalty=0, presence_penalty=0, engine=model)
+            return result
+        except openai.error.RateLimitError as e:
+            return e.user_message
+
+
     def answer_question(self, question:str, context:str, model="text-davinci-003", max_len=1800,
             size="ada", debug=False, max_tokens=150, stop_sequence=None) -> str:
         """
         Answer a question based on the most similar context from the dataframe texts
         """
-        prompt=f"Answer the question based on the context below, and if the question can't be answered based on the context, say \"I don't know\"\n\nContext: {context}\n\n---\n\nQuestion: {question}\nAnswer:"
-        result = self.oac.get_prompt_result_params(prompt, max_tokens=max_tokens, temperature=0, top_p=1, frequency_penalty=0, presence_penalty=0, engine=model)
-        return result
+        prompt = self.create_question(question, context)
+        return self.get_response(prompt, model, max_tokens)
 
     def parse_text_file(self, filename:str, min_len:int = 5, r_str:str = r"\n+|[\.!?()“”]+", default_print:int = 0) -> List:
         s_list = []

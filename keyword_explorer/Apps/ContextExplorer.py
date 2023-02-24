@@ -41,7 +41,7 @@ class ContextExplorer(AppBase):
     rows_field:DataField
     keyword_filtered_field:DataField
     narrative_project_name_field:DataField
-    project_df:[pd.DataFrame, None]
+
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -63,7 +63,6 @@ class ContextExplorer(AppBase):
         self.oae = OpenAIEmbeddings()
         self.so = SharedObjects()
         self.msi = MySqlInterface(user_name="root", db_name="gpt_summary")
-        self.project_df = None
         self.gpt_frame = GPTContextFrame(self.oai, self.dp, self.so)
 
         if not self.oai.key_exists():
@@ -145,7 +144,7 @@ class ContextExplorer(AppBase):
         self.rows_field = DataField(lf, row, 'Rows:', text_width, label_width=label_width)
         row = self.rows_field.get_next_row()
         self.keyword_filtered_field = DataField(lf, row, 'Filtered:', text_width, label_width=label_width)
-        row = self.rows_field.get_next_row()
+        row = self.keyword_filtered_field.get_next_row()
 
     def build_generator_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
         self.generator_frame.build_frame(tab, text_width, label_width)
@@ -261,8 +260,8 @@ class ContextExplorer(AppBase):
         except ValueError:
             pass
 
-        self.project_df = df
-        self.keyword_filtered_field.set_text(str(len(df.index)))
+        self.generator_frame.set_project_dataframe(df)
+        self.keyword_filtered_field.set_text("{:,}".format(len(df.index)))
 
 
 

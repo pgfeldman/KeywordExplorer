@@ -1,7 +1,8 @@
 import re
-import numpy as np
+import pandas as pd
 import tkinter as tk
 from tkinter import ttk
+import tkinter.messagebox as message
 
 from keyword_explorer.tkUtils.Buttons import Buttons
 from keyword_explorer.tkUtils.TextField import TextField
@@ -10,6 +11,7 @@ from keyword_explorer.tkUtils.Checkboxes import Checkboxes, Checkbox
 from keyword_explorer.tkUtils.TopicComboExt import TopicComboExt
 from keyword_explorer.tkUtils.ToolTip import ToolTip
 from keyword_explorer.tkUtils.GPT3GeneratorFrame import GPT3GeneratorFrame, GPT3GeneratorSettings
+from keyword_explorer.OpenAI.OpenAIEmbeddings import OpenAIEmbeddings
 
 from typing import List, Dict, Callable
 
@@ -22,9 +24,11 @@ class GPTContextFrame(GPT3GeneratorFrame):
     context_prompt:DataField
     context_text_field:TextField
     prompt_query_cb:Checkbox
+    project_df:pd.DataFrame
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.project_df = pd.DataFrame()
 
     def build_frame(self, frm: ttk.Frame, text_width:int, label_width:int):
         engine_list = self.oai.list_models(keep_list = ["davinci"], exclude_list = ["embed", "similarity", "code", "edit", "search", "audio", "instruct", "2020", "if", "insert"])
@@ -80,5 +84,35 @@ class GPTContextFrame(GPT3GeneratorFrame):
         b = self.buttons.add_button("Generate", self.new_prompt_callback)
         ToolTip(b, "Sends the prompt to the GPT")
 
+    def set_project_dataframe(self, df:DataField):
+        self.project_df = df
+
     def handle_checkboxes(self, event = None):
         print("prompt_query_cb = {}".format(self.prompt_query_cb.get_val()))
+
+    def new_prompt_callback(self):
+        if self.project_df.empty:
+            tk.messagebox.showwarning("Warning!", "Please import data first")
+            return
+        oae = OpenAIEmbeddings()
+        ctx_question = self.context_prompt.get_text()
+        if self.prompt_query_cb.get_val():
+            ctx_question = self.prompt_text_field.get_text()
+        context = oae.create_context(ctx_question, self.project_df)
+
+        question = self.prompt_text_field.get_text()
+        full_question = oae.create_question(question=question, context=context)
+
+        self.context_text_field.clear()
+        self.context_text_field.set_text(full_question)
+
+        answer = oae.get_response(full_question)
+        self.response_text_field.set_text(answer)
+
+
+        # split_regex = re.compile(r"[\n]+")
+        # prompt = self.prompt_text_field.get_text()
+        # response = self.get_gpt3_response(prompt)
+        # l = split_regex.split(response)
+        # response = "\n".join(l)
+        # self.response_text_field.set_text(response)
