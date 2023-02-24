@@ -217,7 +217,12 @@ class ContextExplorer(AppBase):
             pass
 
     def load_data_callback(self, event = None):
-        l = ['all', 'raw only', 'all summaries']
+        kw_list = []
+        kw_str = self.generator_frame.keyword_filter.get_text()
+        if len(kw_str) > 3:
+            s:str
+            kw_list = kw_str.split("OR")
+            kw_list = [s.strip() for s in kw_list]
         print("load_data_callback")
         df:pd.DataFrame
         if self.experiment_id == -1:
@@ -225,15 +230,17 @@ class ContextExplorer(AppBase):
         level = self.level_combo.tk_combo.get()
         df_list = []
         if level == 'raw only' or level == 'all':
-            sql = "select text_id, parsed_text, embedding from source_text_view where source_id = %s"
-            vals = (self.experiment_id,)
-            results = self.msi.read_data(sql, vals)
+            sql = "select text_id, parsed_text, embedding from source_text_view where source_id = {}".format(self.experiment_id)
+            if len(kw_list) > 0:
+                sql += " AND (parsed_text LIKE '%{}%')".format("%' OR parsed_text LIKE '%".join(kw_list))
+            results = self.msi.read_data(sql)
             df = self.oae.results_to_df(results)
             df_list.append(df)
         if level == 'all summaries' or level == 'all':
-            sql = "select text_id, parsed_text, embedding, origins from summary_text_view where proj_id = %s"
-            vals = (self.experiment_id,)
-            results = self.msi.read_data(sql, vals)
+            sql = "select text_id, parsed_text, embedding, origins from summary_text_view where proj_id = {}".format(self.experiment_id)
+            if len(kw_list) > 0:
+                sql += " AND (parsed_text LIKE '%{}%')".format("%' OR parsed_text LIKE '%".join(kw_list))
+            results = self.msi.read_data(sql)
             df = self.oae.results_to_df(results)
             df_list.append(df)
         if level == 'all':
@@ -242,9 +249,11 @@ class ContextExplorer(AppBase):
         try:
             level = int(level)
             print("level {}".format(level))
-            sql = "select text_id, parsed_text, embedding, origins from summary_text_view where level = %s and proj_id = %s"
-            vals = (level, self.experiment_id,)
-            results = self.msi.read_data(sql, vals)
+            sql = "select text_id, parsed_text, embedding, origins from summary_text_view where level = {} and proj_id = {}".format(level, self.experiment_id)
+            if len(kw_list) > 0:
+                sql += " AND (parsed_text LIKE '%{}%')".format("%' OR parsed_text LIKE '%".join(kw_list))
+                print(sql)
+            results = self.msi.read_data(sql)
             df = self.oae.results_to_df(results)
         except ValueError:
             pass
