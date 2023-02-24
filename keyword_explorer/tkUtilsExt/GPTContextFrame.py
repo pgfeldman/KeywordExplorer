@@ -96,6 +96,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.context_text_field.clear()
         self.context_text_field.set_text(full_question)
 
+        self.dp.dprint("Submitting: {}".format(question))
         answer = oae.get_response(full_question)
         self.response_text_field.set_text(answer)
 
