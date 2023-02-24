@@ -39,6 +39,8 @@ class ContextExplorer(AppBase):
     experiment_combo:TopicComboExt
     level_combo:TopicComboExt
     rows_field = DataField
+    narrative_project_name_field = DataField
+    project_df:[pd.DataFrame, None]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -54,21 +56,19 @@ class ContextExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "ContextExplorer"
-        self.app_version = "2.23.2023"
-        self.geom = (840, 670)
+        self.app_version = "2.24.2023"
+        self.geom = (840, 760)
         self.oai = OpenAIComms()
+        self.oae = OpenAIEmbeddings()
         self.so = SharedObjects()
         self.msi = MySqlInterface(user_name="root", db_name="gpt_summary")
+        self.project_df = None
         self.gpt_frame = GPTContextFrame(self.oai, self.dp, self.so)
 
         if not self.oai.key_exists():
             message.showwarning("Key Error", "Could not find Environment key 'OPENAI_KEY'")
 
-        self.saved_prompt_text = "unset"
-        self.saved_response_text = "unset"
         self.experiment_id = -1
-        self.run_id = -1
-        self.parsed_full_text_list = []
 
     def build_app_view(self, row: int, text_width: int, label_width: int) -> int:
         print("build_app_view")
@@ -111,9 +111,15 @@ class ContextExplorer(AppBase):
         self.level_combo = TopicComboExt(lf, row, "Summary Levels:", self.dp, entry_width=20, combo_width=20)
         self.level_combo.set_callback(self.count_levels_callback)
         row = self.level_combo.get_next_row()
-        buttons = Buttons(lf, row, "Experiments")
-        b = buttons.add_button("Load", self.implement_me)
-        ToolTip(b, "Load a project")
+        self.narrative_project_name_field = DataField(lf, row, "NarrativeMap",text_width, label_width=label_width)
+        ToolTip(self.narrative_project_name_field.tk_entry, "Project name to export NarrativeMaps")
+        row = self.narrative_project_name_field.get_next_row()
+
+        buttons = Buttons(lf, row, "Actions")
+        b = buttons.add_button("Load Data", self.load_data_callback, width=-1)
+        ToolTip(b, "Load data for selected project")
+        b = buttons.add_button("Export", self.save_to_narrative_maps_callback, width=-1)
+        ToolTip(b, "Export Project to NarrativeMaps")
         row = buttons.get_next_row()
 
         s = ttk.Style()
@@ -123,7 +129,7 @@ class ContextExplorer(AppBase):
         tab_control = ttk.Notebook(lf)
         tab_control.grid(column=0, row=row, columnspan=2, sticky="nsew")
         gpt_tab = ttk.Frame(tab_control)
-        tab_control.add(gpt_tab, text='Generate')
+        tab_control.add(gpt_tab, text='Output')
         self.build_generator_tab(gpt_tab, text_width, label_width)
 
         corpora_tab = ttk.Frame(tab_control)
@@ -137,7 +143,6 @@ class ContextExplorer(AppBase):
         row = 0
         self.rows_field = DataField(lf, row, 'Rows:', text_width, label_width=label_width)
         row = self.rows_field.get_next_row()
-        self
 
     def build_generator_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
         self.generator_frame.build_frame(tab, text_width, label_width)
@@ -151,7 +156,7 @@ class ContextExplorer(AppBase):
         row = self.regex_field.get_next_row()
 
         buttons = Buttons(tab, row, "Actions")
-        b = buttons.add_button("Load File", self.implement_me())
+        b = buttons.add_button("Load File", self.load_file_callback, width=-1)
         ToolTip(b, "Loads new text into a project, splits into chunks and finds embeddings")
 
     def load_experiment_callback(self, event = None):
@@ -164,6 +169,7 @@ class ContextExplorer(AppBase):
         if len(results) > 0:
             self.experiment_id = results[0]['id']
             self.experiment_field.set_text(" experiment {}: {}".format(self.experiment_id, s))
+            self.narrative_project_name_field.set_text(s)
 
         self.get_levels_list()
         self.count_levels_callback()
@@ -209,6 +215,56 @@ class ContextExplorer(AppBase):
             self.rows_field.set_text("{:,}".format(count))
         except ValueError:
             pass
+
+    def load_data_callback(self, event = None):
+        l = ['all', 'raw only', 'all summaries']
+        print("load_data_callback")
+        df:pd.DataFrame
+        if self.experiment_id == -1:
+            tk.messagebox.showwarning("Warning!", "Please create or select a database first")
+        level = self.level_combo.tk_combo.get()
+        df_list = []
+        if level == 'raw only' or level == 'all':
+            sql = "select text_id, parsed_text, embedding from source_text_view where source_id = %s"
+            vals = (self.experiment_id,)
+            results = self.msi.read_data(sql, vals)
+            df = self.oae.results_to_df(results)
+            df_list.append(df)
+        if level == 'all summaries' or level == 'all':
+            sql = "select text_id, parsed_text, embedding, origins from summary_text_view where proj_id = %s"
+            vals = (self.experiment_id,)
+            results = self.msi.read_data(sql, vals)
+            df = self.oae.results_to_df(results)
+            df_list.append(df)
+        if level == 'all':
+            df = pd.concat(df_list, ignore_index=True)
+
+        try:
+            level = int(level)
+            print("level {}".format(level))
+            sql = "select text_id, parsed_text, embedding, origins from summary_text_view where level = %s and proj_id = %s"
+            vals = (level, self.experiment_id,)
+            results = self.msi.read_data(sql, vals)
+            df = self.oae.results_to_df(results)
+        except ValueError:
+            pass
+
+        self.project_df = df
+        print("read {} rows\n{}".format(len(df.index), df))
+
+
+
+    def save_to_narrative_maps_callback(self, event = None):
+        print("save_to_narrative_maps_callback")
+        if self.experiment_id == -1:
+            tk.messagebox.showwarning("Warning!", "Please create or select a database first")
+            return
+
+    def load_file_callback(self, event = None):
+        print("load_file_callback")
+        if self.experiment_id == -1:
+            tk.messagebox.showwarning("Warning!", "Please create or select a database first")
+            return
 
 def main():
     app = ContextExplorer()

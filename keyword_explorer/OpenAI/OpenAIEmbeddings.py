@@ -317,6 +317,22 @@ class OpenAIEmbeddings:
         print("\tDone")
         return df
 
+    def results_to_df(self, results:List) -> pd.DataFrame:
+        print("\tProcessing {} lines".format(len(results)))
+        d:Dict
+        for d in results:
+            emb = d['embedding']
+            d['embedding'] = pickle.loads(emb)
+            if 'origins' in d:
+                orig = d['origins']
+                d['origins'] = ast.literal_eval(orig)
+            else:
+                d['origins'] = [d['text_id']]
+            # print(d)
+
+        df = pd.DataFrame(results)
+        return df
+
     def load_project_summary_text(self, text_name:str, group_name:str, level = 1, limit = -1) -> pd.DataFrame:
         sql = "select * from table_source where text_name = %s and group_name = %s"
         vals = (text_name, group_name)
@@ -335,18 +351,7 @@ class OpenAIEmbeddings:
 
         results = self.msi.read_data(sql, vals)
 
-        print("\tProcessing {} lines".format(len(results)))
-        d:Dict
-        for d in results:
-            emb = d['embedding']
-            orig = d['origins']
-            d['embedding'] = pickle.loads(emb)
-            d['origins'] = ast.literal_eval(orig)
-            # print(d)
-
-        df = pd.DataFrame(results)
-        print("\tDone")
-        return df
+        return self.results_to_df(results)
 
     def get_source_text(self, row_id_list:List) -> List:
         s = ", ".join(map(str,row_id_list))
