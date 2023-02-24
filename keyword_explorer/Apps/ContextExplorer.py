@@ -38,8 +38,9 @@ class ContextExplorer(AppBase):
     gpt_frame: GPTContextFrame
     experiment_combo:TopicComboExt
     level_combo:TopicComboExt
-    rows_field = DataField
-    narrative_project_name_field = DataField
+    rows_field:DataField
+    keyword_filtered_field:DataField
+    narrative_project_name_field:DataField
     project_df:[pd.DataFrame, None]
 
     def __init__(self, *args, **kwargs):
@@ -142,6 +143,8 @@ class ContextExplorer(AppBase):
     def build_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
         self.rows_field = DataField(lf, row, 'Rows:', text_width, label_width=label_width)
+        row = self.rows_field.get_next_row()
+        self.keyword_filtered_field = DataField(lf, row, 'Filtered:', text_width, label_width=label_width)
         row = self.rows_field.get_next_row()
 
     def build_generator_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
@@ -259,7 +262,7 @@ class ContextExplorer(AppBase):
             pass
 
         self.project_df = df
-        print("read {} rows\n{}".format(len(df.index), df))
+        self.keyword_filtered_field.set_text(str(len(df.index)))
 
 
 
