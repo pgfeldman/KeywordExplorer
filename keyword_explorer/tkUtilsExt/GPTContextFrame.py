@@ -31,21 +31,11 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.project_df = pd.DataFrame()
 
     def build_frame(self, frm: ttk.Frame, text_width:int, label_width:int):
-        engine_list = self.oai.list_models(keep_list = ["davinci"], exclude_list = ["embed", "similarity", "code", "edit", "search", "audio", "instruct", "2020", "if", "insert"])
-        engine_list = sorted(engine_list)
         row = 0
-        self.generate_model_combo = TopicComboExt(frm, row, "Model:", self.dp, entry_width=25, combo_width=25)
-        self.generate_model_combo.set_combo_list(engine_list)
-        self.generate_model_combo.set_text(engine_list[0])
-        self.generate_model_combo.tk_combo.current(0)
-        ToolTip(self.generate_model_combo.tk_combo, "The GPT-3 model used to generate text")
-
-        row = self.generate_model_combo.get_next_row()
-        row = self.build_generate_params(frm, row)
 
         self.keyword_filter = DataField(frm, row, "Keywords:", text_width+20, label_width=label_width)
         self.keyword_filter.set_text("Pequod OR Rachel OR Ahab")
-        ToolTip(self.keyword_filter.tk_entry, "Keywords to filter available data")
+        ToolTip(self.keyword_filter.tk_entry, "Keywords (separated by OR) to filter available data")
         row = self.keyword_filter.get_next_row()
 
         self.context_prompt = DataField(frm, row, "Context:", text_width+20, label_width=label_width)
