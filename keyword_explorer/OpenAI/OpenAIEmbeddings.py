@@ -27,6 +27,14 @@ class OpenAIEmbeddings:
         prompt=f"Answer the question based on the context below, and if the question can't be answered based on the context, say \"I don't know\"\n\nContext: {context}\n\n---\n\nQuestion: {question}\nAnswer:"
         return prompt
 
+    def create_summary(self, context:str) -> str:
+        full_prompt=f"Summarize the following: {context}\n\n---\n\nSummary:"
+        return full_prompt
+
+    def create_narrative(self, prompt:str, context:str) -> str:
+        full_prompt=f"Using the following context, write a short story, based on the prompt.\n\nContext: {context}\n\n---\n\nStory: {prompt}"
+        return full_prompt
+
     def get_response(self, prompt, model="text-davinci-003", max_tokens=150):
         try:
             result = self.oac.get_prompt_result_params(prompt, max_tokens=max_tokens, temperature=0, top_p=1, frequency_penalty=0, presence_penalty=0, engine=model)
@@ -128,7 +136,7 @@ class OpenAIEmbeddings:
         """
         Create a context for a question by finding the most similar context from the dataframe
         """
-        print("Question: [{}]".format(question))
+        print("Text: [{}]".format(question))
         # Get the embeddings for the question
         # return openai.Embedding.create(input = [text], model=engine)['data'][0]['embedding']
         #q_embeddings = openai.Embedding.create(input=question, engine='text-embedding-ada-002')['data'][0]['embedding']

@@ -118,8 +118,8 @@ class ContextExplorer(AppBase):
         buttons = Buttons(lf, row, "Actions")
         b = buttons.add_button("Load Data", self.load_data_callback, width=-1)
         ToolTip(b, "Load data for selected project")
-        b = buttons.add_button("Export", self.save_to_narrative_maps_callback, width=-1)
-        ToolTip(b, "Export Project to NarrativeMaps")
+        b = buttons.add_button("Export", self.save_to_narrative_maps_jason_callback, width=-1)
+        ToolTip(b, "Export Project to JSON")
         row = buttons.get_next_row()
 
         s = ttk.Style()
@@ -265,7 +265,7 @@ class ContextExplorer(AppBase):
 
 
 
-    def save_to_narrative_maps_callback(self, event = None):
+    def save_to_narrative_maps_jason_callback(self, event = None):
         print("save_to_narrative_maps_callback")
         if self.experiment_id == -1:
             tk.messagebox.showwarning("Warning!", "Please create or select a database first")

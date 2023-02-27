@@ -71,8 +71,12 @@ class GPTContextFrame(GPT3GeneratorFrame):
         row = self.response_text_field.get_next_row()
 
         self.buttons = Buttons(frm, row, "Actions")
-        b = self.buttons.add_button("Generate", self.new_prompt_callback)
-        ToolTip(b, "Sends the prompt to the GPT")
+        b = self.buttons.add_button("Ask Question", self.new_prompt_callback, width=-1)
+        ToolTip(b, "Gets answer from the GPT")
+        b = self.buttons.add_button("Summarize", self.get_summmary_callback, width=-1)
+        ToolTip(b, "Gets Summary from the GPT")
+        b = self.buttons.add_button("Narrative", self.get_story_callback, width=-1)
+        ToolTip(b, "Gets Story from the GPT")
 
     def set_project_dataframe(self, df:DataField):
         self.project_df = df
@@ -96,14 +100,46 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.context_text_field.clear()
         self.context_text_field.set_text(full_question)
 
-        self.dp.dprint("Submitting: {}".format(question))
+        self.dp.dprint("Submitting Question: {}".format(question))
         answer = oae.get_response(full_question)
         self.response_text_field.set_text(answer)
 
+    def get_summmary_callback(self):
+        if self.project_df.empty:
+            tk.messagebox.showwarning("Warning!", "Please import data first")
+            return
+        oae = OpenAIEmbeddings()
+        ctx_prompt = self.context_prompt.get_text()
+        if self.prompt_query_cb.get_val():
+            ctx_prompt = self.prompt_text_field.get_text()
+        context = oae.create_context(ctx_prompt, self.project_df)
 
-        # split_regex = re.compile(r"[\n]+")
-        # prompt = self.prompt_text_field.get_text()
-        # response = self.get_gpt3_response(prompt)
-        # l = split_regex.split(response)
-        # response = "\n".join(l)
-        # self.response_text_field.set_text(response)
+        question = self.prompt_text_field.get_text()
+        full_prompt = oae.create_summary(context=context)
+
+        self.context_text_field.clear()
+        self.context_text_field.set_text(full_prompt)
+
+        self.dp.dprint("Submitting summary prompt: {}".format(question))
+        answer = oae.get_response(full_prompt, max_tokens=256)
+        self.response_text_field.set_text(answer)
+
+    def get_story_callback(self):
+        if self.project_df.empty:
+            tk.messagebox.showwarning("Warning!", "Please import data first")
+            return
+        oae = OpenAIEmbeddings()
+        ctx_prompt = self.context_prompt.get_text()
+        if self.prompt_query_cb.get_val():
+            ctx_prompt = self.prompt_text_field.get_text()
+        context = oae.create_context(ctx_prompt, self.project_df)
+
+        prompt = self.prompt_text_field.get_text()
+        full_prompt = oae.create_narrative(prompt=prompt, context=context)
+
+        self.context_text_field.clear()
+        self.context_text_field.set_text(full_prompt)
+
+        self.dp.dprint("Submitting story prompt: {}".format(prompt))
+        answer = oae.get_response(full_prompt, max_tokens=256)
+        self.response_text_field.set_text(answer)
