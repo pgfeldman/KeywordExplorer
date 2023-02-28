@@ -151,9 +151,10 @@ class GPTContextFrame(GPT3GeneratorFrame):
             tk.messagebox.showwarning("Warning!", "Please import data first")
             return
         oae = OpenAIEmbeddings()
-        prompt = {"{} {}".format(self.prompt_text_field.get_text(), self.response_text_field.get_text())}
+        prompt = "{} {}".format(self.prompt_text_field.get_text(), self.response_text_field.get_text())
         self.prompt_text_field.clear()
         self.prompt_text_field.set_text(prompt)
         self.response_text_field.clear()
+        self.dp.dprint("Submitting extend prompt:")
         response = oae.get_response(prompt)
         self.response_text_field.set_text(response)
