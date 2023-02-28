@@ -271,6 +271,12 @@ class ContextExplorer(AppBase):
             tk.messagebox.showwarning("Warning!", "Please create or select a database first")
             return
 
+        probe_str =  "{}\n{}".format(self.generator_frame.context_text_field.get_text(),
+                                     self.generator_frame.prompt_text_field.get_text())
+        name = self.narrative_project_name_field.get_text()
+        dict = {"probe_str": probe_str, "name":name}
+        self.save_experiment_json(dict)
+
     def load_file_callback(self, event = None):
         print("load_file_callback")
         if self.experiment_id == -1:

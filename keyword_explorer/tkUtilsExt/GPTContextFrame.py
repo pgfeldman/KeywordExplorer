@@ -77,6 +77,8 @@ class GPTContextFrame(GPT3GeneratorFrame):
         ToolTip(b, "Gets Summary from the GPT")
         b = self.buttons.add_button("Narrative", self.get_story_callback, width=-1)
         ToolTip(b, "Gets Story from the GPT")
+        b = self.buttons.add_button("Extend", self.extend_callback, width=-1)
+        ToolTip(b, "Extends the GPT's response")
 
     def set_project_dataframe(self, df:DataField):
         self.project_df = df
@@ -143,3 +145,15 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.dp.dprint("Submitting story prompt: {}".format(prompt))
         answer = oae.get_response(full_prompt, max_tokens=256)
         self.response_text_field.set_text(answer)
+
+    def extend_callback(self):
+        if self.project_df.empty:
+            tk.messagebox.showwarning("Warning!", "Please import data first")
+            return
+        oae = OpenAIEmbeddings()
+        prompt = {"{} {}".format(self.prompt_text_field.get_text(), self.response_text_field.get_text())}
+        self.prompt_text_field.clear()
+        self.prompt_text_field.set_text(prompt)
+        self.response_text_field.clear()
+        response = oae.get_response(prompt)
+        self.response_text_field.set_text(response)
