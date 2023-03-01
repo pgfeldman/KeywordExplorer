@@ -15,9 +15,29 @@ from keyword_explorer.OpenAI.OpenAIEmbeddings import OpenAIEmbeddings
 
 from typing import List, Dict, Callable
 
-class GPTContextSettings(GPT3GeneratorSettings):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class GPTContextSettings:
+    prompt: str
+    context_prompt:str
+    keywords:str
+    def __init__(self, prompt = "unset", context_prompt = "unset", keywords = "unset"):
+        self.prompt = prompt
+        self.context_prompt = context_prompt
+        self.keywords = keywords
+
+    def from_dict(self, d:Dict):
+        if 'prompt' in d:
+            self.prompt = d['prompt']
+        if 'context_prompt' in d:
+            self.context_prompt = d['context_prompt']
+        if 'keywords' in d:
+            self.keywords = d['keywords']
+
+
+    def to_dict(self) -> Dict:
+        return {'prompt':self.prompt,
+                'context_prompt':self.context_prompt,
+                'keywords':self.keywords}
+
 
 class GPTContextFrame(GPT3GeneratorFrame):
     keyword_filter:DataField
@@ -122,7 +142,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.context_text_field.clear()
         self.context_text_field.set_text(full_prompt)
 
-        self.dp.dprint("Submitting summary prompt: {}".format(question))
+        self.dp.dprint("Submitting summary prompt: {}".format(context))
         answer = oae.get_response(full_prompt, max_tokens=256)
         self.response_text_field.set_text(answer)
 
@@ -158,3 +178,19 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.dp.dprint("Submitting extend prompt:")
         response = oae.get_response(prompt)
         self.response_text_field.set_text(response)
+
+    def set_params(self, settings:GPTContextSettings):
+        self.prompt_text_field.clear()
+        self.context_prompt.clear()
+        self.keyword_filter.clear()
+
+        self.prompt_text_field.set_text(settings.prompt)
+        self.context_prompt.set_text(settings.context_prompt)
+        self.keyword_filter.set_text(settings.keywords)
+
+    def get_settings(self) -> GPTContextSettings:
+        gs = GPTContextSettings()
+        gs.prompt = self.prompt_text_field.get_text()
+        gs.context_prompt = self.context_prompt.get_text()
+        gs.keywords = self.keyword_filter.get_text()
+        return gs

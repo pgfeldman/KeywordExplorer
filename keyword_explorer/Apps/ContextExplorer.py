@@ -106,7 +106,7 @@ class ContextExplorer(AppBase):
     def build_gpt(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
         self.experiment_combo = TopicComboExt(lf, row, "Saved Projects:", self.dp, entry_width=20, combo_width=20)
-        self.experiment_combo.set_callback(self.load_experiment_callback)
+        self.experiment_combo.set_callback(self.load_project_callback)
         row = self.experiment_combo.get_next_row()
         self.level_combo = TopicComboExt(lf, row, "Summary Levels:", self.dp, entry_width=20, combo_width=20)
         self.level_combo.set_callback(self.count_levels_callback)
@@ -161,8 +161,8 @@ class ContextExplorer(AppBase):
         b = buttons.add_button("Load File", self.load_file_callback, width=-1)
         ToolTip(b, "Loads new text into a project, splits into chunks and finds embeddings")
 
-    def load_experiment_callback(self, event = None):
-        print("load_experiment_callback")
+    def load_project_callback(self, event = None):
+        print("load_project_callback")
         s = self.experiment_combo.tk_combo.get()
         l = s.split(":")
         self.experiment_combo.clear()
@@ -262,6 +262,29 @@ class ContextExplorer(AppBase):
 
         self.generator_frame.set_project_dataframe(df)
         self.keyword_filtered_field.set_text("{:,}".format(len(df.index)))
+
+    def get_current_params(self) -> Dict:
+        d = self.generator_frame.get_settings().to_dict()
+        d['name'] = self.experiment_field.get_text()
+        d['narrative-name'] = self.narrative_project_name_field.get_text()
+        return d
+
+    def load_experiment_callback(self, event = None):
+        print("ContextExplorer:load_experiment_callback")
+        defaults = self.get_current_params()
+
+        param_dict = self.load_json(defaults)
+        print("param_dict = {}".format(param_dict))
+
+        gs = GPTContextSettings()
+        gs.from_dict(param_dict)
+        self.generator_frame.set_params(gs)
+
+        self.experiment_field.clear()
+        self.experiment_field.set_text(param_dict['name'])
+
+        self.narrative_project_name_field.clear()
+        self.narrative_project_name_field.set_text(param_dict['narrative-name'])
 
 
 
