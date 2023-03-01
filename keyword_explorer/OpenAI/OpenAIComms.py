@@ -3,7 +3,24 @@ import numpy as np
 import openai
 import os
 import time
+from enum import Enum
 from typing import List, Dict, Set, Pattern
+
+class CHAT_ROLES(Enum):
+    USER = "user"
+    SYSTEM = "system"
+    ASSIST = "assistant"
+class ChatUnit:
+    roles:CHAT_ROLES
+    role:str
+    content:str
+
+    def __init__(self, content:str, role:CHAT_ROLES=CHAT_ROLES.USER):
+        self.role = role
+        self.content = content
+
+    def to_dict(self) -> Dict:
+        return {"role":self.role.value, "content": self.content}
 
 class OpenAIComms:
     openai.api_key = os.environ.get("OPENAI_KEY")
@@ -33,15 +50,11 @@ class OpenAIComms:
         self.presence_penalty = presence_penalty
         self.frequency_penalty = frequency_penalty
 
-    def get_chat_complete(self, role: str, content:str, engine:str = "gpt-3.5-turbo") -> Dict:
+    def get_chat_complete(self, unit_list:List, engine:str = "gpt-3.5-turbo") -> Dict:
+        cu:ChatUnit
         response = openai.ChatCompletion.create(
             model=engine,
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": "Who won the world series in 2020?"},
-                {"role": "assistant", "content": "The Los Angeles Dodgers won the World Series in 2020."},
-                {"role": "user", "content": "Where was it played?"}
-            ]
+            messages=[cu.to_dict() for cu in unit_list]
         )
         d = response['choices'][0]
         return d
@@ -223,12 +236,19 @@ def embedding_main():
 def main():
     oai = OpenAIComms()
 
+
     print("\navailable text models:")
     lm = oai.list_models(exclude_list = ["embed", "similarity", "code", "edit", "search", "audio", "instruct", "2020", "if", "insert"])
     for m in sorted(lm):
         print(m)
 
-    d = oai.get_chat_complete("a", "b")
+    l = []
+    l.append(ChatUnit("You are a helpful assistant.", CHAT_ROLES.SYSTEM))
+    l.append(ChatUnit("Who won the world series in 2020?", CHAT_ROLES.USER))
+    l.append(ChatUnit("The Los Angeles Dodgers won the World Series in 2020.", CHAT_ROLES.ASSIST))
+    l.append(ChatUnit("Where was it played?", CHAT_ROLES.USER))
+
+    d = oai.get_chat_complete(l)
     print(d)
 
 if __name__ == '__main__':
