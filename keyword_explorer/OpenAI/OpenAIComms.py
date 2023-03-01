@@ -50,6 +50,7 @@ class OpenAIComms:
         self.presence_penalty = presence_penalty
         self.frequency_penalty = frequency_penalty
 
+    # more options (temperature, etc) are here: https://platform.openai.com/docs/api-reference/chat/create
     def get_chat_complete(self, unit_list:List, engine:str = "gpt-3.5-turbo") -> Dict:
         cu:ChatUnit
         response = openai.ChatCompletion.create(
