@@ -39,6 +39,8 @@ class ContextExplorer(AppBase):
     experiment_combo:TopicComboExt
     level_combo:TopicComboExt
     target_level_combo:TopicComboExt
+    target_text_name:DataField
+    target_group_field:DataField
     rows_field:DataField
     keyword_filtered_field:DataField
     narrative_project_name_field:DataField
@@ -153,6 +155,11 @@ class ContextExplorer(AppBase):
     def build_corpora_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
         row = 0
 
+        self.target_text_name = DataField(tab, row, "Target Name")
+        row = self.target_text_name.get_next_row()
+        self.target_group_field = DataField(tab, row, "Target Group")
+        row = self.target_group_field.get_next_row()
+
         target_level_list = [1, 2, 3, 4]
         self.target_level_combo = TopicComboExt(tab, row, "Target Summary Level:", self.dp, entry_width=20, combo_width=20)
         self.target_level_combo.set_combo_list(target_level_list)
@@ -167,6 +174,8 @@ class ContextExplorer(AppBase):
         row = self.regex_field.get_next_row()
 
         buttons = Buttons(tab, row, "Actions")
+        b = buttons.add_button("Test", self.test_file_callback, width=-1)
+        ToolTip(b, "Performs a small test on 100 lines of text and does not save to DB")
         b = buttons.add_button("Load File", self.load_file_callback, width=-1)
         ToolTip(b, "Loads new text into a project, splits into chunks and finds embeddings")
 
@@ -314,6 +323,9 @@ class ContextExplorer(AppBase):
         if self.experiment_id == -1:
             tk.messagebox.showwarning("Warning!", "Please create or select a database first")
             return
+
+    def test_file_callback(self, event = None):
+        print("test_file_callback")
 
 def main():
     app = ContextExplorer()
