@@ -38,6 +38,7 @@ class ContextExplorer(AppBase):
     gpt_frame: GPTContextFrame
     experiment_combo:TopicComboExt
     level_combo:TopicComboExt
+    target_level_combo:TopicComboExt
     rows_field:DataField
     keyword_filtered_field:DataField
     narrative_project_name_field:DataField
@@ -57,7 +58,7 @@ class ContextExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "ContextExplorer"
-        self.app_version = "2.24.2023"
+        self.app_version = "3.01.2023"
         self.geom = (840, 670)
         self.oai = OpenAIComms()
         self.oae = OpenAIEmbeddings()
@@ -151,6 +152,14 @@ class ContextExplorer(AppBase):
 
     def build_corpora_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
         row = 0
+
+        target_level_list = [1, 2, 3, 4]
+        self.target_level_combo = TopicComboExt(tab, row, "Target Summary Level:", self.dp, entry_width=20, combo_width=20)
+        self.target_level_combo.set_combo_list(target_level_list)
+        self.target_level_combo.tk_combo.current(0)
+        self.target_level_combo.clear()
+        self.target_level_combo.set_text(target_level_list[0])
+        row = self.target_level_combo.get_next_row()
 
         self.regex_field = DataField(tab, row, 'Parse regex:', text_width, label_width=label_width)
         self.regex_field.set_text(r"\n+|[\.!?()“”]+")
