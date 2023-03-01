@@ -33,6 +33,18 @@ class OpenAIComms:
         self.presence_penalty = presence_penalty
         self.frequency_penalty = frequency_penalty
 
+    def get_chat_complete(self, role: str, content:str, engine:str = "gpt-3.5-turbo") -> Dict:
+        response = openai.ChatCompletion.create(
+            model=engine,
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": "Who won the world series in 2020?"},
+                {"role": "assistant", "content": "The Los Angeles Dodgers won the World Series in 2020."},
+                {"role": "user", "content": "Where was it played?"}
+            ]
+        )
+        d = response['choices'][0]
+        return d
     def get_prompt_result_params(self, prompt:str, engine:str = "text-davinci-003", max_tokens:int = 30, temperature:float = 0.4, top_p:float = 1, logprobs:int = 1,
                                  num_responses:int = 1, presence_penalty:float = 0.3, frequency_penalty:float = 0.3) -> str:
         goodread = False
@@ -164,7 +176,7 @@ class OpenAIComms:
         return True
 
 
-def main():
+def embedding_main():
     oai = OpenAIComms()
 
     print("\navailable embedding models:")
@@ -201,14 +213,23 @@ def main():
     for d in result:
         print(d)
 
-    return
-
     print("\ngeneration")
     for name in oai.engines:
         oai.set_engine(name=name)
         print("engine = {}".format(oai.get_engine()))
         result = oai.get_prompt_result("one, two, three", print_result=False)
         print(result)
+
+def main():
+    oai = OpenAIComms()
+
+    print("\navailable text models:")
+    lm = oai.list_models(exclude_list = ["embed", "similarity", "code", "edit", "search", "audio", "instruct", "2020", "if", "insert"])
+    for m in sorted(lm):
+        print(m)
+
+    d = oai.get_chat_complete("a", "b")
+    print(d)
 
 if __name__ == '__main__':
     main()
