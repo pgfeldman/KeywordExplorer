@@ -51,16 +51,47 @@ class OpenAIComms:
         self.frequency_penalty = frequency_penalty
 
     # more options (temperature, etc) are here: https://platform.openai.com/docs/api-reference/chat/create
-    def get_chat_complete(self, unit_list:List, engine:str = "gpt-3.5-turbo") -> Dict:
+    def get_chat_complete(self, unit_list:List, engine:str = "gpt-3.5-turbo", max_tokens:int = 128, temperature:float = 0.4, top_p:float = 1,
+                          presence_penalty:float = 0.3, frequency_penalty:float = 0.3) -> str:
         cu:ChatUnit
-        response = openai.ChatCompletion.create(
-            model=engine,
-            messages=[cu.to_dict() for cu in unit_list]
-        )
-        d = response['choices'][0]
-        return d
+        goodread = False
+        waitcount = 0
+        waitmax = 0
+        s:str
+        time_to_wait = 5
+        while not goodread:
+            try:
+                response = openai.ChatCompletion.create(
+                    model=engine,
+                    max_tokens = max_tokens,
+                    temperature = temperature,
+                    top_p = top_p,
+                    presence_penalty = presence_penalty,
+                    frequency_penalty = frequency_penalty,
+                    messages=[cu.to_dict() for cu in unit_list]
+                )
+                d = response['choices'][0]
+                s = d['message']['content']
+                return s.strip()
+            except openai.error.APIConnectionError as e:
+                print("OpenAIComms.get_prompt_result(): {}".format(e.user_message))
+                return "Error reaching OpenAI completion endpoint"
+
+            except openai.error.RateLimitError:
+                print("OpenAIComms.get_prompt_result_params() waiting {} seconds".format(time_to_wait))
+                time.sleep(time_to_wait)
+                waitcount += 1
+                if waitcount < waitmax:
+                    return "{} is currently overloaded with other requests".format(engine)
+
     def get_prompt_result_params(self, prompt:str, engine:str = "text-davinci-003", max_tokens:int = 30, temperature:float = 0.4, top_p:float = 1, logprobs:int = 1,
                                  num_responses:int = 1, presence_penalty:float = 0.3, frequency_penalty:float = 0.3) -> str:
+        if "gpt-3.5" in engine:
+            print("OpenAICommsget_prompt_result_params(): Using Chat interface")
+            l = [ChatUnit(prompt, CHAT_ROLES.USER)]
+            return self.get_chat_complete(l, max_tokens=max_tokens, temperature=temperature, top_p=top_p,
+                                          presence_penalty=presence_penalty, frequency_penalty=frequency_penalty)
+
         goodread = False
         waitcount = 0
         waitmax = 0
@@ -234,7 +265,7 @@ def embedding_main():
         result = oai.get_prompt_result("one, two, three", print_result=False)
         print(result)
 
-def main():
+def chat_main():
     oai = OpenAIComms()
 
 
@@ -253,4 +284,4 @@ def main():
     print(d)
 
 if __name__ == '__main__':
-    main()
+    chat_main()

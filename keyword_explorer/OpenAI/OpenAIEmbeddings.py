@@ -413,12 +413,12 @@ def summarize_project_main(min_rows = 10):
 def ask_question_main():
     oae = OpenAIEmbeddings()
     df = oae.load_project_summary_text("moby-dick", "melville")
-    question = "Why is Ahab obsessed with Moby-Dick?"
+    question = "Why is Ahab obsessed with Moby-Dick? Provide details."
     print("creating context")
     cs = oae.create_context(question, df)
     # print("Context string:\n{}".format(cs))
     print("submitting question")
-    answer = oae.answer_question(question=question, context=cs)
+    answer = oae.answer_question(question=question, context=cs, model="gpt-3.5-turbo")
     print("\nAnswer:\n{}".format(answer))
 
     top_texts = 5
