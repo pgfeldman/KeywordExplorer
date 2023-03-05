@@ -119,6 +119,13 @@ class OpenAIComms:
 
 
     def get_prompt_result(self, prompt:str, print_result:bool = False) -> List:
+
+
+        if "gpt-3.5" in self.engine:
+            print("OpenAICommsget_prompt_result_params(): Using Chat interface")
+            l = [ChatUnit(prompt, CHAT_ROLES.USER)]
+            return [self.get_chat_complete(l, max_tokens=self.max_tokens, temperature=self.temperature, top_p=self.top_p,
+                                          presence_penalty=self.presence_penalty, frequency_penalty=self.frequency_penalty)]
         to_return = []
         goodread = False
         waitcount = 0
