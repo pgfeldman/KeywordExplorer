@@ -82,10 +82,10 @@ class GoogleExplorer(AppBase):
             return
 
         self.log_action("search", {"query":query})
-        l = gs.get_search_results_list(query, engine, key)
+        results_list, info_list = gs.get_search_results_list(query, engine, key)
         s = html_begin
         g:gs.GoogleCSEResult
-        for g in l:
+        for g in results_list:
             s += g.to_html()
             # print("\n{}".format(g.to_string()))
         s += html_end

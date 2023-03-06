@@ -219,16 +219,19 @@ class KeywordExplorer(AppBase):
                                 "Could not parse [{}]".format(self.response_text_field.get_text()))
 
     def test_keyword_callback(self):
-        key_list = self.keyword_text_field.get_list("\n")
-        print(key_list)
+        l = self.keyword_text_field.get_list("\n")
+        print(l)
         start_dt = self.start_date_field.get_date()
         end_dt = self.end_date_field.get_date()
 
-        for keyword in key_list:
-            if len(keyword) < 3:
-                message.showwarning("Keyword too short",
-                                    "Please enter something longer than [{}] text area".format(keyword))
-                return
+        key_list = []
+        for keyword in l:
+            if len(keyword) > 2:
+                key_list.append(keyword)
+        if len(key_list) == 0:
+            message.showwarning("Keyword too short",
+                                "Please enter something longer than [{}] in the text area".format(keyword))
+            return
 
         tweet_options = self.query_options_field.get_text()
         granularity = self.sample_list.get_selected()

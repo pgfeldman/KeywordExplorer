@@ -62,7 +62,7 @@ class GoogleCSEResult:
         #return "{}:\n\tlink = {}\n\tsnippet = {}".format(self.title, self.display_link, self.snippet)
         return "{}".format(self.d)
 
-    def to_html(self) ->str:
+    def to_html(self) -> str:
         s = '<p>{}</p>\n<ul>\n<li>link = <a href="{}">{}</a></li>\n<li>snippet = {}</li>\n</ul>'.format(
             self.title, self.link, self.display_link, self.snippet
         )
