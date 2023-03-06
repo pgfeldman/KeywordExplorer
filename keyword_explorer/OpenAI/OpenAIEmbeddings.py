@@ -11,7 +11,7 @@ import pickle
 from keyword_explorer.OpenAI.OpenAIComms import OpenAIComms
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
 
-from typing import List, Dict, Pattern
+from typing import List, Dict, Pattern, TextIO, Any
 
 class OpenAIEmbeddings:
     oac:OpenAIComms
@@ -51,20 +51,24 @@ class OpenAIEmbeddings:
         prompt = self.create_question(question, context)
         return self.get_response(prompt, model, max_tokens)
 
-    def parse_text_file(self, filename:str, min_len:int = 5, r_str:str = r"\n+|[\.!?()“”]+", default_print:int = 0) -> List:
-        s_list = []
+    def parse_text_file(self, file:Any, min_len:int = 5, r_str:str = r"([\.!?()“”]+)", default_print:int = 0) -> List:
+        cr_regex = re.compile("\n+")
         reg = re.compile(r_str)
-        with open(filename, mode="r", encoding="G-8") as f:
-            s = f.read()
-            s_list = reg.split(s)
-            s_iter = filter(None, s_list)
-            s_list = []
-            for s in s_iter:
-                if len(s) > min_len:
-                    s_list.append(s.strip())
+        f = file
+        if isinstance(file, str):
+            f = open(file, mode="r", encoding="utf-8")
 
-            for i in range(default_print):
-                print("{}: {}".format(i, s_list[i]))
+        s = f.read()
+        f.close()
+
+        s = cr_regex.sub(" ", s)
+        l = reg.split(s)
+        s_list = []
+        for i in range(0, len(l)-1, 2):
+            s_list.append(l[i]+l[i+1])
+
+        for i in range(default_print):
+            print("{}: {}".format(i, s_list[i]))
 
         return s_list
 
@@ -387,13 +391,13 @@ class OpenAIEmbeddings:
         self.msi.close()
 
 
-def store_embeddings_main():
+def store_embeddings_main(text_name:str, group_name:str, file_str:str):
     oae = OpenAIEmbeddings()
-    s_list = oae.parse_text_file("../../corpora/moby-dick.txt", 10, default_print=10) # can be obtained here: https://www.gutenberg.org/files/2701/2701-h/2701-h.htm
-    # df = oae.get_embeddings(s_list[:100])
-    df = oae.get_embeddings(s_list)
+    s_list = oae.parse_text_file(file_str, 10, default_print=10) # can be obtained here: https://www.gutenberg.org/files/2701/2701-h/2701-h.htm
+    df = oae.get_embeddings(s_list[:100])
+    #df = oae.get_embeddings(s_list)
     print(df)
-    oae.store_project_data("moby-dick", "melville", df)
+    #oae.store_project_data("moby-dick", "melville", df)
 
 def load_data_main():
     oae = OpenAIEmbeddings()
@@ -459,9 +463,9 @@ def fix_summary_origins():
 
 if __name__ == "__main__":
     start_time = time.time()
-    # store_embeddings_main()
+    store_embeddings_main(file_str="../../corpora/old-testament.txt", text_name="old-testament", group_name="bibles")
     # load_data_main()
-    ask_question_main()
+    # ask_question_main()
     # summarize_project_main()
     # fix_summary_origins()
     print("execution took {:.3f} seconds".format(time.time() - start_time))
