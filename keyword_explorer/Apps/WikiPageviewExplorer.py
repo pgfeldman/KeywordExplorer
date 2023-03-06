@@ -140,10 +140,11 @@ class WikiPageviewExplorer(AppBase):
         key_list = self.topic_text_field.get_list("\n")
         result_list = []
         for keyword in key_list:
-            page_list = ws.get_closet_wiki_page_list(keyword, n=7, cutoff=0.4)
-            s = " | ".join(page_list)
-            self.log_action("search term", {keyword: s.replace(",", " ")})
-            result_list.extend(page_list)
+            if len(keyword) > 2:
+                page_list = ws.get_closet_wiki_page_list(keyword, n=7, cutoff=0.4)
+                s = " | ".join(page_list)
+                self.log_action("search term", {keyword: s.replace(",", " ")})
+                result_list.extend(page_list)
         result = "\n".join(result_list)
         self.response_text_field.set_text(result)
 
@@ -158,13 +159,14 @@ class WikiPageviewExplorer(AppBase):
         self.totals_dict = {}
         log_dict = {"granularity":granularity, "wiki_start": start_dt.strftime("%Y-%m-%d"), "wiki_end":end_dt.strftime("%Y-%m-%d")}
         for topic in topic_list:
-            query = topic.replace(" ", "_")
-            query = query.replace("&", "%26")
-            view_list, totals = ws.get_pageview_list(query, start_dt, end_dt, granularity, self.user_agent)
-            print("{} = {}".format(query, totals))
-            self.totals_dict[topic] = totals
-            view_list = sorted(view_list, key=lambda x: x.timestamp)
-            self.multi_count_list.append(view_list)
+            if len(topic) > 2:
+                query = topic.replace(" ", "_")
+                query = query.replace("&", "%26")
+                view_list, totals = ws.get_pageview_list(query, start_dt, end_dt, granularity, self.user_agent)
+                print("{} = {}".format(query, totals))
+                self.totals_dict[topic] = totals
+                view_list = sorted(view_list, key=lambda x: x.timestamp)
+                self.multi_count_list.append(view_list)
 
         for k, v in self.totals_dict.items():
             log_dict[k.replace(",", " ")] = v
