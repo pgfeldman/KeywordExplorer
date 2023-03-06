@@ -169,7 +169,7 @@ class ContextExplorer(AppBase):
         row = self.target_level_combo.get_next_row()
 
         self.regex_field = DataField(tab, row, 'Parse regex:', text_width, label_width=label_width)
-        self.regex_field.set_text(r"\n+|[\.!?()“”]+")
+        self.regex_field.set_text(r"([\.!?()“”]+)")
         ToolTip(self.regex_field.tk_entry, "The regex used to parse the file. Editable")
         row = self.regex_field.get_next_row()
 
@@ -326,6 +326,17 @@ class ContextExplorer(AppBase):
 
     def test_file_callback(self, event = None):
         print("test_file_callback")
+        group_name = self.target_group_field.get_text()
+        text_name = self.target_text_name.get_text()
+        if len(group_name) < 3 or len(text_name) < 3:
+            tk.messagebox.showwarning("Warning!", "Please set text and model fields")
+            return
+        result = filedialog.askopenfile(filetypes=(("Text files", "*.txt"),("All Files", "*.*")), title="Load text file")
+        s:str
+        if result:
+            list = self.oae.parse_text_file(result)
+            for s in list[10:]:
+                print(s)
 
 def main():
     app = ContextExplorer()
