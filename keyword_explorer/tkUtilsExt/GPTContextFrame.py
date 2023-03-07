@@ -76,17 +76,22 @@ class GPTContextFrame(GPT3GeneratorFrame):
         # Add the tabs
         tab_control = ttk.Notebook(frm)
         tab_control.grid(column=0, row=row, columnspan=2, sticky="nsew")
+
         gen_tab = ttk.Frame(tab_control)
         tab_control.add(gen_tab, text='Generated')
-
         ctx_tab = ttk.Frame(tab_control)
         tab_control.add(ctx_tab, text='Context')
+        src_tab = ttk.Frame(tab_control)
+        tab_control.add(src_tab, text='Sources')
 
         self.response_text_field = TextField(gen_tab, row, 'Response:', text_width, height=11, label_width=label_width)
         ToolTip(self.response_text_field.tk_text, "The response from the GPT will be displayed here")
 
         self.context_text_field = TextField(ctx_tab, row, 'Context:', text_width, height=11, label_width=label_width)
         ToolTip(self.context_text_field.tk_text, "The context including the prompt")
+
+        self.sources_text_field = TextField(src_tab, row, 'Sources:', text_width, height=11, label_width=label_width)
+        ToolTip(self.context_text_field.tk_text, "The sources used for the response")
 
         row = self.response_text_field.get_next_row()
 
@@ -114,13 +119,17 @@ class GPTContextFrame(GPT3GeneratorFrame):
         ctx_question = self.context_prompt.get_text()
         if self.prompt_query_cb.get_val():
             ctx_question = self.prompt_text_field.get_text()
-        context = oae.create_context(ctx_question, self.project_df)
+        context, origins_list = oae.create_context(ctx_question, self.project_df)
 
         question = self.prompt_text_field.get_text()
         full_question = oae.create_question(question=question, context=context)
 
         self.context_text_field.clear()
         self.context_text_field.set_text(full_question)
+
+        origins = oae.get_origins_text(origins_list)
+        self.sources_text_field.clear()
+        self.sources_text_field.set_text("\n\n".join(origins))
 
         self.dp.dprint("Submitting Question: {}".format(question))
         answer = oae.get_response(full_question)
@@ -134,13 +143,17 @@ class GPTContextFrame(GPT3GeneratorFrame):
         ctx_prompt = self.context_prompt.get_text()
         if self.prompt_query_cb.get_val():
             ctx_prompt = self.prompt_text_field.get_text()
-        context = oae.create_context(ctx_prompt, self.project_df)
+        context, origins_list = oae.create_context(ctx_prompt, self.project_df)
 
         question = self.prompt_text_field.get_text()
         full_prompt = oae.create_summary(context=context)
 
         self.context_text_field.clear()
         self.context_text_field.set_text(full_prompt)
+
+        origins = oae.get_origins_text(origins_list)
+        self.sources_text_field.clear()
+        self.sources_text_field.set_text("\n\n".join(origins))
 
         self.dp.dprint("Submitting summary prompt: {}".format(context))
         answer = oae.get_response(full_prompt, max_tokens=256)
@@ -154,13 +167,17 @@ class GPTContextFrame(GPT3GeneratorFrame):
         ctx_prompt = self.context_prompt.get_text()
         if self.prompt_query_cb.get_val():
             ctx_prompt = self.prompt_text_field.get_text()
-        context = oae.create_context(ctx_prompt, self.project_df)
+        context, origins_list = oae.create_context(ctx_prompt, self.project_df)
 
         prompt = self.prompt_text_field.get_text()
         full_prompt = oae.create_narrative(prompt=prompt, context=context)
 
         self.context_text_field.clear()
         self.context_text_field.set_text(full_prompt)
+
+        origins = oae.get_origins_text(origins_list)
+        self.sources_text_field.clear()
+        self.sources_text_field.set_text("\n\n".join(origins))
 
         self.dp.dprint("Submitting story prompt: {}".format(prompt))
         answer = oae.get_response(full_prompt, max_tokens=256)

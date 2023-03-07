@@ -469,7 +469,7 @@ class EmbeddingsExplorer(AppBase):
             tweet = row_dict['text']
             embd = self.oai.get_embedding(tweet, engine)
             print("id: {} text: {} embed: {}".format(id, tweet, embd))
-            query = "update table_tweet set embedding = %s where id = %s"
+            query = "update table_tweet set moderation = %s where id = %s"
             values = ("{}:{}".format(engine, embd), id)
             self.msi.write_sql_values_get_row(query, values)
             if count % 1000 == 0:

@@ -16,7 +16,7 @@ create or replace view keyword_tweet_view as
     select te.name, te.id as experiment_id, te.sample_start as start, te.sample_end as end, te.keywords,
            tq.query, tq.keyword,
            tt.author_id, tt.conversation_id, tt.id as tweet_id, tt.row_id as tweet_row, tt.text,
-           tt.cluster_id, tt.cluster_name, tt.reduced, tt.is_thread, tt.embedding
+           tt.cluster_id, tt.cluster_name, tt.reduced, tt.is_thread, tt.moderation
     from table_experiment te
     inner join table_query tq on te.id = tq.experiment_id
     inner join table_tweet tt on tq.id = tt.query_id;
@@ -50,7 +50,7 @@ update table_query set experiment_id = 1 where experiment_id = -1;
 
 select query_id, keyword, count(*) from table_tweet tt inner join table_query tq on tt.query_id = tq.id group by query_id;
 
-select count(*) from table_tweet where embedding is null;
+select count(*) from table_tweet where moderation is null;
 select tweet_id, embedding from keyword_tweet_view where experiment_id = 1 and keyword = 'paxlovid OR Nirmatrelvir OR ritonavir' LIMIT 10;
 
 INSERT INTO table_exclude (cluster_id, experiment_id, keyword) VALUES (19, 1, 'paxlovid OR Nirmatrelvir OR ritonavir');

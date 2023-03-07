@@ -60,7 +60,7 @@ class ContextExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "ContextExplorer"
-        self.app_version = "3.01.2023"
+        self.app_version = "3.07.2023"
         self.geom = (840, 670)
         self.oai = OpenAIComms()
         self.oae = OpenAIEmbeddings()
@@ -335,11 +335,19 @@ class ContextExplorer(AppBase):
             answer = tk.messagebox.askyesno("Warning!", "This will read, process, and store large amounts of data\ntarget = [{}]\ngroup = [{}]\nfile = [{}]\nlines = [{:,}]\nProceed?".format(
                 group_name, text_name, textfile, len(s_list)))
             if answer == True:
+                level = int(self.target_level_combo.get_text())
                 print("ContextExplorer.load_file_callback(): Getting embeddings")
-                # df = self.oae.get_embeddings(s_list)
+                df = self.oae.get_embeddings(s_list)
                 print("ContextExplorer.load_file_callback(): Storing data")
-                # self.oae.store_project_data(text_name, group_name, df)
-                # print(df)
+                self.oae.store_project_data(text_name, group_name, df)
+                print("Dataframe = \n{}".format(df))
+                print("ContextExplorer.load_file_callback(): Summarizing Level 1")
+                self.oae.summarize_raw_text(text_name, group_name)
+                for i in range(1, level):
+                    print("ContextExplorer.load_file_callback(): Summarizing Level {}".format(i+1))
+                    self.oae.summarize_summary_text(text_name, group_name, source_level=i)
+                print("ContextExplorer.load_file_callback(): Getting summary embeddings")
+                self.oae.set_summary_embeddings(text_name, group_name)
                 print("ContextExplorer.load_file_callback(): Finished!")
 
     def test_file_callback(self, event = None):

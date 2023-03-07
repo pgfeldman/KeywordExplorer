@@ -185,7 +185,7 @@ class OpenAIComms:
                     i += 1
                 return d_list
 
-            except openai.error.APIError as e:
+            except (openai.error.APIError, openai.error.RateLimitError) as e:
                 waitcount += 1
                 time_to_wait = 5 * waitcount
                 print("OpenAIComms.get_embedding_list error, returning early. Message = {}".format(e.user_message))

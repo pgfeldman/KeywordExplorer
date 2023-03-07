@@ -14,6 +14,9 @@ from keyword_explorer.utils.MySqlInterface import MySqlInterface
 from typing import List, Dict, Pattern, TextIO, Any
 
 class OpenAIEmbeddings:
+    #DEFAULT_TEXT_MODEL = "gpt-3.5-turbo-0301"
+    DEFAULT_TEXT_MODEL = "text-davinci-003"
+    DEFAULT_EMBEDDING_MODEL = "text-embedding-ada-002"
     oac:OpenAIComms
     msi:MySqlInterface
 
@@ -24,7 +27,8 @@ class OpenAIEmbeddings:
         self.msi = MySqlInterface(user, db)
 
     def create_question(self, question:str, context:str) -> str:
-        prompt=f"Answer the question based on the context below, and if the question can't be answered based on the context, say \"I don't know\"\n\nContext: {context}\n\n---\n\nQuestion: {question}\nAnswer:"
+        #prompt=f"Answer the question based on the context below, and if the question can't be answered based on the context, say \"I don't know\"\n\nContext: {context}\n\n---\n\nQuestion: {question}\nAnswer:"
+        prompt=f"Answer the question based on the context below.\n\nContext: {context}\n\n---\n\nQuestion: {question}\nAnswer:"
         return prompt
 
     def create_summary(self, context:str) -> str:
@@ -35,7 +39,7 @@ class OpenAIEmbeddings:
         full_prompt=f"Using the following context, write a short story, based on the prompt.\n\nContext: {context}\n\n---\n\nStory: {prompt}"
         return full_prompt
 
-    def get_response(self, prompt, model="text-davinci-003", max_tokens=150):
+    def get_response(self, prompt, model=DEFAULT_TEXT_MODEL, max_tokens=150):
         try:
             result = self.oac.get_prompt_result_params(prompt, max_tokens=max_tokens, temperature=0, top_p=1, frequency_penalty=0, presence_penalty=0, engine=model)
             return result
@@ -43,13 +47,24 @@ class OpenAIEmbeddings:
             return e.user_message
 
 
-    def answer_question(self, question:str, context:str, model="text-davinci-003", max_len=1800,
+    def answer_question(self, question:str, context:str, model=DEFAULT_TEXT_MODEL, max_len=1800,
             size="ada", debug=False, max_tokens=150, stop_sequence=None) -> str:
         """
         Answer a question based on the most similar context from the dataframe texts
         """
         prompt = self.create_question(question, context)
         return self.get_response(prompt, model, max_tokens)
+
+    def get_origins_text(self, origins_list:List) -> List:
+        origins_text = ", ".join(map(str, origins_list))
+        sql = "select id, parsed_text from gpt_summary.table_parsed_text where id in ({})".format(origins_text)
+        # print("sql = {}".format(sql))
+        response = self.msi.read_data(sql)
+        d:Dict
+        to_return = []
+        for d in response:
+            to_return.append("{}: {}".format(d['id'], d['parsed_text']))
+        return to_return
 
     def parse_text_file(self, filename:str, r_str:str = r"([\.!?()]+)", default_print:int = 0, min_chars = 10) -> List:
         cr_regex = re.compile("\n+")
@@ -94,7 +109,7 @@ class OpenAIEmbeddings:
             s_list = text_list[i:i+submit_size]
             percent_done = float(i/num_text) * 100
 
-            result = self.oac.get_embedding_list(s_list, 'text-embedding-ada-002')
+            result = self.oac.get_embedding_list(s_list, self.DEFAULT_EMBEDDING_MODEL)
             for d in result:
                 text = d['text']
                 embedding = np.array(d['embedding'])
@@ -148,7 +163,7 @@ class OpenAIEmbeddings:
 
         print("OpenAIEmbeddings.set_summary_embeddings() Processed {} embeddings".format(len(df.index)))
 
-    def create_context(self, question:str, df:pd.DataFrame, max_len=300, size="ada"):
+    def create_context(self, question:str, df:pd.DataFrame, max_len=300, size="ada") -> [str, List]:
         """
         Create a context for a question by finding the most similar context from the dataframe
         """
@@ -163,11 +178,15 @@ class OpenAIEmbeddings:
 
 
         returns = []
+        origins = []
         cur_len = 0
         df2 = df.sort_values('distances', ascending=True)
         # Sort by distance and add the text to the context until the context is too long
         for i, row in df2.iterrows():
-
+            text = str(row['origins'])
+            # print("OpenAIEmbeddings.create_context = {}".format(text))
+            origin = ast.literal_eval(text)
+            origins += origin
             # Add the length of the text to the current length
             text = str(row['parsed_text'])
             words = text.split()
@@ -184,7 +203,7 @@ class OpenAIEmbeddings:
 
         # Return the context so the best match is closest to the question
         #return "\n\n###\n\n".join(reversed(returns))
-        return "\n\n###\n\n".join(returns)
+        return ("\n\n###\n\n".join(returns), origins)
 
     def build_text_to_summarize(self, results:List, count:int, words_to_summarize = 200) -> Dict:
         num_lines = len(results)
@@ -226,7 +245,7 @@ class OpenAIEmbeddings:
         d = results[0]
         project_id = d['id']
         # then take those summaries and recursively summarize until the target line count is reached
-        sql = "select text_id, parsed_text from source_text_view where source_id = %s and summary_id IS NULL"
+        sql = "select text_id, parsed_text from source_text_view where source_id = %s and summary_id = -1"
         if max_lines != -1:
             sql = "{} limit {}".format(sql, max_lines)
         vals = (project_id,)
@@ -308,7 +327,7 @@ class OpenAIEmbeddings:
         vals = (text_name, group_name_str)
         results = self.msi.read_data(sql, vals)
         if len(results) == 0:
-            print("No db entry for '{}' '{}': creating entry")
+            print("No db entry for '{}' '{}': creating entry".format(text_name, group_name_str))
             sql = "insert into table_source (text_name, group_name) values (%s, %s)"
             source_id = self.msi.write_sql_values_get_row(sql, vals)
         else:
@@ -420,19 +439,21 @@ def load_data_main():
 
 def summarize_project_main(min_rows = 10):
     oae = OpenAIEmbeddings()
-    # num_rows = oae.summarize_raw_text("moby-dick", "melville")
+    #num_rows = oae.summarize_raw_text("king-james", "religious")
     # while num_rows > min_rows:
     #   num_rows = oae.summarize_summary_text("moby-dick", "melville", source_level=4)
     #   print("summarize_project_main() num_rows = {}".format(num_rows))
-    oae.set_summary_embeddings("moby-dick", "melville")
+    oae.set_summary_embeddings("king-james", "religious")
 
 def ask_question_main():
     oae = OpenAIEmbeddings()
     df = oae.load_project_summary_text("moby-dick", "melville")
     question = "Why is Ahab obsessed with Moby-Dick? Provide details."
     print("creating context")
-    cs = oae.create_context(question, df)
+    cs, origins_list = oae.create_context(question, df)
     # print("Context string:\n{}".format(cs))
+    origins = oae.get_origins_text(origins_list)
+    print("Origins:\n{}".format("\n".join(origins)))
     print("submitting question")
     answer = oae.answer_question(question=question, context=cs, model="gpt-3.5-turbo")
     print("\nAnswer:\n{}".format(answer))
@@ -475,9 +496,9 @@ def fix_summary_origins():
 
 if __name__ == "__main__":
     start_time = time.time()
-    store_embeddings_main(file_str="../../corpora/old-testament.txt", text_name="old-testament", group_name="bibles")
+    #store_embeddings_main(file_str="../../corpora/old-testament.txt", text_name="old-testament", group_name="bibles")
     # load_data_main()
-    # ask_question_main()
+    ask_question_main()
     # summarize_project_main()
     # fix_summary_origins()
     print("execution took {:.3f} seconds".format(time.time() - start_time))
