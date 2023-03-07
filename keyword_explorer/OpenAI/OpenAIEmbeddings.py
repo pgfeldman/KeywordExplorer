@@ -51,24 +51,36 @@ class OpenAIEmbeddings:
         prompt = self.create_question(question, context)
         return self.get_response(prompt, model, max_tokens)
 
-    def parse_text_file(self, file:Any, min_len:int = 5, r_str:str = r"([\.!?()“”]+)", default_print:int = 0) -> List:
+    def parse_text_file(self, filename:str, r_str:str = r"([\.!?()]+)", default_print:int = 0, min_chars = 10) -> List:
         cr_regex = re.compile("\n+")
+        print("OpenAIEmbeddings:parse_text_file r_str = {}".format(r_str))
         reg = re.compile(r_str)
-        f = file
-        if isinstance(file, str):
-            f = open(file, mode="r", encoding="utf-8")
+        #f = open(filename, mode="r", encoding="G-8", errors='ignore')
+        f = open(filename, mode="r", encoding="utf-8", errors='replace')
 
         s = f.read()
         f.close()
 
         s = cr_regex.sub(" ", s)
         l = reg.split(s)
+        s1:str
+        s2:str
         s_list = []
-        for i in range(0, len(l)-1, 2):
-            s_list.append(l[i]+l[i+1])
+        i = 0
+        while i < len(l):
+            s1 = l[i].strip()
+            while i < len(l)-1:
+                s2 = l[i+1]
+                if len(s2) < min_chars:
+                    s1 += s2
+                    i += 1
+                else:
+                    break
+            s_list.append(s1)
+            i += 1
 
         for i in range(default_print):
-            print("{}: {}".format(i, s_list[i]))
+            print("OpenAIEmbeddings:parse_text_file{}".format(s_list[i]))
 
         return s_list
 

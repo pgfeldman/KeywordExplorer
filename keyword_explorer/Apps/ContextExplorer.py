@@ -169,7 +169,7 @@ class ContextExplorer(AppBase):
         row = self.target_level_combo.get_next_row()
 
         self.regex_field = DataField(tab, row, 'Parse regex:', text_width, label_width=label_width)
-        self.regex_field.set_text(r"([\.!?()“”]+)")
+        self.regex_field.set_text(r"([\.!?()]+)")
         ToolTip(self.regex_field.tk_entry, "The regex used to parse the file. Editable")
         row = self.regex_field.get_next_row()
 
@@ -190,6 +190,7 @@ class ContextExplorer(AppBase):
             self.experiment_id = results[0]['id']
             self.experiment_field.set_text(" experiment {}: {}".format(self.experiment_id, s))
             self.narrative_project_name_field.set_text(s)
+            self.target_group_field.set_text(l[0])
 
         self.get_levels_list()
         self.count_levels_callback()
@@ -319,24 +320,43 @@ class ContextExplorer(AppBase):
         self.save_experiment_json(dict)
 
     def load_file_callback(self, event = None):
-        print("load_file_callback")
-        if self.experiment_id == -1:
-            tk.messagebox.showwarning("Warning!", "Please create or select a database first")
-            return
-
-    def test_file_callback(self, event = None):
-        print("test_file_callback")
-        group_name = self.target_group_field.get_text()
-        text_name = self.target_text_name.get_text()
+        print("ContextExplorer.load_file_callback()")
+        group_name = self.target_group_field.get_text().strip()
+        text_name = self.target_text_name.get_text().strip()
+        regex_str = self.regex_field.get_text()
         if len(group_name) < 3 or len(text_name) < 3:
             tk.messagebox.showwarning("Warning!", "Please set text and model fields")
             return
-        result = filedialog.askopenfile(filetypes=(("Text files", "*.txt"),("All Files", "*.*")), title="Load text file")
+        result = filedialog.askopenfilename(filetypes=(("Text files", "*.txt"),("All Files", "*.*")), title="Load text file")
+        textfile = result.split("/")[-1]
         s:str
         if result:
-            list = self.oae.parse_text_file(result)
-            for s in list[10:]:
-                print(s)
+            s_list = self.oae.parse_text_file(result, r_str=regex_str)
+            answer = tk.messagebox.askyesno("Warning!", "This will read, process, and store large amounts of data\ntarget = [{}]\ngroup = [{}]\nfile = [{}]\nlines = [{:,}]\nProceed?".format(
+                group_name, text_name, textfile, len(s_list)))
+            if answer == True:
+                print("ContextExplorer.load_file_callback(): Getting embeddings")
+                # df = self.oae.get_embeddings(s_list)
+                print("ContextExplorer.load_file_callback(): Storing data")
+                # self.oae.store_project_data(text_name, group_name, df)
+                # print(df)
+                print("ContextExplorer.load_file_callback(): Finished!")
+
+    def test_file_callback(self, event = None):
+        print("ContextExplorer.test_file_callback()")
+        group_name = self.target_group_field.get_text()
+        text_name = self.target_text_name.get_text()
+        regex_str = self.regex_field.get_text()
+        if len(group_name) < 3 or len(text_name) < 3:
+            tk.messagebox.showwarning("Warning!", "Please set text and model fields")
+            return
+        result = filedialog.askopenfilename(filetypes=(("Text files", "*.txt"),("All Files", "*.*")), title="Load text file")
+        s:str
+        if result:
+            s_list = self.oae.parse_text_file(result, r_str=regex_str)
+            df = self.oae.get_embeddings(s_list[:100])
+            #df = oae.get_embeddings(s_list)
+            print(df)
 
 def main():
     app = ContextExplorer()
