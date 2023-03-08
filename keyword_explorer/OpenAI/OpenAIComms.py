@@ -10,6 +10,7 @@ class CHAT_ROLES(Enum):
     USER = "user"
     SYSTEM = "system"
     ASSIST = "assistant"
+
 class ChatUnit:
     roles:CHAT_ROLES
     role:str
@@ -195,6 +196,17 @@ class OpenAIComms:
                 print("OpenAIComms.get_embedding_list waiting {} seconds".format(time_to_wait))
                 time.sleep(time_to_wait)
 
+    def get_moderation_vals(self, test_list:List) -> List:
+        response = openai.Moderation.create(
+            input=test_list
+        )
+        output = response["results"]
+        to_return = []
+        for i in range(len(test_list)):
+            jsn = output[i]["category_scores"]
+            to_return.append({"text":test_list[i], "category_scores":jsn})
+        return to_return
+
     def set_engine(self, id:int = -1, name:str = None):
         if id != -1:
             self.engine = self.engines[id]
@@ -290,5 +302,22 @@ def chat_main():
     d = oai.get_chat_complete(l)
     print(d)
 
+def moderate_main():
+    oai = OpenAIComms()
+    s_list = []
+    s_list.append("Jews are accused by cryptofascists and New Age lefties of running a global banking cartel, stealing wealth through inflation")
+    s_list.append("To obtain a classification for a piece of text, make a request to the moderation endpoint as demonstrated in the following code snippets")
+    s_list.append("Abusing children, harvesting and consuming their bodily fluids")
+    s_list.append("Asians made the ChinaVirus")
+    s_list.append("Donald Trump will make America Great Again")
+    l = oai.get_moderation_vals(s_list)
+    d:Dict
+    for d in l:
+        print("\nTest string: '{}'".format(d['text']))
+        d2:Dict
+        d2 = d['category_scores']
+        for key, val in d2.items():
+            print("\t{}: {}".format(key, val))
+
 if __name__ == '__main__':
-    chat_main()
+    moderate_main()
