@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 import numpy as np
 import openai
@@ -316,6 +317,8 @@ def moderate_main():
         print("\nTest string: '{}'".format(d['text']))
         d2:Dict
         d2 = d['category_scores']
+        js = json.dumps(d2)
+        print("\t{}".format(js))
         for key, val in d2.items():
             print("\t{}: {}".format(key, val))
 
