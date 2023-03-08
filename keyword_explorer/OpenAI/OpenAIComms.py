@@ -121,8 +121,6 @@ class OpenAIComms:
 
 
     def get_prompt_result(self, prompt:str, print_result:bool = False) -> List:
-
-
         if "gpt-3.5" in self.engine:
             print("OpenAICommsget_prompt_result_params(): Using Chat interface")
             l = [ChatUnit(prompt, CHAT_ROLES.USER)]
@@ -162,6 +160,13 @@ class OpenAIComms:
                     goodread = True
 
         return to_return
+
+    def get_full_response(self, prompt:str) -> Dict:
+        response = openai.Completion.create(engine=self.engine, prompt=prompt, max_tokens=self.max_tokens,
+                                            temperature=self.temperature, top_p=self.top_p, logprobs=self.logprobs,
+                                            presence_penalty=self.presence_penalty, frequency_penalty=self.frequency_penalty,
+                                            n=self.num_responses)
+        return response
 
     def get_embedding(self, text:str, engine="text-embedding-ada-002"):
         # from https://beta.openai.com/docs/guides/embeddings/what-are-embeddings
@@ -317,10 +322,15 @@ def moderate_main():
         print("\nTest string: '{}'".format(d['text']))
         d2:Dict
         d2 = d['category_scores']
-        js = json.dumps(d2)
-        print("\t{}".format(js))
         for key, val in d2.items():
             print("\t{}: {}".format(key, val))
 
+def full_response_main():
+    oai = OpenAIComms()
+    oai.set_parameters(max_tokens=64, logprobs=10)
+    response = oai.get_full_response("one, two, three")
+    print(response)
+
 if __name__ == '__main__':
     moderate_main()
+    # full_response_main()

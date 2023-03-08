@@ -56,7 +56,7 @@ class EmbeddingsExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "EmbeddingsExplorer"
-        self.app_version = "11.8.22"
+        self.app_version = "3.8.23"
         self.geom = (600, 620)
         self.oai = OpenAIComms()
         self.tkws = TweetKeywords()
@@ -260,9 +260,10 @@ class EmbeddingsExplorer(AppBase):
         et:EmbeddedText
         rows = 0
         for et in self.mr.embedding_list:
+            ra = np.array(et.reduced)
             sql = "update table_tweet set cluster_id = %s, cluster_name = %s, reduced = %s where row_id = %s;"
-            vals = (int(et.cluster_id), et.cluster_name, "{}".format(et.reduced), int(et.row_id))
-            print("store_reduced_and_clustering_callback\n\t{}\n\t{}".format(sql, vals))
+            vals = (int(et.cluster_id), et.cluster_name, ra.dumps(), int(et.row_id))
+            # print("store_reduced_and_clustering_callback\n\t{}\n\t{}".format(sql, vals))
             self.msi.write_sql_values_get_row(sql, vals)
             rows += 1
         message.showinfo("DB Write", "Wrote {} rows of reduced and cluster data".format(rows))
@@ -331,11 +332,11 @@ class EmbeddingsExplorer(AppBase):
         print("\tClearing ManifoldReduction")
         self.mr.clear()
         self.canvas_frame.clear_Nodes()
-        self.dp.dprint("\tLoading {} rows".format(len(result)))
+        print("\tLoading {} rows".format(len(result)))
         count = 0
         et:EmbeddedText
         for row_dict in result:
-            et = self.mr.load_row(row_dict['tweet_row'], row_dict['embedding'])
+            et = self.mr.load_row(row_dict['tweet_row'], row_dict['embedding'], None, None)
             et.text = self.safe_dict(row_dict, 'text', "unset")
             reduced = self.safe_dict(row_dict, 'reduced', None)
             cluster_id = self.safe_dict(row_dict, 'cluster_id', None)
