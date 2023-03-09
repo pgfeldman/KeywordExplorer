@@ -382,6 +382,10 @@ class ContextExplorer(AppBase):
                 d = self.oae.build_text_to_summarize(results, count, words_to_summarize)
                 # run the query and store the result. Update the parsed text table with the summary id
                 summary = self.oai.get_prompt_result_params(d['query'], engine=engine, temperature=0, presence_penalty=0.8, frequency_penalty=0, max_tokens=128)
+                if summary == self.oai.ERROR_MSG:
+                    print("ContextExplorer.test_file_callback() got {} from self.oai.get_prompt_result_params({})".format(summary, d['query']))
+                    continue
+
                 embd = self.oai.get_embedding_list([summary])
                 mod = self.oai.get_moderation_vals([summary])
                 print("Summary: {}\n\tEmbedding: {}\n\tSpeech: {}\n".format(summary, embd[0]['embedding'], mod[0]['category_scores']))

@@ -16,7 +16,8 @@ from typing import List, Dict, Pattern, TextIO, Any
 class OpenAIEmbeddings:
     #DEFAULT_TEXT_MODEL = "gpt-3.5-turbo-0301"
     DEFAULT_TEXT_MODEL = "text-davinci-003"
-    DEFAULT_SUMMARY_MODEL = "gpt-3.5-turbo-0301"
+    #DEFAULT_SUMMARY_MODEL = "gpt-3.5-turbo-0301"
+    DEFAULT_SUMMARY_MODEL = "text-davinci-003"
     DEFAULT_EMBEDDING_MODEL = "text-embedding-ada-002"
     oac:OpenAIComms
     msi:MySqlInterface
@@ -234,7 +235,7 @@ class OpenAIEmbeddings:
         d = {'query':query, 'count':count, 'row_list':row_list, 'origins':origin_list}
         return d
 
-    def summarize_raw_text(self, text_name:str, group_name:str, max_lines = -1, words_to_summarize = 200, target_line_count = 10, database="gpt_summary", user="root") -> int:
+    def summarize_raw_text(self, text_name:str, group_name:str, max_lines = -1, words_to_summarize = 200) -> int:
         # take some set of lines from the parsed text table and produce summary lines in the summary text table
         d:Dict
         sql = "select * from table_source where text_name = %s and group_name = %s"

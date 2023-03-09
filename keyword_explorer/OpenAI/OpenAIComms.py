@@ -35,7 +35,7 @@ class OpenAIComms:
     num_responses:int = 1 # How many completions to generate for each prompt.
     presence_penalty:float = 0.3 # Number between 0 and 1 that penalizes new tokens based on whether they appear in the text so far. Increases the model's likelihood to talk about new topics.
     frequency_penalty:float = 0.3 # Number between 0 and 1 that penalizes new tokens based on their existing frequency in the text so far. Decreases the model's likelihood to repeat the same line verbatim.
-
+    ERROR_MSG = "ERROR_MSG-ERROR_MSG-ERROR_MSG"
 
     def __init__(self, engine_id:int = 0):
         self.engine = self.engines[engine_id]
@@ -77,11 +77,13 @@ class OpenAIComms:
                 return s.strip()
 
             except (openai.error.RateLimitError, openai.error.APIConnectionError, openai.error.APIError) as e:
-                print("OpenAIComms.get_prompt_result_params() waiting {} seconds {} of {}".format(time_to_wait, waitcount, waitmax))
-                time.sleep(time_to_wait)
+                print("\nOpenAIComms.get_chat_complete(): {}".format(e.user_message))
+                sleeptime = (waitcount+1) * time_to_wait
+                print("\twaiting {} seconds {} of {}".format(sleeptime, waitcount, waitmax))
+                time.sleep(sleeptime)
                 waitcount += 1
                 if waitcount > waitmax:
-                    return e.user_message
+                    return self.ERROR_MSG
 
     def get_prompt_result_params(self, prompt:str, engine:str = "text-davinci-003", max_tokens:int = 30, temperature:float = 0.4, top_p:float = 1, logprobs:int = 1,
                                  num_responses:int = 1, presence_penalty:float = 0.3, frequency_penalty:float = 0.3) -> str:
@@ -105,16 +107,14 @@ class OpenAIComms:
                 s = choices[0]['text']
                 goodread = True
                 return s.strip()
-            except openai.error.APIConnectionError as e:
-                print("OpenAIComms.get_prompt_result(): {}".format(e.user_message))
-                return "Error reaching OpenAI completion endpoint"
-
-            except openai.error.RateLimitError:
-                print("OpenAIComms.get_prompt_result_params() waiting {} seconds".format(time_to_wait))
-                time.sleep(time_to_wait)
+            except (openai.error.RateLimitError, openai.error.APIConnectionError, openai.error.APIError) as e:
+                print("\nOpenAIComms.get_prompt_result_params(): {}".format(e.user_message))
+                sleeptime = (waitcount+1) * time_to_wait
+                print("\twaiting {} seconds {} of {}".format(sleeptime, waitcount, waitmax))
+                time.sleep(sleeptime)
                 waitcount += 1
-                if waitcount < waitmax:
-                    return "{} is currently overloaded with other requests".format(engine)
+                if waitcount > waitmax:
+                    return self.ERROR_MSG
 
 
     def get_prompt_result(self, prompt:str, print_result:bool = False) -> List:
