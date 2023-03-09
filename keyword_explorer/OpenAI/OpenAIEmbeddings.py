@@ -16,6 +16,7 @@ from typing import List, Dict, Pattern, TextIO, Any
 class OpenAIEmbeddings:
     #DEFAULT_TEXT_MODEL = "gpt-3.5-turbo-0301"
     DEFAULT_TEXT_MODEL = "text-davinci-003"
+    DEFAULT_SUMMARY_MODEL = "gpt-3.5-turbo-0301"
     DEFAULT_EMBEDDING_MODEL = "text-embedding-ada-002"
     oac:OpenAIComms
     msi:MySqlInterface
@@ -258,7 +259,7 @@ class OpenAIEmbeddings:
         while count < num_lines:
             d = self.build_text_to_summarize(results, count, words_to_summarize)
             # run the query and store the result. Update the parsed text table with the summary id
-            summary = self.oac.get_prompt_result_params(d['query'], temperature=0, presence_penalty=0.8, frequency_penalty=0, max_tokens=128)
+            summary = self.oac.get_prompt_result_params(d['query'], engine=self.DEFAULT_SUMMARY_MODEL, temperature=0, presence_penalty=0.8, frequency_penalty=0, max_tokens=128)
             sql = "insert into table_summary_text (source, level, summary_text, origins) values (%s, %s, %s, %s)"
             vals = (project_id, level, summary, str(d['origins']))
             row_id = self.msi.write_sql_values_get_row(sql, vals)
@@ -301,7 +302,7 @@ class OpenAIEmbeddings:
         while count < num_lines:
             d = self.build_text_to_summarize(results, count, words_to_summarize)
             # run the query and store the result. Update the parsed text table with the summary id
-            summary = self.oac.get_prompt_result_params(d['query'], temperature=0, presence_penalty=0.8, frequency_penalty=0, max_tokens=128)
+            summary = self.oac.get_prompt_result_params(d['query'], engine=self.DEFAULT_SUMMARY_MODEL, temperature=0, presence_penalty=0.8, frequency_penalty=0, max_tokens=128)
             sql = "insert into table_summary_text (source, level, summary_text, origins) values (%s, %s, %s, %s)"
             vals = (project_id, target_level, summary, str(d['origins']))
             row_id = self.msi.write_sql_values_get_row(sql, vals)

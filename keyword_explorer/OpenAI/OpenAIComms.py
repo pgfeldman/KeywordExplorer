@@ -26,7 +26,7 @@ class ChatUnit:
 
 class OpenAIComms:
     openai.api_key = os.environ.get("OPENAI_KEY")
-    engines:List = ["text-davinci-003", "davinci", "curie", "babbage", "ada", "text-curie-001", "text-babbage-001", "text-ada-001"]
+    engines:List = ["text-davinci-003", "davinci", "text-curie-001", "text-babbage-001", "text-ada-001"]
     engine:str = engines[0]
     max_tokens:int = 30 # The maximum number of tokens to generate. Requests can use up to 2048 tokens shared between prompt and completion. (One token is roughly 4 characters for normal English text)
     temperature:float = 0.4 # What sampling temperature to use. Higher values means the model will take more risks. Try 0.9 for more creative applications, and 0 (argmax sampling) for ones with a well-defined answer.
@@ -332,5 +332,6 @@ def full_response_main():
     print(response)
 
 if __name__ == '__main__':
-    moderate_main()
+    chat_main()
+    # moderate_main()
     # full_response_main()
