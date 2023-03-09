@@ -360,11 +360,34 @@ class ContextExplorer(AppBase):
             return
         result = filedialog.askopenfilename(filetypes=(("Text files", "*.txt"),("All Files", "*.*")), title="Load text file")
         s:str
+        num_rows = 100
         if result:
             s_list = self.oae.parse_text_file(result, r_str=regex_str)
-            df = self.oae.get_embeddings(s_list[:100])
-            #df = oae.get_embeddings(s_list)
-            print(df)
+            # send that list to get embeddings
+            embd_list = self.oai.get_embedding_list(s_list[:num_rows])
+            print("\tGetting moderations for {} rows".format(num_rows))
+            mod_list = self.oai.get_moderation_vals(s_list[:num_rows])
+            # build a proxy db results List
+            results = []
+            for i in range(num_rows):
+                d = {"text_id":i, "parsed_text":s_list[i]}
+                results.append(d)
+            row_dict:Dict
+            count = 0
+            level = 1
+            summary_count = 0
+            words_to_summarize = 200
+            engine = self.oae.DEFAULT_SUMMARY_MODEL
+            while count < num_rows:
+                d = self.oae.build_text_to_summarize(results, count, words_to_summarize)
+                # run the query and store the result. Update the parsed text table with the summary id
+                summary = self.oai.get_prompt_result_params(d['query'], engine=engine, temperature=0, presence_penalty=0.8, frequency_penalty=0, max_tokens=128)
+                embd = self.oai.get_embedding_list([summary])
+                mod = self.oai.get_moderation_vals([summary])
+                print("Summary: {}\n\tEmbedding: {}\n\tSpeech: {}\n".format(summary, embd[0]['embedding'], mod[0]['category_scores']))
+
+                count = d['count']
+
 
 def main():
     app = ContextExplorer()

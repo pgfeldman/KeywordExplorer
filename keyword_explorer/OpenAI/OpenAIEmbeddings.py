@@ -210,7 +210,7 @@ class OpenAIEmbeddings:
         num_lines = len(results)
         d:Dict
         text:str
-        query = "Summarize the following into a single sentence:\n"
+        query = "Provide a summary of the following:\n"
         row_list = []
         origin_list = []
         word_count = 0

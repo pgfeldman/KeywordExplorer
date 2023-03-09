@@ -58,7 +58,7 @@ class OpenAIComms:
         cu:ChatUnit
         goodread = False
         waitcount = 0
-        waitmax = 0
+        waitmax = 5
         s:str
         time_to_wait = 5
         while not goodread:
@@ -75,16 +75,13 @@ class OpenAIComms:
                 d = response['choices'][0]
                 s = d['message']['content']
                 return s.strip()
-            except openai.error.APIConnectionError as e:
-                print("OpenAIComms.get_prompt_result(): {}".format(e.user_message))
-                return "Error reaching OpenAI completion endpoint"
 
-            except openai.error.RateLimitError:
-                print("OpenAIComms.get_prompt_result_params() waiting {} seconds".format(time_to_wait))
+            except (openai.error.RateLimitError, openai.error.APIConnectionError, openai.error.APIError) as e:
+                print("OpenAIComms.get_prompt_result_params() waiting {} seconds {} of {}".format(time_to_wait, waitcount, waitmax))
                 time.sleep(time_to_wait)
                 waitcount += 1
-                if waitcount < waitmax:
-                    return "{} is currently overloaded with other requests".format(engine)
+                if waitcount > waitmax:
+                    return e.user_message
 
     def get_prompt_result_params(self, prompt:str, engine:str = "text-davinci-003", max_tokens:int = 30, temperature:float = 0.4, top_p:float = 1, logprobs:int = 1,
                                  num_responses:int = 1, presence_penalty:float = 0.3, frequency_penalty:float = 0.3) -> str:

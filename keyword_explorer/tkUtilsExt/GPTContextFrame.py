@@ -44,6 +44,8 @@ class GPTContextFrame(GPT3GeneratorFrame):
     context_prompt:DataField
     context_text_field:TextField
     prompt_query_cb:Checkbox
+    ignore_context_cb:Checkbox
+    tab_control:ttk.Notebook
     project_df:pd.DataFrame
 
     def __init__(self, *args, **kwargs):
@@ -71,18 +73,21 @@ class GPTContextFrame(GPT3GeneratorFrame):
         cboxes = Checkboxes(frm, row, "Options")
         self.prompt_query_cb = cboxes.add_checkbox("Use Prompt for context", self.handle_checkboxes)
         self.prompt_query_cb.set_val(False)
+        self.ignore_context_cb = cboxes.add_checkbox("Ignore context", self.handle_checkboxes)
+        self.ignore_context_cb.set_val(False)
         row = cboxes.get_next_row()
 
         # Add the tabs
-        tab_control = ttk.Notebook(frm)
-        tab_control.grid(column=0, row=row, columnspan=2, sticky="nsew")
+        self.tab_control = ttk.Notebook(frm)
+        self.tab_control.grid(column=0, row=row, columnspan=2, sticky="nsew")
 
-        gen_tab = ttk.Frame(tab_control)
-        tab_control.add(gen_tab, text='Generated')
-        ctx_tab = ttk.Frame(tab_control)
-        tab_control.add(ctx_tab, text='Context')
-        src_tab = ttk.Frame(tab_control)
-        tab_control.add(src_tab, text='Sources')
+        gen_tab = ttk.Frame(self.tab_control)
+        self.tab_control.add(gen_tab, text='Generated')
+        ctx_tab = ttk.Frame(self.tab_control)
+        self.tab_control.add(ctx_tab, text='Context')
+        src_tab = ttk.Frame(self.tab_control)
+        self.tab_control.add(src_tab, text='Sources')
+        
 
         self.response_text_field = TextField(gen_tab, row, 'Response:', text_width, height=11, label_width=label_width)
         ToolTip(self.response_text_field.tk_text, "The response from the GPT will be displayed here")
@@ -110,8 +115,10 @@ class GPTContextFrame(GPT3GeneratorFrame):
 
     def handle_checkboxes(self, event = None):
         print("prompt_query_cb = {}".format(self.prompt_query_cb.get_val()))
+        print("ignore_context_cb = {}".format(self.ignore_context_cb.get_val()))
 
     def new_prompt_callback(self):
+        self.tab_control.select(0)
         if self.project_df.empty:
             tk.messagebox.showwarning("Warning!", "Please import data first")
             return
@@ -122,7 +129,9 @@ class GPTContextFrame(GPT3GeneratorFrame):
         context, origins_list = oae.create_context(ctx_question, self.project_df)
 
         question = self.prompt_text_field.get_text()
-        full_question = oae.create_question(question=question, context=context)
+        full_question = question
+        if self.ignore_context_cb.get_val() == False:
+            full_question = oae.create_question(question=question, context=context)
 
         self.context_text_field.clear()
         self.context_text_field.set_text(full_question)
@@ -170,7 +179,9 @@ class GPTContextFrame(GPT3GeneratorFrame):
         context, origins_list = oae.create_context(ctx_prompt, self.project_df)
 
         prompt = self.prompt_text_field.get_text()
-        full_prompt = oae.create_narrative(prompt=prompt, context=context)
+        full_prompt = prompt
+        if self.ignore_context_cb.get_val() == False:
+            full_prompt = oae.create_narrative(prompt=prompt, context=context)
 
         self.context_text_field.clear()
         self.context_text_field.set_text(full_prompt)
