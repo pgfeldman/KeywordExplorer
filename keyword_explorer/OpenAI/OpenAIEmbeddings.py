@@ -1,3 +1,4 @@
+import json
 import time
 
 import numpy as np
@@ -103,7 +104,8 @@ class OpenAIEmbeddings:
 
     def get_embeddings(self, text_list:List, submit_size:int = 10, max:int = -1) -> pd.DataFrame:
         d_list = []
-        d:Dict
+        ed:Dict
+        md:Dict
         num_text = len(text_list)
         # for i in range(0, num_text+submit_size-1, submit_size):
         #    s_list = text_list[i:min(num_text, i+submit_size])
@@ -111,11 +113,15 @@ class OpenAIEmbeddings:
             s_list = text_list[i:i+submit_size]
             percent_done = float(i/num_text) * 100
 
-            result = self.oac.get_embedding_list(s_list, self.DEFAULT_EMBEDDING_MODEL)
-            for d in result:
-                text = d['text']
-                embedding = np.array(d['embedding'])
-                d = {"text":text, "embedding":embedding}
+            embd_list = self.oac.get_embedding_list(s_list, self.DEFAULT_EMBEDDING_MODEL)
+            mod_list = self.oac.get_moderation_vals(s_list)
+            for i in range(len(s_list)):
+                ed = embd_list[i]
+                md = mod_list[i]
+                text = s_list[i]
+                embedding = np.array(ed['embedding'])
+                jmod = json.dumps(md['category_scores'])
+                d = {"text":text, "embedding":embedding, "moderation":jmod}
                 d_list.append(d)
             print("{:2f}%: {}".format(percent_done, s_list[0]))
             if max > 0 and i > max:
@@ -158,9 +164,10 @@ class OpenAIEmbeddings:
         for index, row in df.iterrows():
             id = row['id']
             emb = row['embedding']
+            moderation = row['moderation']
             # print("[{}], {}".format(id, emb))
-            sql = "update table_summary_text set embedding = %s where id = %s"
-            vals = (emb.dumps(), id)
+            sql = "update table_summary_text set embedding = %s, moderation = %s where id = %s"
+            vals = (emb.dumps(), moderation, id)
             self.msi.write_sql_values_get_row(sql, vals)
 
         print("OpenAIEmbeddings.set_summary_embeddings() Processed {} embeddings".format(len(df.index)))
@@ -237,6 +244,7 @@ class OpenAIEmbeddings:
 
     def summarize_raw_text(self, text_name:str, group_name:str, max_lines = -1, words_to_summarize = 200) -> int:
         # take some set of lines from the parsed text table and produce summary lines in the summary text table
+        print("OpenAIEmbeddings.summarize_raw_text(): saving to '{}':'{}'".format(text_name, group_name))
         d:Dict
         sql = "select * from table_source where text_name = %s and group_name = %s"
         vals = (text_name, group_name)
@@ -324,7 +332,7 @@ class OpenAIEmbeddings:
         return num_lines
 
 
-    def store_project_data(self, text_name:str, group_name_str, df:pd.DataFrame, database="gpt_summary", user="root"):
+    def store_project_data(self, text_name:str, group_name_str, df:pd.DataFrame, database="gpt_summary", user="root") -> int:
         sql = "select * from table_source where text_name = %s and group_name = %s"
         vals = (text_name, group_name_str)
         results = self.msi.read_data(sql, vals)
@@ -338,12 +346,11 @@ class OpenAIEmbeddings:
         print("source_id = {}".format(source_id))
         for index, row in df.iterrows():
             text = row['text']
-            embedding = row['embedding']
-            sql = "insert into gpt_summary.table_parsed_text (source, parsed_text, embedding) values (%s, %s, %s)"
-            vals = (source_id, text, embedding.dumps())
+            embedding = np.array(row['embedding'])
+            moderation = row['moderation']
+            sql = "insert into gpt_summary.table_parsed_text (source, parsed_text, embedding, moderation) values (%s, %s, %s, %s)"
+            vals = (source_id, text, embedding.dumps(), moderation)
             self.msi.write_sql_values_get_row(sql, vals)
-
-        self.msi.close()
 
     def load_project_parsed_text(self, text_name:str, group_name:str, database="gpt_summary", user="root", limit = -1) -> pd.DataFrame:
         sql = "select * from table_source where text_name = %s and group_name = %s"
@@ -441,11 +448,11 @@ def load_data_main():
 
 def summarize_project_main(min_rows = 10):
     oae = OpenAIEmbeddings()
-    #num_rows = oae.summarize_raw_text("king-james", "religious")
+    num_rows = oae.summarize_raw_text("on-war", "warfare")
     # while num_rows > min_rows:
     #   num_rows = oae.summarize_summary_text("moby-dick", "melville", source_level=4)
     #   print("summarize_project_main() num_rows = {}".format(num_rows))
-    oae.set_summary_embeddings("king-james", "religious")
+    oae.set_summary_embeddings("on-war", "warfare")
 
 def ask_question_main():
     oae = OpenAIEmbeddings()
@@ -500,7 +507,7 @@ if __name__ == "__main__":
     start_time = time.time()
     #store_embeddings_main(file_str="../../corpora/old-testament.txt", text_name="old-testament", group_name="bibles")
     # load_data_main()
-    ask_question_main()
-    # summarize_project_main()
+    # ask_question_main()
+    summarize_project_main()
     # fix_summary_origins()
     print("execution took {:.3f} seconds".format(time.time() - start_time))

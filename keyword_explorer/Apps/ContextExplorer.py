@@ -190,7 +190,7 @@ class ContextExplorer(AppBase):
             self.experiment_id = results[0]['id']
             self.experiment_field.set_text(" experiment {}: {}".format(self.experiment_id, s))
             self.narrative_project_name_field.set_text(s)
-            self.target_group_field.set_text(l[0])
+            self.target_group_field.set_text(l[1])
 
         self.get_levels_list()
         self.count_levels_callback()
@@ -333,14 +333,13 @@ class ContextExplorer(AppBase):
         if result:
             s_list = self.oae.parse_text_file(result, r_str=regex_str)
             answer = tk.messagebox.askyesno("Warning!", "This will read, process, and store large amounts of data\ntarget = [{}]\ngroup = [{}]\nfile = [{}]\nlines = [{:,}]\nProceed?".format(
-                group_name, text_name, textfile, len(s_list)))
+                text_name, group_name, textfile, len(s_list)))
             if answer == True:
                 level = int(self.target_level_combo.get_text())
                 print("ContextExplorer.load_file_callback(): Getting embeddings")
                 df = self.oae.get_embeddings(s_list)
-                print("ContextExplorer.load_file_callback(): Storing data")
+                print("ContextExplorer.load_file_callback(): Storing data Dataframe = \n{}".format(df))
                 self.oae.store_project_data(text_name, group_name, df)
-                print("Dataframe = \n{}".format(df))
                 print("ContextExplorer.load_file_callback(): Summarizing Level 1")
                 self.oae.summarize_raw_text(text_name, group_name)
                 for i in range(1, level):
@@ -363,10 +362,6 @@ class ContextExplorer(AppBase):
         num_rows = 100
         if result:
             s_list = self.oae.parse_text_file(result, r_str=regex_str)
-            # send that list to get embeddings
-            embd_list = self.oai.get_embedding_list(s_list[:num_rows])
-            print("\tGetting moderations for {} rows".format(num_rows))
-            mod_list = self.oai.get_moderation_vals(s_list[:num_rows])
             # build a proxy db results List
             results = []
             for i in range(num_rows):
@@ -374,8 +369,6 @@ class ContextExplorer(AppBase):
                 results.append(d)
             row_dict:Dict
             count = 0
-            level = 1
-            summary_count = 0
             words_to_summarize = 200
             engine = self.oae.DEFAULT_SUMMARY_MODEL
             while count < num_rows:
