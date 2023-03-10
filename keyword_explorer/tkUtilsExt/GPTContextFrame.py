@@ -109,6 +109,8 @@ class GPTContextFrame(GPT3GeneratorFrame):
         ToolTip(b, "Gets Story from the GPT")
         b = self.buttons.add_button("Extend", self.extend_callback, width=-1)
         ToolTip(b, "Extends the GPT's response")
+        b = self.buttons.add_button("Clear", self.clear_callback, width=-1)
+        ToolTip(b, "Clears all the fields")
 
     def set_project_dataframe(self, df:DataField):
         self.project_df = df
@@ -145,6 +147,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.response_text_field.set_text(answer)
 
     def get_summmary_callback(self):
+        self.tab_control.select(0)
         if self.project_df.empty:
             tk.messagebox.showwarning("Warning!", "Please import data first")
             return
@@ -169,6 +172,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.response_text_field.set_text(answer)
 
     def get_story_callback(self):
+        self.tab_control.select(0)
         if self.project_df.empty:
             tk.messagebox.showwarning("Warning!", "Please import data first")
             return
@@ -206,6 +210,14 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.dp.dprint("Submitting extend prompt:")
         response = oae.get_response(prompt)
         self.response_text_field.set_text(response)
+
+    def clear_callback(self):
+        self.keyword_filter.clear()
+        self.context_prompt.clear()
+        self.prompt_text_field.clear()
+        self.response_text_field.clear()
+        self.context_text_field.clear()
+        self.sources_text_field.clear()
 
     def set_params(self, settings:GPTContextSettings):
         self.prompt_text_field.clear()

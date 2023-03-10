@@ -62,7 +62,7 @@ class ContextExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "ContextExplorer"
-        self.app_version = "3.07.2023"
+        self.app_version = "3.10.2023"
         self.geom = (840, 670)
         self.oai = OpenAIComms()
         self.oae = OpenAIEmbeddings()
@@ -88,11 +88,17 @@ class ContextExplorer(AppBase):
         return row + 1
 
     def load_experiment_list(self):
-        #TODO: create "*" entries where there are more than one text per group
         experiments = []
-        results = self.msi.read_data("select * from table_source")
+        results = self.msi.read_data("select * from table_source order by group_name, text_name")
+        entries = self.msi.read_data("select group_name, count(group_name) as entries from table_source group by group_name")
+        prev_name = "NO-PREV-NAME"
         for r in results:
-            experiments.append("{}:{}".format(r['text_name'], r['group_name']))
+            group_name = r['group_name']
+            for e in entries:
+                if e['group_name'] == group_name and e['entries'] > 1 and prev_name != group_name:
+                    experiments.append("*:{}".format(group_name))
+            experiments.append("{}:{}".format(r['text_name'], group_name))
+            prev_name = group_name
         self.experiment_combo.set_combo_list(experiments)
 
     def get_levels_list(self):
@@ -188,20 +194,31 @@ class ContextExplorer(AppBase):
         l = s.split(":")
         self.experiment_combo.clear()
         self.experiment_combo.set_text(s)
-        #TODO: If there is a "*" for text_name, then just search for group
-        results = self.msi.read_data("select id from table_source where text_name = %s and group_name = %s", (l[0],l[1]))
+
+        #If there is a "*" for text_name, then just search for group
+        text_name = l[0]
+        sql = "select id from table_source where text_name = %s and group_name = %s"
+        vals = (text_name,l[1])
+        if text_name == "*":
+            sql = "select id from table_source where group_name = %s"
+            vals = (l[1],)
+        results = self.msi.read_data(sql, vals)
         if len(results) > 0:
             self.experiment_id_list = []
             self.experiment_id = results[0]['id']
             self.experiment_field.set_text(" experiment {}: {}".format(self.experiment_id, s))
             self.narrative_project_name_field.set_text(s)
             self.target_group_field.set_text(l[1])
+            # load up all the experiment id's
+            for r in results:
+                self.experiment_id_list.append(r['id'])
 
         self.get_levels_list()
         self.count_levels_callback()
-        print("experiment_callback: experiment_id = {}".format(self.experiment_id))
+        print("\tload_project_callback: experiment_id = {}/{}".format(self.experiment_id, self.experiment_id_list))
 
     def count_levels_callback(self, event = None):
+        print("ContextExplorer.count_levels_callback(): ")
         if self.experiment_id == -1:
             tk.messagebox.showwarning("Warning!", "Please create or select a database first")
             return
@@ -209,34 +226,40 @@ class ContextExplorer(AppBase):
         level = self.level_combo.tk_combo.get()
         self.level_combo.clear()
         self.level_combo.set_text(level)
-        print("\nlevel = '{}'".format(level))
+        print("\tlevel = '{}'".format(level))
 
         raw_count = 0
         summary_count = 0
         if level == 'raw only' or level == 'all':
-            print("'raw only' or 'all'")
-            sql = "select count(*) from gpt_summary.table_parsed_text where source = %s"
-            vals = (self.experiment_id,)
-            results = self.msi.read_data(sql, vals)
+            print("\t'raw only' or 'all'")
+            sql = "select count(*) from gpt_summary.table_parsed_text where source = {}".format(self.experiment_id)
+            if len(self.experiment_id_list) > 0:
+                sql =  "select count(*) from gpt_summary.table_parsed_text where source in ({})".format(", ".join(map(str, self.experiment_id_list)))
+            print("\t{}".format(sql))
+            results = self.msi.read_data(sql)
             raw_count = int(results[0]['count(*)'])
             self.rows_field.set_text("{:,}".format(raw_count))
         if level == 'all summaries' or level == 'all':
-            print("'all summaries' or 'all'")
-            sql = "select count(*) from gpt_summary.table_summary_text where source = %s"
-            vals = (self.experiment_id,)
-            results = self.msi.read_data(sql, vals)
+            print("\t'all summaries' or 'all'")
+            sql = "select count(*) from gpt_summary.table_summary_text where source = {}".format(self.experiment_id)
+            if len(self.experiment_id_list) > 0:
+                sql =  "select count(*) from gpt_summary.table_summary_text where source in ({})".format(", ".join(map(str, self.experiment_id_list)))
+            print("\t{}".format(sql))
+            results = self.msi.read_data(sql)
             summary_count = int(results[0]['count(*)'])
             self.rows_field.set_text("{:,}".format(summary_count))
         if level == 'all':
-            print("'all'")
+            print("\t'all'")
             self.rows_field.set_text("{:,}".format(raw_count + summary_count))
 
         try:
             level = int(level)
-            print("level {}".format(level))
-            sql = "select count(*) from gpt_summary.table_summary_text where level = %s and source = %s"
-            vals = (level, self.experiment_id,)
-            results = self.msi.read_data(sql, vals)
+            print("\tlevel {}".format(level))
+            sql = "select count(*) from gpt_summary.table_summary_text where level = {} and source = {}".format(level, self.experiment_id)
+            if len(self.experiment_id_list) > 0:
+                sql =  "select count(*) from gpt_summary.table_summary_text where level = {} and source in ({})".format(level, ", ".join(map(str, self.experiment_id_list)))
+            print("\t{}".format(sql))
+            results = self.msi.read_data(sql)
             count = int(results[0]['count(*)'])
             self.rows_field.set_text("{:,}".format(count))
         except ValueError:
@@ -258,6 +281,7 @@ class ContextExplorer(AppBase):
         if level == 'raw only' or level == 'all':
             sql = "select text_id, parsed_text, embedding from source_text_view where source_id = {}".format(self.experiment_id)
             if len(self.experiment_id_list) > 0:
+                print("ContextExplorer.load_data_callback(): loading raw data for sources {}".format(self.experiment_id_list))
                 sql = "select text_id, parsed_text, embedding from source_text_view where source_id in ({})".format(", ".join(map(str, self.experiment_id_list)))
             if len(kw_list) > 0:
                 sql += " AND (parsed_text LIKE '%{}%')".format("%' OR parsed_text LIKE '%".join(kw_list))
@@ -266,6 +290,9 @@ class ContextExplorer(AppBase):
             df_list.append(df)
         if level == 'all summaries' or level == 'all':
             sql = "select text_id, parsed_text, embedding, origins from summary_text_view where proj_id = {}".format(self.experiment_id)
+            if len(self.experiment_id_list) > 0:
+                print("ContextExplorer.load_data_callback(): loading all summaries for sources {}".format(self.experiment_id_list))
+                sql = "select text_id, parsed_text, embedding, origins from summary_text_view where proj_id in ({})".format(", ".join(map(str, self.experiment_id_list)))
             if len(kw_list) > 0:
                 sql += " AND (parsed_text LIKE '%{}%')".format("%' OR parsed_text LIKE '%".join(kw_list))
             results = self.msi.read_data(sql)
@@ -278,6 +305,10 @@ class ContextExplorer(AppBase):
             level = int(level)
             print("level {}".format(level))
             sql = "select text_id, parsed_text, embedding, origins from summary_text_view where level = {} and proj_id = {}".format(level, self.experiment_id)
+            if len(self.experiment_id_list) > 0:
+                print("ContextExplorer.load_data_callback(): loading level {} for sources {}".format(level, self.experiment_id_list))
+                sql = "select text_id, parsed_text, embedding, origins from summary_text_view where level = {} and proj_id in ({})".format(level, ", ".join(map(str, self.experiment_id_list)))
+
             if len(kw_list) > 0:
                 sql += " AND (parsed_text LIKE '%{}%')".format("%' OR parsed_text LIKE '%".join(kw_list))
                 print(sql)
