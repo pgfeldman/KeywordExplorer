@@ -44,6 +44,7 @@ class ContextExplorer(AppBase):
     rows_field:DataField
     keyword_filtered_field:DataField
     narrative_project_name_field:DataField
+    experiment_id_list:List
 
 
     def __init__(self, *args, **kwargs):
@@ -56,6 +57,7 @@ class ContextExplorer(AppBase):
         experiment_str = "{}_{}_{}".format(self.app_name, getpass.getuser(), dt.strftime("%H:%M:%S"))
         self.experiment_field.set_text(experiment_str)
         self.load_experiment_list()
+        self.experiment_id_list = []
         # self.test_data_callback()
 
     def setup_app(self):
@@ -86,6 +88,7 @@ class ContextExplorer(AppBase):
         return row + 1
 
     def load_experiment_list(self):
+        #TODO: create "*" entries where there are more than one text per group
         experiments = []
         results = self.msi.read_data("select * from table_source")
         for r in results:
@@ -185,8 +188,10 @@ class ContextExplorer(AppBase):
         l = s.split(":")
         self.experiment_combo.clear()
         self.experiment_combo.set_text(s)
+        #TODO: If there is a "*" for text_name, then just search for group
         results = self.msi.read_data("select id from table_source where text_name = %s and group_name = %s", (l[0],l[1]))
         if len(results) > 0:
+            self.experiment_id_list = []
             self.experiment_id = results[0]['id']
             self.experiment_field.set_text(" experiment {}: {}".format(self.experiment_id, s))
             self.narrative_project_name_field.set_text(s)
@@ -252,6 +257,8 @@ class ContextExplorer(AppBase):
         df_list = []
         if level == 'raw only' or level == 'all':
             sql = "select text_id, parsed_text, embedding from source_text_view where source_id = {}".format(self.experiment_id)
+            if len(self.experiment_id_list) > 0:
+                sql = "select text_id, parsed_text, embedding from source_text_view where source_id in ({})".format(", ".join(map(str, self.experiment_id_list)))
             if len(kw_list) > 0:
                 sql += " AND (parsed_text LIKE '%{}%')".format("%' OR parsed_text LIKE '%".join(kw_list))
             results = self.msi.read_data(sql)
