@@ -65,7 +65,10 @@ class EmbeddedText:
     def set_optional(self, reduced_str:bytes, cluster_id:int, cluster_name:str):
         #print("set_optional: reduced = {}".format(reduced_str))
         if reduced_str != None:
-            self.reduced = pickle.loads(reduced_str)
+            try:
+                self.reduced = pickle.loads(reduced_str)
+            except pickle.UnpicklingError as e:
+                pass
 
         if cluster_id != None:
             self.cluster_id = cluster_id

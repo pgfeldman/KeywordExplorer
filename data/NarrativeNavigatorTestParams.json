@@ -2,7 +2,7 @@
   "probe_str": "Once upon a time there was a beautiful",
   "name": "Fairy tale test",
   "automated_runs": 5,
-  "generate_model": "davinci",
+  "generate_model": "davinci-text-003",
   "tokens": 64,
   "temp": 0.7,
   "presence_penalty": 0.7,

@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 import numpy as np
 import openai
@@ -10,6 +11,7 @@ class CHAT_ROLES(Enum):
     USER = "user"
     SYSTEM = "system"
     ASSIST = "assistant"
+
 class ChatUnit:
     roles:CHAT_ROLES
     role:str
@@ -24,7 +26,7 @@ class ChatUnit:
 
 class OpenAIComms:
     openai.api_key = os.environ.get("OPENAI_KEY")
-    engines:List = ["text-davinci-003", "davinci", "curie", "babbage", "ada", "text-curie-001", "text-babbage-001", "text-ada-001"]
+    engines:List = ["text-davinci-003", "davinci", "text-curie-001", "text-babbage-001", "text-ada-001"]
     engine:str = engines[0]
     max_tokens:int = 30 # The maximum number of tokens to generate. Requests can use up to 2048 tokens shared between prompt and completion. (One token is roughly 4 characters for normal English text)
     temperature:float = 0.4 # What sampling temperature to use. Higher values means the model will take more risks. Try 0.9 for more creative applications, and 0 (argmax sampling) for ones with a well-defined answer.
@@ -33,7 +35,7 @@ class OpenAIComms:
     num_responses:int = 1 # How many completions to generate for each prompt.
     presence_penalty:float = 0.3 # Number between 0 and 1 that penalizes new tokens based on whether they appear in the text so far. Increases the model's likelihood to talk about new topics.
     frequency_penalty:float = 0.3 # Number between 0 and 1 that penalizes new tokens based on their existing frequency in the text so far. Decreases the model's likelihood to repeat the same line verbatim.
-
+    ERROR_MSG = "ERROR_MSG-ERROR_MSG-ERROR_MSG"
 
     def __init__(self, engine_id:int = 0):
         self.engine = self.engines[engine_id]
@@ -56,7 +58,7 @@ class OpenAIComms:
         cu:ChatUnit
         goodread = False
         waitcount = 0
-        waitmax = 0
+        waitmax = 5
         s:str
         time_to_wait = 5
         while not goodread:
@@ -73,16 +75,15 @@ class OpenAIComms:
                 d = response['choices'][0]
                 s = d['message']['content']
                 return s.strip()
-            except openai.error.APIConnectionError as e:
-                print("OpenAIComms.get_prompt_result(): {}".format(e.user_message))
-                return "Error reaching OpenAI completion endpoint"
 
-            except openai.error.RateLimitError:
-                print("OpenAIComms.get_prompt_result_params() waiting {} seconds".format(time_to_wait))
-                time.sleep(time_to_wait)
+            except (openai.error.RateLimitError, openai.error.APIConnectionError, openai.error.APIError) as e:
+                print("\nOpenAIComms.get_chat_complete(): {}".format(e.user_message))
+                sleeptime = (waitcount+1) * time_to_wait
+                print("\twaiting {} seconds {} of {}".format(sleeptime, waitcount, waitmax))
+                time.sleep(sleeptime)
                 waitcount += 1
-                if waitcount < waitmax:
-                    return "{} is currently overloaded with other requests".format(engine)
+                if waitcount > waitmax:
+                    return self.ERROR_MSG
 
     def get_prompt_result_params(self, prompt:str, engine:str = "text-davinci-003", max_tokens:int = 30, temperature:float = 0.4, top_p:float = 1, logprobs:int = 1,
                                  num_responses:int = 1, presence_penalty:float = 0.3, frequency_penalty:float = 0.3) -> str:
@@ -106,21 +107,17 @@ class OpenAIComms:
                 s = choices[0]['text']
                 goodread = True
                 return s.strip()
-            except openai.error.APIConnectionError as e:
-                print("OpenAIComms.get_prompt_result(): {}".format(e.user_message))
-                return "Error reaching OpenAI completion endpoint"
-
-            except openai.error.RateLimitError:
-                print("OpenAIComms.get_prompt_result_params() waiting {} seconds".format(time_to_wait))
-                time.sleep(time_to_wait)
+            except (openai.error.RateLimitError, openai.error.APIConnectionError, openai.error.APIError) as e:
+                print("\nOpenAIComms.get_prompt_result_params(): {}".format(e.user_message))
+                sleeptime = (waitcount+1) * time_to_wait
+                print("\twaiting {} seconds {} of {}".format(sleeptime, waitcount, waitmax))
+                time.sleep(sleeptime)
                 waitcount += 1
-                if waitcount < waitmax:
-                    return "{} is currently overloaded with other requests".format(engine)
+                if waitcount > waitmax:
+                    return self.ERROR_MSG
 
 
     def get_prompt_result(self, prompt:str, print_result:bool = False) -> List:
-
-
         if "gpt-3.5" in self.engine:
             print("OpenAICommsget_prompt_result_params(): Using Chat interface")
             l = [ChatUnit(prompt, CHAT_ROLES.USER)]
@@ -161,6 +158,13 @@ class OpenAIComms:
 
         return to_return
 
+    def get_full_response(self, prompt:str) -> Dict:
+        response = openai.Completion.create(engine=self.engine, prompt=prompt, max_tokens=self.max_tokens,
+                                            temperature=self.temperature, top_p=self.top_p, logprobs=self.logprobs,
+                                            presence_penalty=self.presence_penalty, frequency_penalty=self.frequency_penalty,
+                                            n=self.num_responses)
+        return response
+
     def get_embedding(self, text:str, engine="text-embedding-ada-002"):
         # from https://beta.openai.com/docs/guides/embeddings/what-are-embeddings
         # replace newlines, which can negatively affect performance.
@@ -185,7 +189,7 @@ class OpenAIComms:
                     i += 1
                 return d_list
 
-            except openai.error.APIError as e:
+            except (openai.error.APIError, openai.error.RateLimitError) as e:
                 waitcount += 1
                 time_to_wait = 5 * waitcount
                 print("OpenAIComms.get_embedding_list error, returning early. Message = {}".format(e.user_message))
@@ -194,6 +198,17 @@ class OpenAIComms:
                     return [{"text":"unset", "embedding":np.array([0, 0, 0])}]
                 print("OpenAIComms.get_embedding_list waiting {} seconds".format(time_to_wait))
                 time.sleep(time_to_wait)
+
+    def get_moderation_vals(self, test_list:List) -> List:
+        response = openai.Moderation.create(
+            input=test_list
+        )
+        output = response["results"]
+        to_return = []
+        for i in range(len(test_list)):
+            jsn = output[i]["category_scores"]
+            to_return.append({"text":test_list[i], "category_scores":jsn})
+        return to_return
 
     def set_engine(self, id:int = -1, name:str = None):
         if id != -1:
@@ -290,5 +305,30 @@ def chat_main():
     d = oai.get_chat_complete(l)
     print(d)
 
+def moderate_main():
+    oai = OpenAIComms()
+    s_list = []
+    s_list.append("Jews are accused by cryptofascists and New Age lefties of running a global banking cartel, stealing wealth through inflation")
+    s_list.append("To obtain a classification for a piece of text, make a request to the moderation endpoint as demonstrated in the following code snippets")
+    s_list.append("Abusing children, harvesting and consuming their bodily fluids")
+    s_list.append("Asians made the ChinaVirus")
+    s_list.append("Donald Trump will make America Great Again")
+    l = oai.get_moderation_vals(s_list)
+    d:Dict
+    for d in l:
+        print("\nTest string: '{}'".format(d['text']))
+        d2:Dict
+        d2 = d['category_scores']
+        for key, val in d2.items():
+            print("\t{}: {}".format(key, val))
+
+def full_response_main():
+    oai = OpenAIComms()
+    oai.set_parameters(max_tokens=64, logprobs=10)
+    response = oai.get_full_response("one, two, three")
+    print(response)
+
 if __name__ == '__main__':
     chat_main()
+    # moderate_main()
+    # full_response_main()

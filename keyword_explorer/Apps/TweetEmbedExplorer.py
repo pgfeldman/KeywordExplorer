@@ -1,4 +1,6 @@
+import json
 import re
+import numpy as np
 import tkinter.messagebox as message
 import tkinter as tk
 from tkinter import ttk
@@ -54,7 +56,7 @@ class EmbeddingsExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "EmbeddingsExplorer"
-        self.app_version = "11.8.22"
+        self.app_version = "3.8.23"
         self.geom = (600, 620)
         self.oai = OpenAIComms()
         self.tkws = TweetKeywords()
@@ -152,12 +154,9 @@ class EmbeddingsExplorer(AppBase):
 
 
     def build_get_store_tab(self, tab: ttk.Frame):
-        engine_list = ['text-similarity-ada-001',
-                       'text-similarity-babbage-001',
-                       'text-similarity-curie-001',
-                       'text-similarity-davinci-001']
+        engine_list = self.oai.list_models(keep_list = ["embed"])
         row = 0
-        self.engine_combo = TopicComboExt(tab, row, "Engine:", self.dp, entry_width=20, combo_width=20)
+        self.engine_combo = TopicComboExt(tab, row, "Engine:", self.dp, entry_width=25, combo_width=25)
         self.engine_combo.set_combo_list(engine_list)
         self.engine_combo.set_text(engine_list[0])
         self.engine_combo.tk_combo.current(0)
@@ -261,9 +260,10 @@ class EmbeddingsExplorer(AppBase):
         et:EmbeddedText
         rows = 0
         for et in self.mr.embedding_list:
+            ra = np.array(et.reduced)
             sql = "update table_tweet set cluster_id = %s, cluster_name = %s, reduced = %s where row_id = %s;"
-            vals = (int(et.cluster_id), et.cluster_name, "{}".format(et.reduced), int(et.row_id))
-            print("store_reduced_and_clustering_callback\n\t{}\n\t{}".format(sql, vals))
+            vals = (int(et.cluster_id), et.cluster_name, ra.dumps(), int(et.row_id))
+            # print("store_reduced_and_clustering_callback\n\t{}\n\t{}".format(sql, vals))
             self.msi.write_sql_values_get_row(sql, vals)
             rows += 1
         message.showinfo("DB Write", "Wrote {} rows of reduced and cluster data".format(rows))
@@ -332,11 +332,11 @@ class EmbeddingsExplorer(AppBase):
         print("\tClearing ManifoldReduction")
         self.mr.clear()
         self.canvas_frame.clear_Nodes()
-        self.dp.dprint("\tLoading {} rows".format(len(result)))
+        print("\tLoading {} rows".format(len(result)))
         count = 0
         et:EmbeddedText
         for row_dict in result:
-            et = self.mr.load_row(row_dict['tweet_row'], row_dict['embedding'])
+            et = self.mr.load_row(row_dict['tweet_row'], row_dict['embedding'], None, None)
             et.text = self.safe_dict(row_dict, 'text', "unset")
             reduced = self.safe_dict(row_dict, 'reduced', None)
             cluster_id = self.safe_dict(row_dict, 'cluster_id', None)
@@ -452,29 +452,48 @@ class EmbeddingsExplorer(AppBase):
             message.showwarning("DB Error", "get_oai_embeddings_callback(): Please set database and/or keyword")
             return
 
-        query = "select tweet_id, text from keyword_tweet_view where experiment_id = %s and embedding is NULL"
-        values = (self.experiment_id,)
+        get_remaining_sql = "select tweet_row, text from keyword_tweet_view where experiment_id = %s and embedding is NULL LIMIT 100"
+        get_remaining_values = (self.experiment_id,)
         if keyword != 'all_keywords':
-            query = "select tweet_id, text from keyword_tweet_view where experiment_id = %s and keyword = %s and embedding is NULL"
-            values = (self.experiment_id, keyword)
+            get_remaining_sql = "select tweet_row, text from keyword_tweet_view where experiment_id = %s and keyword = %s and embedding is NULL"
+            get_remaining_values = (self.experiment_id, keyword)
 
         engine = self.engine_combo.get_text()
         print("get_embeddings_callback() Experiment id = {}, Keyword = {}, Engine = {}".format(self.experiment_id, keyword, engine))
-        result = self.msi.read_data(query, values)
-        self.dp.dprint("Getting embeddings for {} rows".format(len(result)))
-        count = 0
-        row_dict:Dict
-        for row_dict in result:
-            id = row_dict['tweet_id']
-            tweet = row_dict['text']
-            embd = self.oai.get_embedding(tweet, engine)
-            print("id: {} text: {} embed: {}".format(id, tweet, embd))
-            query = "update table_tweet set embedding = %s where id = %s"
-            values = ("{}:{}".format(engine, embd), id)
-            self.msi.write_sql_values_get_row(query, values)
-            if count % 1000 == 0:
-                self.dp.dprint("Embedded {} of {} records".format(count, len(result)))
-            count += 1
+        results = self.msi.read_data(get_remaining_sql, get_remaining_values)
+        count = len(results)
+        while len(results) > 0:
+            print("\tGetting embeddings for {} rows".format(len(results)))
+            d:Dict
+            # create a list of text
+            s_list = []
+            for d in results:
+                s_list.append(d['text'])
+
+            # send that list to get embeddings
+            embd_list = self.oai.get_embedding_list(s_list, engine)
+            print("\tGetting moderations for {} rows".format(len(results)))
+            mod_list = self.oai.get_moderation_vals(s_list)
+            row_dict:Dict
+            for i in range(len(results)):
+                rd = results[i]
+                tweet_row = rd['tweet_row']
+                tweet = rd['text']
+                d = embd_list[i]
+                embedding = d['embedding']
+                embd_s = np.array(embedding)
+                d = mod_list[i]
+                mods = d['category_scores']
+                mods_s = json.dumps(mods)
+                # print("row_id: {} text: {} embed: {}, mods = {}".format(tweet_row, tweet, embedding, mods_s))
+                sql = "update table_tweet set embedding = %s, moderation = %s where row_id = %s"
+                values = (embd_s.dumps(), mods_s, tweet_row)
+                self.msi.write_sql_values_get_row(sql, values)
+
+            print("\tEmbedded {} records".format(count))
+            results = self.msi.read_data(get_remaining_sql, get_remaining_values)
+            count += len(results)
+        print("TweetEmbedExplorer.get_oai_embeddings_callback(): Finished! Embedded a total of {} records".format(count))
 
 
     def get_keyword_entries_callback(self, keyword: str):
