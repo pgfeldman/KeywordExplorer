@@ -4,6 +4,9 @@ import numpy as np
 import tkinter.messagebox as message
 import tkinter as tk
 from tkinter import ttk
+from tkinter import filedialog
+from datetime import datetime, timedelta
+import pandas as pd
 from matplotlib import pyplot as plt
 import matplotlib.colors as mcolors
 
@@ -21,6 +24,7 @@ from keyword_explorer.tkUtils.Checkboxes import Checkboxes, DIR
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
 from keyword_explorer.utils.ManifoldReduction import ManifoldReduction, EmbeddedText
 from keyword_explorer.utils.CorporaGenerator import CorporaGenerator
+from keyword_explorer.tkUtils.TextField import TextField
 
 from typing import Dict, List, Any
 
@@ -48,7 +52,9 @@ class EmbeddingsExplorer(AppBase):
     tweet_option_checkboxes:Checkboxes
     author_option_checkboxes:Checkboxes
     generation_options:Checkboxes
+    speech_text_field:TextField
     experiment_id: int
+    speech_df:pd.DataFrame
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -56,7 +62,7 @@ class EmbeddingsExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "EmbeddingsExplorer"
-        self.app_version = "3.8.23"
+        self.app_version = "3.13.23"
         self.geom = (600, 620)
         self.oai = OpenAIComms()
         self.tkws = TweetKeywords()
@@ -70,6 +76,7 @@ class EmbeddingsExplorer(AppBase):
         if not self.tkws.key_exists():
             message.showwarning("Key Error", "Could not find Environment key 'BEARER_TOKEN_2'")
         self.experiment_id = -1
+        self.speech_df = pd.DataFrame()
 
 
     def build_app_view(self, row: int, text_width: int, label_width: int) -> int:
@@ -77,12 +84,13 @@ class EmbeddingsExplorer(AppBase):
         keywords = ["foo", "bar", "bas"]
         print("build_app_view")
 
-        self.experiment_combo = TopicComboExt(self, row, "Experiment:", self.dp, entry_width=20, combo_width=20)
+        combo_width = 30
+        self.experiment_combo = TopicComboExt(self, row, "Experiment:", self.dp, entry_width=20, combo_width=combo_width)
         self.experiment_combo.set_combo_list(experiments)
         self.experiment_combo.set_callback(self.keyword_callback)
         row = self.experiment_combo.get_next_row()
         ToolTip(self.experiment_combo.tk_combo, "Select the experiment you want to explore here")
-        self.keyword_combo = TopicComboExt(self, row, "Keyword:", self.dp, entry_width=20, combo_width=20)
+        self.keyword_combo = TopicComboExt(self, row, "Keyword:", self.dp, entry_width=20, combo_width=combo_width)
         self.keyword_combo.set_combo_list(keywords)
         ToolTip(self.keyword_combo.tk_combo, "Select the keyword for the experiment. 'all_keywords' gets everything")
         b = self.keyword_combo.add_button("Num Entries:", command=lambda: self.get_keyword_entries_callback(
@@ -103,6 +111,10 @@ class EmbeddingsExplorer(AppBase):
         canvas_tab = ttk.Frame(tab_control)
         tab_control.add(canvas_tab, text='Canvas')
         self.build_graph_tab(canvas_tab)
+
+        speech_tab = ttk.Frame(tab_control)
+        tab_control.add(speech_tab, text='Speech')
+        self.build_speech_tab(speech_tab, text_width, label_width)
 
         corpora_tab = ttk.Frame(tab_control)
         tab_control.add(corpora_tab, text='Corpora')
@@ -228,6 +240,21 @@ class EmbeddingsExplorer(AppBase):
         ToolTip(b, "Add cluster ID to the exclude table for this experiment")
         row = self.exclude_cluster_field.get_next_row()
 
+    def build_speech_tab(self, frm: ttk.Frame, text_width: int, label_width: int):
+        row = 0
+        self.speech_text_field = TextField(frm, row, 'Speech:', text_width, height=11, label_width=label_width)
+        ToolTip(self.speech_text_field.tk_text, "Speech categories are displayed here")
+        row = self.speech_text_field.get_next_row()
+
+        buttons = Buttons(frm, row, "Actions")
+        b = buttons.add_button("Retrieve", self.retreive_tweet_data_callback)
+        ToolTip(b, "Load speech data if available")
+        b = buttons.add_button("Plot", self.plot_speech_data)
+        ToolTip(b, "Plot speech classes if available")
+        b = buttons.add_button("Save", self.save_speech_data)
+        ToolTip(b, "Save raw chart data to spreadsheet")
+        row = buttons.get_next_row()
+
     def color_excluded_clusters(self):
         keyword = self.keyword_combo.get_text()
         sql = "select * from table_exclude where experiment_id = %s and keyword = %s"
@@ -266,7 +293,25 @@ class EmbeddingsExplorer(AppBase):
             # print("store_reduced_and_clustering_callback\n\t{}\n\t{}".format(sql, vals))
             self.msi.write_sql_values_get_row(sql, vals)
             rows += 1
+
+
+        # get the embedding model entry
+        sql = "select * from table_embedding_params where experiment_id = %s AND keyword = %s"
+        vals = (self.experiment_id, self.keyword_combo.get_text())
+        results = self.msi.read_data(sql, vals)
+        # insert if there is no experiment_id that matches, otherwise update
+        if len(results) == 0:
+            sql = "insert into table_embedding_params (experiment_id, keyword, model, PCA_dim, EPS, min_samples, perplexity) values (%s, %s, %s, %s, %s, %s, %s)"
+            vals = (self.experiment_id, self.keyword_combo.get_text(), self.engine_combo.get_text(), self.pca_dim_param.get_as_int(), self.eps_param.get_as_float(),
+                    self.min_samples_param.get_as_int(), self.perplexity_param.get_as_int())
+            self.msi.write_sql_values_get_row(sql, vals)
+        else:
+            sql = "update table_embedding_params set PCA_dim = %s, EPS = %s, min_samples = %s, perplexity = %s where experiment_id = %s and keyword = %s"
+            vals = (self.pca_dim_param.get_as_int, self.eps_param.get_as_float, self.min_samples_param.get_as_int(), self.perplexity_param.get_as_int(),
+                    self.experiment_id, self.keyword_combo.get_text())
+            self.msi.write_sql_values_get_row(sql, vals)
         message.showinfo("DB Write", "Wrote {} rows of reduced and cluster data".format(rows))
+
 
     def store_clustering_callback(self):
         print("store_clustering_callback")
@@ -321,13 +366,25 @@ class EmbeddingsExplorer(AppBase):
             return
 
         print("\t Loading from DB")
-        query = 'select tweet_row, tweet_id, embedding, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s'
+        query = 'select tweet_row, tweet_id, embedding, moderation, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s limit 1000'
         values = (self.experiment_id,)
         if keyword != 'all_keywords':
-            query = 'select tweet_row, tweet_id, text, embedding, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s and keyword = %s'
+            query = 'select tweet_row, tweet_id, text, embedding, moderation, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s and keyword = %s'
             values = (self.experiment_id, keyword)
         result = self.msi.read_data(query, values, True)
+        print("\t Loaded {} records from DB".format(len(result)))
         row_dict:Dict
+
+        print("\tLoading embedding parameters")
+        sql = "select * from table_embedding_params where experiment_id = %s and keyword = %s"
+        vals = (self.experiment_id, self.keyword_combo.get_text())
+        results = self.msi.read_data(sql, vals)
+        if len(results) > 0:
+            row_dict = results[0]
+            self.pca_dim_param.set_text(self.safe_dict(row_dict, 'PCA_dim', self.pca_dim_param.get_as_int()))
+            self.eps_param.set_text(self.safe_dict(row_dict, 'EPS', self.eps_param.get_as_float()))
+            self.min_samples_param.set_text(self.safe_dict(row_dict, 'min_samples', self.min_samples_param.get_as_int()))
+            self.perplexity_param.set_text(self.safe_dict(row_dict, 'perplexity', self.perplexity_param.get_as_int()))
 
         print("\tClearing ManifoldReduction")
         self.mr.clear()
@@ -335,6 +392,7 @@ class EmbeddingsExplorer(AppBase):
         print("\tLoading {} rows".format(len(result)))
         count = 0
         et:EmbeddedText
+        moderation_list = []
         for row_dict in result:
             et = self.mr.load_row(row_dict['tweet_row'], row_dict['embedding'], None, None)
             et.text = self.safe_dict(row_dict, 'text', "unset")
@@ -342,9 +400,20 @@ class EmbeddingsExplorer(AppBase):
             cluster_id = self.safe_dict(row_dict, 'cluster_id', None)
             cluster_name = self.safe_dict(row_dict, 'cluster_name', None)
             et.set_optional(reduced, cluster_id, cluster_name)
+            mod = self.safe_dict(row_dict, 'moderation', None)
+            if mod != None:
+                moderation_list.append(json.loads(mod))
             if count % 1000 == 0:
                 self.dp.dprint("loaded {} of {} records".format(count, len(result)))
             count += 1
+
+        if len(moderation_list) > 0:
+            self.speech_df = pd.DataFrame(moderation_list)
+            stats = self.speech_df.agg(['mean', 'std']).T
+            self.speech_text_field.clear()
+            self.speech_text_field.set_text(stats.to_string())
+        else:
+            self.speech_df = pd.DataFrame()
 
         self.mr.calc_xy_range()
 
@@ -525,6 +594,24 @@ class EmbeddingsExplorer(AppBase):
             l.append(row_dict['keyword'])
         self.keyword_combo.set_combo_list(l)
 
+    def plot_speech_data(self):
+        print("plot_speech_data")
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax.boxplot(self.speech_df.values)
+        ax.set_xticklabels(self.speech_df.columns)
+        ax.set_xlabel('Variable')
+        ax.set_ylabel('Value')
+        ax.set_title('[{}] moderated speech'.format(self.keyword_combo.get_text()))
+        plt.show()
+
+    def save_speech_data(self):
+        print("save_speech_data")
+        default = "{}.xlsx".format(self.experiment_field.get_text())
+        filename = filedialog.asksaveasfilename(filetypes=(("Excel files", "*.xlsx"),("All Files", "*.*")), title="Save Excel File", initialfile=default)
+        if filename:
+            print("saving to {}".format(filename))
+            with pd.ExcelWriter(filename) as writer:
+                self.speech_df.to_excel(writer)
 
     def setup(self):
         # set up the canvas
