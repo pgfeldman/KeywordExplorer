@@ -307,7 +307,7 @@ class EmbeddingsExplorer(AppBase):
             self.msi.write_sql_values_get_row(sql, vals)
         else:
             sql = "update table_embedding_params set PCA_dim = %s, EPS = %s, min_samples = %s, perplexity = %s where experiment_id = %s and keyword = %s"
-            vals = (self.pca_dim_param.get_as_int, self.eps_param.get_as_float, self.min_samples_param.get_as_int(), self.perplexity_param.get_as_int(),
+            vals = (self.pca_dim_param.get_as_int(), self.eps_param.get_as_float(), self.min_samples_param.get_as_int(), self.perplexity_param.get_as_int(),
                     self.experiment_id, self.keyword_combo.get_text())
             self.msi.write_sql_values_get_row(sql, vals)
         message.showinfo("DB Write", "Wrote {} rows of reduced and cluster data".format(rows))
@@ -358,7 +358,7 @@ class EmbeddingsExplorer(AppBase):
         print("store_user_callback(): complete")
 
     def retreive_tweet_data_callback(self):
-        print("get_db_embeddings_callback")
+        print("retreive_tweet_data_callback")
         keyword = self.keyword_combo.get_text()
 
         if self.experiment_id == -1 or len(keyword) < 2:
@@ -379,6 +379,8 @@ class EmbeddingsExplorer(AppBase):
         sql = "select * from table_embedding_params where experiment_id = %s and keyword = %s"
         vals = (self.experiment_id, self.keyword_combo.get_text())
         results = self.msi.read_data(sql, vals)
+        for d in results:
+            print("\t{}".format(d))
         if len(results) > 0:
             row_dict = results[0]
             self.pca_dim_param.set_text(self.safe_dict(row_dict, 'PCA_dim', self.pca_dim_param.get_as_int()))
@@ -521,7 +523,7 @@ class EmbeddingsExplorer(AppBase):
             message.showwarning("DB Error", "get_oai_embeddings_callback(): Please set database and/or keyword")
             return
 
-        get_remaining_sql = "select tweet_row, text from keyword_tweet_view where experiment_id = %s and embedding is NULL LIMIT 100"
+        get_remaining_sql = "select tweet_row, text from keyword_tweet_view where experiment_id = %s and embedding is NULL"
         get_remaining_values = (self.experiment_id,)
         if keyword != 'all_keywords':
             get_remaining_sql = "select tweet_row, text from keyword_tweet_view where experiment_id = %s and keyword = %s and embedding is NULL"
