@@ -62,8 +62,8 @@ class ContextExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "ContextExplorer"
-        self.app_version = "3.10.2023"
-        self.geom = (840, 670)
+        self.app_version = "3.14.2023"
+        self.geom = (840, 700)
         self.oai = OpenAIComms()
         self.oae = OpenAIEmbeddings()
         self.so = SharedObjects()
@@ -351,8 +351,7 @@ class ContextExplorer(AppBase):
             tk.messagebox.showwarning("Warning!", "Please create or select a database first")
             return
 
-        probe_str =  "{}\n{}".format(self.generator_frame.context_text_field.get_text(),
-                                     self.generator_frame.prompt_text_field.get_text())
+        probe_str =  "{}".format(self.generator_frame.context_text_field.get_text())
         name = self.narrative_project_name_field.get_text()
         dict = {"probe_str": probe_str, "name":name}
         self.save_experiment_json(dict)
