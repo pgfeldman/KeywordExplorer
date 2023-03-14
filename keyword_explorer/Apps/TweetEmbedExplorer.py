@@ -366,7 +366,7 @@ class EmbeddingsExplorer(AppBase):
             return
 
         print("\t Loading from DB")
-        query = 'select tweet_row, tweet_id, embedding, moderation, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s limit 1000'
+        query = 'select tweet_row, tweet_id, embedding, moderation, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s'
         values = (self.experiment_id,)
         if keyword != 'all_keywords':
             query = 'select tweet_row, tweet_id, text, embedding, moderation, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s and keyword = %s'
@@ -404,7 +404,9 @@ class EmbeddingsExplorer(AppBase):
             et.set_optional(reduced, cluster_id, cluster_name)
             mod = self.safe_dict(row_dict, 'moderation', None)
             if mod != None:
-                moderation_list.append(json.loads(mod))
+                jmod = json.loads(mod)
+                jmod['text'] = et.text
+                moderation_list.append(jmod)
             if count % 1000 == 0:
                 self.dp.dprint("loaded {} of {} records".format(count, len(result)))
             count += 1
@@ -597,23 +599,26 @@ class EmbeddingsExplorer(AppBase):
         self.keyword_combo.set_combo_list(l)
 
     def plot_speech_data(self):
+        plot_df = self.speech_df
+        if 'text' in self.speech_df:
+            plot_df = self.speech_df.drop(["text"], axis=1)
         print("plot_speech_data")
         fig, ax = plt.subplots(figsize=(12, 6))
-        ax.boxplot(self.speech_df.values)
-        ax.set_xticklabels(self.speech_df.columns)
+        ax.boxplot(plot_df.values)
+        ax.set_xticklabels(plot_df.columns)
         ax.set_xlabel('Variable')
         ax.set_ylabel('Value')
-        ax.set_title('[{}] moderated speech'.format(self.keyword_combo.get_text()))
+        ax.set_title('[{}] moderated speech - {:,} results'.format(self.keyword_combo.get_text(), len(plot_df.index)))
         plt.show()
 
     def save_speech_data(self):
         print("save_speech_data")
-        default = "{}.xlsx".format(self.experiment_field.get_text())
+        default = "{}_{}.xlsx".format(self.experiment_field.get_text(), self.keyword_combo.get_text())
         filename = filedialog.asksaveasfilename(filetypes=(("Excel files", "*.xlsx"),("All Files", "*.*")), title="Save Excel File", initialfile=default)
         if filename:
             print("saving to {}".format(filename))
             with pd.ExcelWriter(filename) as writer:
-                self.speech_df.to_excel(writer)
+                self.speech_df.to_excel(writer, index=False)
 
     def setup(self):
         # set up the canvas
