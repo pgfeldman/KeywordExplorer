@@ -83,7 +83,7 @@ class NarrativeExplorer2(AppBase):
 
     def setup_app(self):
         self.app_name = "NarrativeExplorer2"
-        self.app_version = "2.22.2023"
+        self.app_version = "3.14.2023"
         self.geom = (840, 670)
         self.oai = OpenAIComms()
         self.msi = MySqlInterface(user_name="root", db_name="narrative_maps")
@@ -478,11 +478,12 @@ class NarrativeExplorer2(AppBase):
 
         gs = GPT3EmbeddingSettings(defaults)
         gs.from_dict(param_dict)
-        self.embedding_frame.set_params(defaults)
+        self.embedding_frame.set_params(gs)
 
         self.experiment_field.clear()
 
-        self.experiment_field.set_text(param_dict['name'])
+        if 'name' in param_dict:
+            self.experiment_field.set_text(param_dict['name'])
 
     def save_params_callback(self):
         params = self.get_current_params()

@@ -39,8 +39,9 @@ class SharedObjects:
 
     def print_contents(self):
         d:Dict
+        print("SharedObjects.print_contents()")
         for d in self.object_dict_list:
-            print("name = '{}', type = {}, obj = '{}'".format(d['name'], d['type'], d['object']))
+            print("\tname = '{}', type = {}, obj = '{}'".format(d['name'], d['type'], d['object']))
 
 def main():
     so = SharedObjects()
