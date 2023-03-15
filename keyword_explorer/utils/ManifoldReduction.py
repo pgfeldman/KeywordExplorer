@@ -15,6 +15,7 @@ from typing import List, Dict, Union, Any, Pattern
 
 class EmbeddedText:
     row_id:int
+    run_id:int
     raw_str:[str, bytes]
     source:str
     text:Union[None, str]
@@ -40,6 +41,7 @@ class EmbeddedText:
             self.parse()
         self.reduced = [0, 0]
         self.cluster_id = -1
+        self.run_id = -1
         self.cluster_name = "unset"
         self.text = "unset"
         self.mnode = None
@@ -62,7 +64,7 @@ class EmbeddedText:
             return val
         return default
 
-    def set_optional(self, reduced_str:bytes, cluster_id:int, cluster_name:str):
+    def set_optional(self, reduced_str:bytes = None, cluster_id:int = None, cluster_name:str = None, run_id:int = None):
         #print("set_optional: reduced = {}".format(reduced_str))
         if reduced_str != None:
             try:
@@ -76,12 +78,15 @@ class EmbeddedText:
         if cluster_name != None:
             self.cluster_name = cluster_name
 
+        if run_id != None:
+            self.run_id = run_id
+
     def to_dict(self) -> Dict:
         return{"id":self.row_id, "text":self.text, "embedding": np.array(self.original), "reduced":np.array(self.reduced), "distance":0}
 
     def to_string(self) -> str:
-        return "Text row = {}, Cluster ID = {}, Cluster Name = {}, Reduced = {}, Text = {}".format(
-            self.row_id, self.cluster_id, self.cluster_name, self.reduced, self.text)
+        return "Text row = {}, Cluster ID = {}, run_id = {}, Cluster Name = {}, Reduced = {}, Text = {}".format(
+            self.row_id, self.cluster_id, self.run_id, self.cluster_name.replace("\n", "-"), self.reduced, self.text)
 
 class ClusterInfo:
     id:int
@@ -221,31 +226,49 @@ class ManifoldReduction:
     def plot(self, title:str = None):
         et:EmbeddedText
         cluster_dict = {}
+        run_dict = {}
         for et in self.embedding_list:
-            d:Dict
+            cd:Dict
+            rd:Dict
             if et.cluster_name not in cluster_dict:
-                d = {'x':[], 'y':[]}
-                cluster_dict[et.cluster_name] = d
+                cd = {'x':[], 'y':[]}
+                cluster_dict[et.cluster_name] = cd
             else:
-                d = cluster_dict[et.cluster_name]
+                cd = cluster_dict[et.cluster_name]
 
-            d['x'].append(et.reduced[0])
-            d['y'].append(et.reduced[1])
+            if et.run_id not in run_dict:
+                rd = {'x':[], 'y':[]}
+                run_dict[et.run_id] = rd
+            else:
+                rd = run_dict[et.run_id]
+
+            cd['x'].append(et.reduced[0])
+            cd['y'].append(et.reduced[1])
+            rd['x'].append(et.reduced[0])
+            rd['y'].append(et.reduced[1])
 
         if title != None:
             plt.title(title)
 
         l1 = list(mcolors.TABLEAU_COLORS.values())
         c_index = 0
-        for name, d in cluster_dict.items():
-            x = d['x']
-            y = d['y']
+        for run_id, rd in run_dict.items():
+            x = rd['x']
+            y = rd['y']
             c = self.get_cluster_color(c_index, l1)
-            plt.scatter(x, y, s=2, c=c)
+            plt.plot(x, y, linewidth=2, alpha=0.1, c=c)
+            c_index += 1
+
+        c_index = 0
+        for name, cd in cluster_dict.items():
+            x = cd['x']
+            y = cd['y']
+            c = self.get_cluster_color(c_index, l1)
+            plt.scatter(x, y, s=10, c=c)
             c_index += 1
 
         for ci in self.cluster_list:
-            print(ci.to_string())
+            # print(ci.to_string())
             plt.annotate(ci.label, ci.reduced_coordinate)
 
     def plot_reduced(self, axs, title:str = None):
@@ -275,7 +298,7 @@ class ManifoldReduction:
             axs.scatter(x, y, s=2, c=c)
             c_index += 1
         for ci in self.cluster_list:
-            print(ci.to_string())
+            # print(ci.to_string())
             axs.annotate(ci.label, ci.reduced_coordinate)
 
     def reduced_to_str(self) -> str:

@@ -450,7 +450,8 @@ class NarrativeExplorer2(AppBase):
             mapped = self.safe_dict_read(d, 'mapped', None)
             cluster_id = self.safe_dict_read(d, 'cluster_id', None)
             cluster_name = self.safe_dict_read(d, 'cluster_name', "clstr_{}".format(cluster_id))
-            et.set_optional(mapped, cluster_id, cluster_name)
+            run_id = self.safe_dict_read(d, 'run_id', None)
+            et.set_optional(mapped, cluster_id, cluster_name, run_id)
             print(et.to_string())
         self.mr.calc_clusters()
 
