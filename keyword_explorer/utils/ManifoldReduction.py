@@ -227,6 +227,7 @@ class ManifoldReduction:
         et:EmbeddedText
         cluster_dict = {}
         run_dict = {}
+        point_size = 2
         for et in self.embedding_list:
             cd:Dict
             rd:Dict
@@ -235,17 +236,18 @@ class ManifoldReduction:
                 cluster_dict[et.cluster_name] = cd
             else:
                 cd = cluster_dict[et.cluster_name]
-
-            if et.run_id not in run_dict:
-                rd = {'x':[], 'y':[]}
-                run_dict[et.run_id] = rd
-            else:
-                rd = run_dict[et.run_id]
-
             cd['x'].append(et.reduced[0])
             cd['y'].append(et.reduced[1])
-            rd['x'].append(et.reduced[0])
-            rd['y'].append(et.reduced[1])
+
+            if et.run_id != -1:
+                point_size = 10
+                if et.run_id not in run_dict:
+                    rd = {'x':[], 'y':[]}
+                    run_dict[et.run_id] = rd
+                else:
+                    rd = run_dict[et.run_id]
+                rd['x'].append(et.reduced[0])
+                rd['y'].append(et.reduced[1])
 
         if title != None:
             plt.title(title)
@@ -264,7 +266,7 @@ class ManifoldReduction:
             x = cd['x']
             y = cd['y']
             c = self.get_cluster_color(c_index, l1)
-            plt.scatter(x, y, s=10, c=c)
+            plt.scatter(x, y, s=point_size, c=c)
             c_index += 1
 
         for ci in self.cluster_list:
