@@ -50,19 +50,13 @@ class NarrativeExplorer2(AppBase):
     so:SharedObjects
     generator_frame: GPT3GeneratorFrame
     embedding_frame: GPT3EmbeddingFrame
-    embed_model_combo: TopicComboExt
     experiment_combo: TopicComboExt
     new_experiment_button:Buttons
-    pca_dim_param: LabeledParam
-    eps_param: LabeledParam
-    min_samples_param: LabeledParam
-    perplexity_param: LabeledParam
     embed_state_text_field:TextField
     embedded_field:DataField
     reduced_field:DataField
     experiment_id:int
     run_id:int
-    parsed_full_text_list:List
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -83,7 +77,7 @@ class NarrativeExplorer2(AppBase):
 
     def setup_app(self):
         self.app_name = "NarrativeExplorer2"
-        self.app_version = "3.14.2023"
+        self.app_version = "3.15.2023"
         self.geom = (840, 670)
         self.oai = OpenAIComms()
         self.msi = MySqlInterface(user_name="root", db_name="narrative_maps")
@@ -93,11 +87,8 @@ class NarrativeExplorer2(AppBase):
         if not self.oai.key_exists():
             message.showwarning("Key Error", "Could not find Environment key 'OPENAI_KEY'")
 
-        self.saved_prompt_text = "unset"
-        self.saved_response_text = "unset"
         self.experiment_id = -1
         self.run_id = -1
-        self.parsed_full_text_list = []
 
     def build_app_view(self, row: int, text_width: int, label_width: int) -> int:
         print("build_app_view")
@@ -318,21 +309,23 @@ class NarrativeExplorer2(AppBase):
         et: EmbeddedText
         for et in self.mr.embedding_list:
             reduced_s = np.array(et.reduced).dumps()
-            sql = "update table_parsed_text set mapped = %s, cluster_id = %s where id = %s"
-            vals = (reduced_s, int(et.cluster_id), int(et.row_id))
+            sql = "update table_parsed_text set mapped = %s, cluster_id = %s, cluster_name = %s where id = %s"
+            vals = (reduced_s, int(et.cluster_id), et.cluster_name, int(et.row_id))
             self.msi.write_sql_values_get_row(sql, vals)
 
         self.count_parsed(self.experiment_id)
 
 
     def save_text_list_callback(self):
-        print("save_text_list_callback")
+        print("NarrativeExplorer2.save_text_list_callback()")
 
         if self.experiment_id == -1:
             result = tk.messagebox.showwarning("Warning!", "Please create or select a database first")
             return
-
-        if len(self.parsed_full_text_list) > 0:
+        gf = self.generator_frame
+        ef = self.embedding_frame
+        print("\tSaving {} lines".format(len(gf.parsed_full_text_list)))
+        if len(gf.parsed_full_text_list) > 0:
             # create the run
             run_id = 1
             sql = "select MAX(run_id) as max from table_run where experiment_id = %s"
@@ -342,49 +335,62 @@ class NarrativeExplorer2(AppBase):
             if results[0]['max'] != None:
                 run_id = results[0]['max'] + 1
             # get the language model params entry
-            sql = "insert into table_generate_params (tokens, presence_penalty, frequency_penalty, model) values (%s, %s, %s, %s)"
-            vals = (self.tokens_param.get_as_int(), self.presence_param.get_as_float(),
-                    self.frequency_param.get_as_float(), self.generate_model_combo.get_text())
+            gs = gf.get_settings()
+            sql = "insert into table_generate_params (tokens, temp, presence_penalty, frequency_penalty, model, automated_runs) values (%s, %s, %s, %s, %s, %s)"
+            vals = (gs.tokens, gs.temperature, gs.presence_penalty, gs.frequency_penalty, gs.model, gs.auto_runs)
             lang_param_id = self.msi.write_sql_values_get_row(sql, vals)
 
             # get the embedding model entry
+            es = ef.get_settings()
             sql = "insert into table_embedding_params (model, PCA_dim, EPS, min_samples, perplexity) values (%s, %s, %s, %s, %s)"
-            vals = (self.embed_model_combo.get_text(), self.pca_dim_param.get_as_int(), self.eps_param.get_as_float(),
-                    self.min_samples_param.get_as_int(), self.perplexity_param.get_as_int())
+            vals = (es.model, es.pca_dim, es.eps, es.min_samples, es.perplexity)
             embed_param_id = self.msi.write_sql_values_get_row(sql, vals)
 
             sql = "insert into table_run (experiment_id, run_id, prompt, response, generator_params, embedding_params) values (%s, %s, %s, %s, %s, %s)"
-            vals = (self.experiment_id, run_id, self.saved_prompt_text,
-                    self.saved_response_text, lang_param_id, embed_param_id)
-            self.msi.write_sql_values_get_row(sql, vals)
+            vals = (self.experiment_id, run_id, gf.saved_prompt_text,
+                    gf.saved_response_text, lang_param_id, embed_param_id)
+            run_index = self.msi.write_sql_values_get_row(sql, vals)
 
             # store the text
             s:str
-            for s in self.parsed_full_text_list:
-                sql = "insert into table_parsed_text (run_id, parsed_text) values (%s, %s)"
-                vals = (run_id, s)
+            for s in gf.parsed_full_text_list:
+                sql = "insert into table_parsed_text (run_index, parsed_text) values (%s, %s)"
+                vals = (run_index, s)
                 self.msi.write_sql_values_get_row(sql, vals)
+        else:
+            result = tk.messagebox.showwarning("Warning!", "There are no parsed lines")
+            return
 
         #reset the list
-        self.parsed_full_text_list = []
+        gf.parsed_full_text_list = []
 
     def automate_callback(self):
         print("automate_callback():")
-        num_runs = self.auto_field.get_as_int()
+        if self.experiment_id == -1:
+            result = tk.messagebox.showwarning("Warning!", "Please create or select a database first")
+            return
+
+        gf = self.generator_frame
+        num_runs = gf.auto_field.get_as_int()
+        parsed_lines = 0
         for i in range(num_runs):
-            prompt = self.prompt_text_field.get_text()
-            print("{}: prompting: {}".format(i, prompt))
-            self.new_prompt_callback()
-            response = self.response_text_field.get_text()
-            print("\tgetting response: {}".format(response))
+            prompt = gf.prompt_text_field.get_text()
+            print("{}: prompting: ...{}".format(i, prompt[-80:]))
+            gf.new_prompt_callback()
+            response = gf.response_text_field.get_text()
+            print("\tgetting response: {}...".format(response[:80]))
             print("\tparsing response")
-            self.parse_response_callback()
+            gf.parse_response_callback()
+            parsed_lines += len(gf.parsed_full_text_list)
             print("\tstoring data")
             self.save_text_list_callback()
             print("\tresetting")
-            self.parsed_full_text_list = []
-            self.response_text_field.clear()
+            gf.parsed_full_text_list = []
+            gf.response_text_field.clear()
+            self.runs_field.set_text(str(i+1))
+            self.parsed_field.set_text(str(parsed_lines))
         print("done")
+        tk.messagebox.showinfo("Automate", "Finished processing {} rows".format(parsed_lines))
 
     def get_oai_embeddings_callback(self):
         print("get_oai_embeddings_callback")
@@ -399,7 +405,7 @@ class NarrativeExplorer2(AppBase):
         # create a list of text
         s_list = []
         for d in results:
-            s_list.append(['parsed_text'])
+            s_list.append(d['parsed_text'])
 
         # send that list to get embeddings
         engine = results[0]['embedding_model']
@@ -418,7 +424,8 @@ class NarrativeExplorer2(AppBase):
             self.msi.write_sql_values_get_row(sql, vals)
 
             print("[{}]: {} [{}]".format(id, text, embd_s))
-            self.embed_state_text_field.insert_text("[{}] {}\n".format(id, text))
+
+        tk.messagebox.showinfo("get_oai_embeddings_callback", "Finished embedding {} rows".format(len(results)))
 
 
     def get_db_embeddings_callback(self):

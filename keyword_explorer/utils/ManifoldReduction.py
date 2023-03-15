@@ -76,6 +76,8 @@ class EmbeddedText:
         if cluster_name != None:
             self.cluster_name = cluster_name
 
+    def to_dict(self) -> Dict:
+        return{"id":self.row_id, "text":self.text, "embedding": np.array(self.original), "reduced":np.array(self.reduced), "distance":0}
 
     def to_string(self) -> str:
         return "Text row = {}, Cluster ID = {}, Cluster Name = {}, Reduced = {}, Text = {}".format(

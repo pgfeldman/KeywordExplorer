@@ -208,7 +208,7 @@ CREATE TABLE `table_run` (
 /*!50001 SET collation_connection      = utf8mb4_unicode_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `index_view` AS select `e`.`id` AS `experiment_id`,`r`.`id` AS `run_id`,`p`.`id` AS `parsed_text_id`,`g`.`id` AS `gen_id`,`ep`.`id` AS `emb_id` from ((((`table_experiment` `e` join `table_run` `r` on(`e`.`id` = `r`.`experiment_id`)) join `table_parsed_text` `p` on(`r`.`run_id` = `p`.`run_id`)) join `table_generate_params` `g` on(`r`.`embedding_params` = `g`.`id`)) join `table_embedding_params` `ep` on(`r`.`embedding_params` <> 0)) */;
+/*!50001 VIEW `index_view` AS select `e`.`id` AS `experiment_id`,`r`.`id` AS `run_id`,`p`.`id` AS `parsed_text_id`,`g`.`id` AS `gen_id`,`ep`.`id` AS `emb_id` from ((((`table_experiment` `e` join `table_run` `r` on(`e`.`id` = `r`.`experiment_id`)) join `table_parsed_text` `p` on(`r`.`run_id` = `p`.run_index)) join `table_generate_params` `g` on(`r`.`embedding_params` = `g`.`id`)) join `table_embedding_params` `ep` on(`r`.`embedding_params` <> 0)) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -227,7 +227,7 @@ CREATE TABLE `table_run` (
 /*!50001 SET collation_connection      = utf8mb4_unicode_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `parsed_view` AS select `tr`.`experiment_id` AS `experiment_id`,`tr`.`id` AS `run_index`,`pt`.`id` AS `id`,`pt`.`run_id` AS `run_id`,`pt`.`parsed_text` AS `parsed_text`,`pt`.`embedding` AS `embedding`,`pt`.`mapped` AS `mapped`,`pt`.`cluster_id` AS `cluster_id`,`ep`.`model` AS `embedding_model` from ((`table_parsed_text` `pt` join `table_run` `tr` on(`pt`.`run_id` = `tr`.`id`)) join `table_embedding_params` `ep` on(`tr`.`embedding_params` = `ep`.`id`)) */;
+/*!50001 VIEW `parsed_view` AS select `tr`.`experiment_id` AS `experiment_id`,`tr`.`id` AS `run_index`,`pt`.`id` AS `id`,`pt`.run_index AS `run_id`,`pt`.`parsed_text` AS `parsed_text`,`pt`.`embedding` AS `embedding`,`pt`.`mapped` AS `mapped`,`pt`.`cluster_id` AS `cluster_id`,`ep`.`model` AS `embedding_model` from ((`table_parsed_text` `pt` join `table_run` `tr` on(`pt`.run_index = `tr`.`id`)) join `table_embedding_params` `ep` on(`tr`.`embedding_params` = `ep`.`id`)) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -265,7 +265,7 @@ CREATE TABLE `table_run` (
 /*!50001 SET collation_connection      = utf8mb4_unicode_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `run_parsed_view` AS select `r`.`experiment_id` AS `experiment_id`,`r`.`id` AS `id`,`r`.`run_id` AS `run_id`,`r`.`prompt` AS `prompt`,`r`.`response` AS `response`,`gp`.`model` AS `generate_model`,`ep`.`model` AS `embedding_model`,`pt`.`id` AS `line_index`,`pt`.`parsed_text` AS `parsed_text` from (((`table_run` `r` join `table_parsed_text` `pt` on(`r`.`id` = `pt`.`run_id`)) join `table_generate_params` `gp` on(`r`.`generator_params` = `gp`.`id`)) join `table_embedding_params` `ep` on(`r`.`embedding_params` = `ep`.`id`)) */;
+/*!50001 VIEW `run_parsed_view` AS select `r`.`experiment_id` AS `experiment_id`,`r`.`id` AS `id`,`r`.`run_id` AS `run_id`,`r`.`prompt` AS `prompt`,`r`.`response` AS `response`,`gp`.`model` AS `generate_model`,`ep`.`model` AS `embedding_model`,`pt`.`id` AS `line_index`,`pt`.`parsed_text` AS `parsed_text` from (((`table_run` `r` join `table_parsed_text` `pt` on(`r`.`id` = `pt`.run_index)) join `table_generate_params` `gp` on(`r`.`generator_params` = `gp`.`id`)) join `table_embedding_params` `ep` on(`r`.`embedding_params` = `ep`.`id`)) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;

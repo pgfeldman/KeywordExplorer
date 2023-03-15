@@ -5,7 +5,10 @@ from tkinter import ttk
 import tkinter.messagebox as message
 from datetime import datetime
 from tkinter import filedialog
+
+import pandas as pd
 from matplotlib import pyplot as plt
+import openai.embeddings_utils as oaiu
 
 from keyword_explorer.tkUtils.ConsoleDprint import ConsoleDprint
 from keyword_explorer.tkUtils.Buttons import Buttons
@@ -157,7 +160,6 @@ class GPT3EmbeddingFrame:
         cf = self.so.get_object("clusters_field")
         if cf != None:
             cf.set_text(str(len(self.mr.embedding_list)))
-        self.embed_state_text_field.add_text("Finished clustering")
 
     def topic_callback(self):
         ci:ClusterInfo
@@ -165,17 +167,31 @@ class GPT3EmbeddingFrame:
         split_regex = re.compile("\d+\)")
 
         for ci in self.mr.cluster_list:
-            text_list = []
+            et_list = []
             for et in ci.member_list:
-                text_list.append(et.text)
+                et_list.append(et.to_dict())
+            df = pd.DataFrame(et_list)
+            mean_embedding = list(df['reduced'].mean())
+            # Get the distances from the embeddings
+            df['distances'] = oaiu.distances_from_embeddings(mean_embedding, list(df['reduced'].values), distance_metric='cosine')
+            df2 = df.sort_values('distances', ascending=True)
+            text_list = []
+            for i, row in df2.iterrows():
+                text = str(row['text'])
+                text_list.append(text)
+                if len(text_list) > 5:
+                    break
+
             prompt = "Extract keywords from this text:\n\n{}\n\nTop three keywords\n1)".format(" ".join(text_list))
             # print("\nCluster ID {} query text:\n{}".format(ci.id, prompt))
             result = self.oai.get_prompt_result_params(prompt, temperature=0.5, max_tokens=60, top_p=1.0, frequency_penalty=0.8, presence_penalty=0)
             l = split_regex.split(result)
             response = "".join(l)
             ci.label = "[{}] {}".format(ci.id, response)
-            print("Cluster {}:\n{}".format(ci.id, response))
-        self.embed_state_text_field.add_text("topic_callback complete")
+            print("Cluster {}: = {}".format(ci.id, response))
+            for et in ci.member_list:
+                et.cluster_name = response
+        message.showinfo("topic_callback", "Generated {} topics".format(len(self.mr.cluster_list)))
 
     def plot_callback(self):
         print("Plotting")

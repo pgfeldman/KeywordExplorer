@@ -87,7 +87,7 @@ class NarrativeExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "NarrativeExplorer"
-        self.app_version = "2.14.2023"
+        self.app_version = "3.15.2023"
         self.geom = (840, 670)
         self.oai = OpenAIComms()
         self.msi = MySqlInterface(user_name="root", db_name="narrative_maps")
@@ -180,7 +180,7 @@ class NarrativeExplorer(AppBase):
         row = self.clusters_field.get_next_row()
 
     def build_generator_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
-        engine_list = self.oai.list_models(keep_list = ["davinci"], exclude_list = ["embed", "similarity", "code", "edit", "search", "audio", "instruct", "2020", "if", "insert"])
+        engine_list = self.oai.list_models(exclude_list = ["embed", "similarity", "code", "edit", "search", "audio", "instruct", "2020", "if", "insert", "whisper"])
         engine_list = sorted(engine_list)
         row = 0
         self.generate_model_combo = TopicComboExt(tab, row, "Model:", self.dp, entry_width=25, combo_width=25)
@@ -346,9 +346,12 @@ class NarrativeExplorer(AppBase):
         self.clusters_field.set_text(len(clusters_set))
 
     def new_prompt_callback(self):
+        print("GPT3GeneratorFrame.new_prompts_callback()")
         split_regex = re.compile(r"[\n]+")
         prompt = self.prompt_text_field.get_text()
+        print("\tSending prompt ...{}".format(prompt[-80:]))
         response = self.get_gpt3_response(prompt)
+        print("\tGot response {}...".format(response[:80]))
         l = split_regex.split(response)
         response = "\n".join(l)
         self.response_text_field.set_text(response)
@@ -515,7 +518,7 @@ class NarrativeExplorer(AppBase):
             # store the text
             s:str
             for s in self.parsed_full_text_list:
-                sql = "insert into table_parsed_text (run_id, parsed_text) values (%s, %s)"
+                sql = "insert into table_parsed_text (run_index, parsed_text) values (%s, %s)"
                 vals = (run_id, s)
                 self.msi.write_sql_values_get_row(sql, vals)
 
