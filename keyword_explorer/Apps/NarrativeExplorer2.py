@@ -12,9 +12,10 @@ Query - 1) Run cluster queries on the DB. Select the cluster ID and the number o
 Save - stores the text on a sentence-by sentence bases with clustering info
 Generate Graph - runs through each narrative in an experiment to produce a directed graph of nodes. The output is all the narratives threaded together. Used as an input to Gephi
 '''
-
+import os
 import re
 import getpass
+import math
 import numpy as np
 import tkinter as tk
 from tkinter import ttk
@@ -40,6 +41,7 @@ from keyword_explorer.OpenAI.OpenAIComms import OpenAIComms
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
 from keyword_explorer.utils.ManifoldReduction import ManifoldReduction, EmbeddedText, ClusterInfo
 from keyword_explorer.utils.SharedObjects import SharedObjects
+from keyword_explorer.utils.NetworkxGraphing import NetworkxGraphing
 
 from typing import List, Dict
 
@@ -177,6 +179,7 @@ class NarrativeExplorer2(AppBase):
         self.embedding_frame.build_frame(tab, text_width, label_width)
         self.embedding_frame.add_button("GPT embed", self.get_oai_embeddings_callback, "Get source embeddings from the GPT")
         self.embedding_frame.add_button("Retreive", self.get_db_embeddings_callback, "Get the high-dimensional embeddings from the DB")
+        self.embedding_frame.add_button("Export", self.export_network_callback, "Plot and Export the graph to GML")
 
     def build_embed_params(self, parent:tk.Frame, row:int) -> int:
         f = tk.Frame(parent)
@@ -496,6 +499,75 @@ class NarrativeExplorer2(AppBase):
     def save_params_callback(self):
         params = self.get_current_params()
         self.save_experiment_json(params)
+
+    def export_network_callback(self):
+        print("NarrativeExplorer2.export_network_callback()")
+        if self.experiment_id == -1:
+            message.showwarning("DB Error", "get_db_embeddings_callback(): Please set database")
+            return
+        user = os.getlogin()
+        ng = NetworkxGraphing(name=self.experiment_field.get_text(), creator=user)
+
+        sql = "select id, experiment_id, run_id from table_run where experiment_id = %s"
+        vals = (self.experiment_id,)
+
+        runs_response = self.msi.read_data(sql, vals)
+        runs_d:Dict
+        parsed_d1:Dict
+        parsed_d2:Dict
+        weight_dict = {}
+        for runs_d in runs_response:
+            run_index = int(runs_d['id'])
+            sql = "select id, cluster_name, parsed_text from table_parsed_text where run_index = %s order by id"
+            vals = (run_index,)
+            parsed_response = self.msi.read_data(sql, vals)
+            for i in range(len(parsed_response) - 1):
+                parsed_d1 = parsed_response[i]
+                parsed_d2 = parsed_response[i+1]
+                cl = str(parsed_d1['cluster_name']).split("\n")
+                cl = [x.strip() for x in cl]
+                source = "-".join(cl).strip()
+                cl = str(parsed_d2['cluster_name']).split("\n")
+                cl = [x.strip() for x in cl]
+                target = "-".join(cl).strip()
+                if source != target:
+                    if source in weight_dict:
+                        weight_dict[source] += 1
+                    else:
+                        weight_dict[source] = 1
+                    if target in weight_dict:
+                        weight_dict[target] += 1
+                    else:
+                        weight_dict[target] = 1
+
+        for key, val in weight_dict.items():
+            print("{} = {}".format(key, val))
+
+        for runs_d in runs_response:
+            run_index = int(runs_d['id'])
+            sql = "select id, cluster_name, parsed_text from table_parsed_text where run_index = %s order by id"
+            vals = (run_index,)
+            parsed_response = self.msi.read_data(sql, vals)
+            for i in range(len(parsed_response) - 1):
+                parsed_d1 = parsed_response[i]
+                parsed_d2 = parsed_response[i+1]
+                cl = str(parsed_d1['cluster_name']).split("\n")
+                cl = [x.strip() for x in cl]
+                source = "-".join(cl).strip()
+                cl = str(parsed_d2['cluster_name']).split("\n")
+                cl = [x.strip() for x in cl]
+                target = "-".join(cl).strip()
+                if source != target:
+                    # print("[{}] source: {}, target: {}".format(runs_d['run_id'], source, target))
+                    ng.add_weighted_nodes(source, weight_dict[source], target, weight_dict[target])
+        #ng.draw(self.experiment_field.get_text(), draw_legend=False, do_show=True, scalar=2.0)
+        result = filedialog.asksaveasfile(filetypes=(("gml files", "*.gml"),("All Files", "*.*")), title="Save/Update network", initialfile = "{}.gml".format(self.experiment_field.get_text()))
+        if result:
+            filename = result.name
+            ng.to_gml(filename, graph_creator=user, node_attributes=['weight'])
+            self.dp.dprint("Saved network to {}".format(filename))
+
+
 
 
 def main():

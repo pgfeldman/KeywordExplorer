@@ -87,10 +87,11 @@ class OpenAIComms:
 
     def get_prompt_result_params(self, prompt:str, engine:str = "text-davinci-003", max_tokens:int = 30, temperature:float = 0.4, top_p:float = 1, logprobs:int = 1,
                                  num_responses:int = 1, presence_penalty:float = 0.3, frequency_penalty:float = 0.3) -> str:
-        if "gpt-3.5" in engine:
+        chat_models = ['gpt-3.5', 'gpt-4']
+        if any([x in engine for x in chat_models]):
             print("OpenAICommsget_prompt_result_params(): Using Chat interface")
             l = [ChatUnit(prompt, CHAT_ROLES.USER)]
-            return self.get_chat_complete(l, max_tokens=max_tokens, temperature=temperature, top_p=top_p,
+            return self.get_chat_complete(l, engine=engine, max_tokens=max_tokens, temperature=temperature, top_p=top_p,
                                           presence_penalty=presence_penalty, frequency_penalty=frequency_penalty)
 
         goodread = False
@@ -118,10 +119,11 @@ class OpenAIComms:
 
 
     def get_prompt_result(self, prompt:str, print_result:bool = False) -> List:
-        if "gpt-3.5" in self.engine:
+        chat_models = ['gpt-3.5', 'gpt-4']
+        if any([x in self.engine for x in chat_models]):
             print("OpenAICommsget_prompt_result_params(): Using Chat interface")
             l = [ChatUnit(prompt, CHAT_ROLES.USER)]
-            return [self.get_chat_complete(l, max_tokens=self.max_tokens, temperature=self.temperature, top_p=self.top_p,
+            return [self.get_chat_complete(l, engine=self.engine, max_tokens=self.max_tokens, temperature=self.temperature, top_p=self.top_p,
                                           presence_penalty=self.presence_penalty, frequency_penalty=self.frequency_penalty)]
         to_return = []
         goodread = False
