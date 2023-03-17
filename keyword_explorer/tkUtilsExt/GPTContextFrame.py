@@ -120,6 +120,9 @@ class GPTContextFrame(GPT3GeneratorFrame):
         print("ignore_context_cb = {}".format(self.ignore_context_cb.get_val()))
 
     def new_prompt_callback(self):
+        generate_model_combo:TopicComboExt = self.so.get_object("generate_model_combo")
+        model = generate_model_combo.get_text()
+        print("using model {}".format(model))
         self.tab_control.select(0)
         if self.project_df.empty:
             tk.messagebox.showwarning("Warning!", "Please import data first")
@@ -143,10 +146,14 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.sources_text_field.set_text("\n\n".join(origins))
 
         self.dp.dprint("Submitting Question: {}".format(question))
-        answer = oae.get_response(full_question)
+        answer = oae.get_response(full_question, model=model)
         self.response_text_field.set_text(answer)
 
     def get_summmary_callback(self):
+        generate_model_combo:TopicComboExt = self.so.get_object("generate_model_combo")
+        model = generate_model_combo.get_text()
+        print("using model {}".format(model))
+
         self.tab_control.select(0)
         if self.project_df.empty:
             tk.messagebox.showwarning("Warning!", "Please import data first")
@@ -168,10 +175,14 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.sources_text_field.set_text("\n\n".join(origins))
 
         self.dp.dprint("Submitting summary prompt: {}".format(context))
-        answer = oae.get_response(full_prompt, max_tokens=256)
+        answer = oae.get_response(full_prompt, max_tokens=256, model=model)
         self.response_text_field.set_text(answer)
 
     def get_story_callback(self):
+        generate_model_combo:TopicComboExt = self.so.get_object("generate_model_combo")
+        model = generate_model_combo.get_text()
+        print("using model {}".format(model))
+
         self.tab_control.select(0)
         if self.project_df.empty:
             tk.messagebox.showwarning("Warning!", "Please import data first")
@@ -195,10 +206,14 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.sources_text_field.set_text("\n\n".join(origins))
 
         self.dp.dprint("Submitting story prompt: {}".format(prompt))
-        answer = oae.get_response(full_prompt, max_tokens=256)
+        answer = oae.get_response(full_prompt, max_tokens=256, model=model)
         self.response_text_field.set_text(answer)
 
     def extend_callback(self):
+        generate_model_combo:TopicComboExt = self.so.get_object("generate_model_combo")
+        model = generate_model_combo.get_text()
+        print("using model {}".format(model))
+
         if self.project_df.empty:
             tk.messagebox.showwarning("Warning!", "Please import data first")
             return
@@ -208,7 +223,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.prompt_text_field.set_text(prompt)
         self.response_text_field.clear()
         self.dp.dprint("Submitting extend prompt:")
-        response = oae.get_response(prompt)
+        response = oae.get_response(prompt, model=model)
         self.response_text_field.set_text(response)
 
     def clear_callback(self):
