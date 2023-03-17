@@ -36,6 +36,7 @@ class OpenAIComms:
     presence_penalty:float = 0.3 # Number between 0 and 1 that penalizes new tokens based on whether they appear in the text so far. Increases the model's likelihood to talk about new topics.
     frequency_penalty:float = 0.3 # Number between 0 and 1 that penalizes new tokens based on their existing frequency in the text so far. Decreases the model's likelihood to repeat the same line verbatim.
     ERROR_MSG = "ERROR_MSG-ERROR_MSG-ERROR_MSG"
+    chat_models = ['gpt-3.5', 'gpt-4']
 
     def __init__(self, engine_id:int = 0):
         self.engine = self.engines[engine_id]
@@ -87,8 +88,8 @@ class OpenAIComms:
 
     def get_prompt_result_params(self, prompt:str, engine:str = "text-davinci-003", max_tokens:int = 30, temperature:float = 0.4, top_p:float = 1, logprobs:int = 1,
                                  num_responses:int = 1, presence_penalty:float = 0.3, frequency_penalty:float = 0.3) -> str:
-        chat_models = ['gpt-3.5', 'gpt-4']
-        if any([x in engine for x in chat_models]):
+
+        if any([x in engine for x in self.chat_models]):
             print("OpenAICommsget_prompt_result_params(): Using Chat interface")
             l = [ChatUnit(prompt, CHAT_ROLES.USER)]
             return self.get_chat_complete(l, engine=engine, max_tokens=max_tokens, temperature=temperature, top_p=top_p,
@@ -119,8 +120,7 @@ class OpenAIComms:
 
 
     def get_prompt_result(self, prompt:str, print_result:bool = False) -> List:
-        chat_models = ['gpt-3.5', 'gpt-4']
-        if any([x in self.engine for x in chat_models]):
+        if any([x in self.engine for x in self.chat_models]):
             print("OpenAICommsget_prompt_result_params(): Using Chat interface")
             l = [ChatUnit(prompt, CHAT_ROLES.USER)]
             return [self.get_chat_complete(l, engine=self.engine, max_tokens=self.max_tokens, temperature=self.temperature, top_p=self.top_p,
