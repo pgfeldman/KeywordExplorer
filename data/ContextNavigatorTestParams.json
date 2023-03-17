@@ -1,7 +1,0 @@
-{
-  "name": "Moby-Dick-test",
-  "prompt": "Why is Ahab obsessed with Moby Dick?",
-  "context_prrompt": "Working on whaling ships",
-  "keywords": "Pequod OR Rachel OR Ahab",
-  "narrative-name": "Moby-Dick-narrative-name"
-}
