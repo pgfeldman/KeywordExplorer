@@ -194,7 +194,7 @@ class OpenAIComms:
             except (openai.error.APIError, openai.error.RateLimitError, openai.error.APIConnectionError) as e:
                 waitcount += 1
                 time_to_wait = 5 * waitcount
-                print("OpenAIComms.get_embedding_list error, returning early. Message = {}".format(e.user_message))
+                print("OpenAIComms.get_embedding_list error. Message = {}".format(e.user_message))
                 if waitcount > 5:
                     print("OpenAIComms.get_embedding_list error, returning early.")
                     return [{"text":"unset", "embedding":np.array([0, 0, 0])}]
@@ -219,11 +219,11 @@ class OpenAIComms:
             except (openai.error.APIError, openai.error.RateLimitError, openai.error.APIConnectionError) as e:
                 waitcount += 1
                 time_to_wait = 5 * waitcount
-                print("OpenAIComms.get_embedding_list error, returning early. Message = {}".format(e.user_message))
+                print("OpenAIComms.get_moderation_vals error. Message = {}".format(e.user_message))
                 if waitcount > 5:
-                    print("OpenAIComms.get_embedding_list error, returning early.")
+                    print("OpenAIComms.get_moderation_vals error, returning early.")
                     return [{"text":"unset", "category_scores": {}}]
-                print("OpenAIComms.get_embedding_list waiting {} seconds".format(time_to_wait))
+                print("OpenAIComms.get_moderation_vals waiting {} seconds".format(time_to_wait))
                 time.sleep(time_to_wait)
 
     def set_engine(self, id:int = -1, name:str = None):
