@@ -191,7 +191,7 @@ class OpenAIComms:
                     i += 1
                 return d_list
 
-            except (openai.error.APIError, openai.error.RateLimitError) as e:
+            except (openai.error.APIError, openai.error.RateLimitError, openai.error.APIConnectionError) as e:
                 waitcount += 1
                 time_to_wait = 5 * waitcount
                 print("OpenAIComms.get_embedding_list error, returning early. Message = {}".format(e.user_message))
@@ -202,15 +202,29 @@ class OpenAIComms:
                 time.sleep(time_to_wait)
 
     def get_moderation_vals(self, test_list:List) -> List:
-        response = openai.Moderation.create(
-            input=test_list
-        )
-        output = response["results"]
-        to_return = []
-        for i in range(len(test_list)):
-            jsn = output[i]["category_scores"]
-            to_return.append({"text":test_list[i], "category_scores":jsn})
-        return to_return
+
+        good_read = False
+        waitcount = 0
+        while not good_read:
+            try:
+                response = openai.Moderation.create(
+                    input=test_list
+                )
+                output = response["results"]
+                to_return = []
+                for i in range(len(test_list)):
+                    jsn = output[i]["category_scores"]
+                    to_return.append({"text":test_list[i], "category_scores":jsn})
+                return to_return
+            except (openai.error.APIError, openai.error.RateLimitError, openai.error.APIConnectionError) as e:
+                waitcount += 1
+                time_to_wait = 5 * waitcount
+                print("OpenAIComms.get_embedding_list error, returning early. Message = {}".format(e.user_message))
+                if waitcount > 5:
+                    print("OpenAIComms.get_embedding_list error, returning early.")
+                    return [{"text":"unset", "category_scores": {}}]
+                print("OpenAIComms.get_embedding_list waiting {} seconds".format(time_to_wait))
+                time.sleep(time_to_wait)
 
     def set_engine(self, id:int = -1, name:str = None):
         if id != -1:

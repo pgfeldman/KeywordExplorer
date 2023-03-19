@@ -517,7 +517,7 @@ class EmbeddingsExplorer(AppBase):
     def label_clusters_callback(self):
         pass
 
-    def get_oai_embeddings_callback(self):
+    def get_oai_embeddings_callback(self, limit = 500):
         print("get_oai_embeddings_callback")
         keyword = self.keyword_combo.get_text()
 
@@ -525,11 +525,11 @@ class EmbeddingsExplorer(AppBase):
             message.showwarning("DB Error", "get_oai_embeddings_callback(): Please set database and/or keyword")
             return
 
-        get_remaining_sql = "select tweet_row, text from keyword_tweet_view where experiment_id = %s and embedding is NULL"
-        get_remaining_values = (self.experiment_id,)
+        get_remaining_sql = "select tweet_row, text from keyword_tweet_view where experiment_id = %s and embedding is NULL limit %s"
+        get_remaining_values = (self.experiment_id, limit)
         if keyword != 'all_keywords':
-            get_remaining_sql = "select tweet_row, text from keyword_tweet_view where experiment_id = %s and keyword = %s and embedding is NULL"
-            get_remaining_values = (self.experiment_id, keyword)
+            get_remaining_sql = "select tweet_row, text from keyword_tweet_view where experiment_id = %s and keyword = %s and embedding is NULL limit %s"
+            get_remaining_values = (self.experiment_id, keyword, limit)
 
         engine = self.engine_combo.get_text()
         print("get_embeddings_callback() Experiment id = {}, Keyword = {}, Engine = {}".format(self.experiment_id, keyword, engine))
