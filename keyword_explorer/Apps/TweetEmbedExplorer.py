@@ -517,7 +517,7 @@ class EmbeddingsExplorer(AppBase):
     def label_clusters_callback(self):
         pass
 
-    def get_oai_embeddings_callback(self, api_limit = 500, db_limit = 10000):
+    def get_oai_embeddings_callback(self, api_limit = 500, db_limit = 10000, debug = True):
         print("get_oai_embeddings_callback")
         keyword = self.keyword_combo.get_text()
 
@@ -554,21 +554,27 @@ class EmbeddingsExplorer(AppBase):
                 print("\tGetting moderations for {} rows".format(len(results)))
                 mod_list = self.oai.get_moderation_vals(s_list)
                 row_dict:Dict
-                for i in range(len(sub_results)):
-                    rd = results[i]
+                for j in range(len(sub_results)):
+                    rd = results[j]
                     tweet_row = rd['tweet_row']
-                    d = embd_list[i]
+                    d = embd_list[j]
                     embedding = d['embedding']
                     embd_s = np.array(embedding)
-                    d = mod_list[i]
+                    d = mod_list[j]
                     mods = d['category_scores']
                     mods_s = json.dumps(mods)
                     # print("row_id: {} text: {} embed: {}, mods = {}".format(tweet_row, tweet, embedding, mods_s))
                     sql = "update table_tweet set embedding = %s, moderation = %s where row_id = %s"
                     values = (embd_s.dumps(), mods_s, tweet_row)
-                    self.msi.write_sql_values_get_row(sql, values)
+                    if debug:
+                        print("\tTweetEmbedExplorer.get_oai_embeddings_callback() Writing {}/{} ({})".format(i, j, i*api_limit + j))
+                    else:
+                        self.msi.write_sql_values_get_row(sql, values)
 
             print("\tEmbedded {} records".format(count))
+            if debug:
+                print("\tbreaking early")
+                break
             results = self.msi.read_data(get_remaining_sql, get_remaining_values)
             count += len(results)
         print("TweetEmbedExplorer.get_oai_embeddings_callback(): Finished! Embedded a total of {} records".format(count))
