@@ -517,7 +517,7 @@ class EmbeddingsExplorer(AppBase):
     def label_clusters_callback(self):
         pass
 
-    def get_oai_embeddings_callback(self, limit = 500):
+    def get_oai_embeddings_callback(self, api_limit = 500, db_limit = 10000):
         print("get_oai_embeddings_callback")
         keyword = self.keyword_combo.get_text()
 
@@ -525,11 +525,12 @@ class EmbeddingsExplorer(AppBase):
             message.showwarning("DB Error", "get_oai_embeddings_callback(): Please set database and/or keyword")
             return
 
+        # do a big pull because pulls take a long time
         get_remaining_sql = "select tweet_row, text from keyword_tweet_view where experiment_id = %s and embedding is NULL limit %s"
-        get_remaining_values = (self.experiment_id, limit)
+        get_remaining_values = (self.experiment_id, db_limit)
         if keyword != 'all_keywords':
             get_remaining_sql = "select tweet_row, text from keyword_tweet_view where experiment_id = %s and keyword = %s and embedding is NULL limit %s"
-            get_remaining_values = (self.experiment_id, keyword, limit)
+            get_remaining_values = (self.experiment_id, keyword, db_limit)
 
         engine = self.engine_combo.get_text()
         print("get_embeddings_callback() Experiment id = {}, Keyword = {}, Engine = {}".format(self.experiment_id, keyword, engine))
@@ -538,30 +539,34 @@ class EmbeddingsExplorer(AppBase):
         while len(results) > 0:
             print("\tGetting embeddings for {} rows".format(len(results)))
             d:Dict
-            # create a list of text
-            s_list = []
-            for d in results:
-                s_list.append(d['text'])
+            #chunk up the returned list to send off to the api
+            for i in range(0, len(results), api_limit):
+                # create a list of text
+                s_list = []
+                sub_results = []
+                last_r = min(i+api_limit, len(results))
+                for d in results[i:last_r]:
+                    s_list.append(d['text'])
+                    sub_results.append(d)
 
-            # send that list to get embeddings
-            embd_list = self.oai.get_embedding_list(s_list, engine)
-            print("\tGetting moderations for {} rows".format(len(results)))
-            mod_list = self.oai.get_moderation_vals(s_list)
-            row_dict:Dict
-            for i in range(len(results)):
-                rd = results[i]
-                tweet_row = rd['tweet_row']
-                tweet = rd['text']
-                d = embd_list[i]
-                embedding = d['embedding']
-                embd_s = np.array(embedding)
-                d = mod_list[i]
-                mods = d['category_scores']
-                mods_s = json.dumps(mods)
-                # print("row_id: {} text: {} embed: {}, mods = {}".format(tweet_row, tweet, embedding, mods_s))
-                sql = "update table_tweet set embedding = %s, moderation = %s where row_id = %s"
-                values = (embd_s.dumps(), mods_s, tweet_row)
-                self.msi.write_sql_values_get_row(sql, values)
+                # send that list to get embeddings
+                embd_list = self.oai.get_embedding_list(s_list, engine)
+                print("\tGetting moderations for {} rows".format(len(results)))
+                mod_list = self.oai.get_moderation_vals(s_list)
+                row_dict:Dict
+                for i in range(len(sub_results)):
+                    rd = results[i]
+                    tweet_row = rd['tweet_row']
+                    d = embd_list[i]
+                    embedding = d['embedding']
+                    embd_s = np.array(embedding)
+                    d = mod_list[i]
+                    mods = d['category_scores']
+                    mods_s = json.dumps(mods)
+                    # print("row_id: {} text: {} embed: {}, mods = {}".format(tweet_row, tweet, embedding, mods_s))
+                    sql = "update table_tweet set embedding = %s, moderation = %s where row_id = %s"
+                    values = (embd_s.dumps(), mods_s, tweet_row)
+                    self.msi.write_sql_values_get_row(sql, values)
 
             print("\tEmbedded {} records".format(count))
             results = self.msi.read_data(get_remaining_sql, get_remaining_values)
