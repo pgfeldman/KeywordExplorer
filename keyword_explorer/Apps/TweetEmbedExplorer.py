@@ -62,7 +62,7 @@ class EmbeddingsExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "EmbeddingsExplorer"
-        self.app_version = "3.13.23"
+        self.app_version = "3.20.23"
         self.geom = (600, 620)
         self.oai = OpenAIComms()
         self.tkws = TweetKeywords()
@@ -517,8 +517,11 @@ class EmbeddingsExplorer(AppBase):
     def label_clusters_callback(self):
         pass
 
-    def get_oai_embeddings_callback(self, api_limit = 500, db_limit = 10000, debug = True):
+    def get_oai_embeddings_callback(self, api_limit = 500, db_limit = 10000, debug = False):
         print("get_oai_embeddings_callback")
+        if debug:
+            api_limit = 10
+            db_limit = 100
         keyword = self.keyword_combo.get_text()
 
         if self.experiment_id == -1 or len(keyword) < 2:
