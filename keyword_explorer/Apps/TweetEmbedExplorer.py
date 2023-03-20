@@ -539,8 +539,9 @@ class EmbeddingsExplorer(AppBase):
         print("get_embeddings_callback() Experiment id = {}, Keyword = {}, Engine = {}".format(self.experiment_id, keyword, engine))
         results = self.msi.read_data(get_remaining_sql, get_remaining_values)
         count = len(results)
+        print("\tGetting embeddings and moderations for {} rows".format(len(results)))
+        total = 0
         while len(results) > 0:
-            print("\tGetting embeddings for {} rows".format(len(results)))
             d:Dict
             #chunk up the returned list to send off to the api
             for i in range(0, len(results), api_limit):
@@ -551,14 +552,18 @@ class EmbeddingsExplorer(AppBase):
                 for d in results[i:last_r]:
                     s_list.append(d['text'])
                     sub_results.append(d)
+                print("First ({}/{}) = {}".format(i, sub_results[0]['tweet_row'], s_list[0][:40].strip()))
+                print("Last ({}/{}) = {}".format(last_r, sub_results[-1]['tweet_row'], s_list[-1][:40].strip()))
 
                 # send that list to get embeddings
+                print("\tGetting embeddings for {} rows".format(len(sub_results)))
                 embd_list = self.oai.get_embedding_list(s_list, engine)
-                print("\tGetting moderations for {} rows".format(len(results)))
+                print("\tGetting moderations for {} rows".format(len(sub_results)))
                 mod_list = self.oai.get_moderation_vals(s_list)
                 row_dict:Dict
+                print("\tUpdating DB")
                 for j in range(len(sub_results)):
-                    rd = results[j]
+                    rd = sub_results[j]
                     tweet_row = rd['tweet_row']
                     d = embd_list[j]
                     embedding = d['embedding']
@@ -572,13 +577,18 @@ class EmbeddingsExplorer(AppBase):
                     if debug:
                         print("\tTweetEmbedExplorer.get_oai_embeddings_callback() Writing {}/{} ({})".format(i, j, i*api_limit + j))
                     else:
+                        # print("\t[{}] row: {} embd: {}, mod: {}".format(total, tweet_row, embd_s, mods_s))
                         self.msi.write_sql_values_get_row(sql, values)
+                        total += 1
+                print("\tUpdated DB with {}/{} entries".format(len(sub_results), total+1))
 
             print("\tEmbedded {} records".format(count))
             if debug:
                 print("\tbreaking early")
                 break
+            print("\tLooking for more NULL rows")
             results = self.msi.read_data(get_remaining_sql, get_remaining_values)
+            print("\tGetting embeddings and moderations for {} rows".format(len(results)))
             count += len(results)
         print("TweetEmbedExplorer.get_oai_embeddings_callback(): Finished! Embedded a total of {} records".format(count))
 
