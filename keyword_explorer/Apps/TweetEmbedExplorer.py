@@ -17,6 +17,7 @@ from keyword_explorer.tkUtils.CanvasFrame import CanvasFrame
 from keyword_explorer.tkUtils.TopicComboExt import TopicComboExt
 from keyword_explorer.tkUtils.DataField import DataField
 from keyword_explorer.tkUtils.LabeledParam import LabeledParam
+from keyword_explorer.tkUtils.SelectParam import SelectParam
 from keyword_explorer.tkUtils.Buttons import Buttons
 from keyword_explorer.tkUtils.ToolTip import ToolTip
 from keyword_explorer.tkUtils.MoveableNode import MovableNode
@@ -49,6 +50,7 @@ class EmbeddingsExplorer(AppBase):
     min_samples_param: LabeledParam
     perplexity_param: LabeledParam
     rows_param: LabeledParam
+    subsampleParam:SelectParam
     tweet_option_checkboxes:Checkboxes
     author_option_checkboxes:Checkboxes
     generation_options:Checkboxes
@@ -63,7 +65,7 @@ class EmbeddingsExplorer(AppBase):
     def setup_app(self):
         self.app_name = "EmbeddingsExplorer"
         self.app_version = "3.20.23"
-        self.geom = (600, 620)
+        self.geom = (640, 620)
         self.oai = OpenAIComms()
         self.tkws = TweetKeywords()
         self.msi = MySqlInterface(user_name="root", db_name="twitter_v2")
@@ -207,6 +209,7 @@ class EmbeddingsExplorer(AppBase):
         self.rows_param = LabeledParam(f, 8, "Limit:")
         self.rows_param.set_text('1000')
         ToolTip(self.rows_param.tk_entry, "The number of rows that the full list will be subsampled down to\nfor performance")
+        self.subsampleParam = SelectParam(f, 10, "Subsample", None)
         return row + 1
 
     def build_graph_tab(self, tab: ttk.Frame):
@@ -217,8 +220,9 @@ class EmbeddingsExplorer(AppBase):
         buttons = Buttons(tab, row, "Commands", label_width=10)
         b = buttons.add_button("Retreive", self.retreive_tweet_data_callback, -1)
         ToolTip(b, "Get the high-dimensional embeddings from the DB")
-        b = buttons.add_button("Reduce", self.reduce_dimensions_callback, -1)
-        ToolTip(b, "Reduce to 2 dimensions with PCS and TSNE")
+        b = buttons.add_button("Subset", self.reduce_dimensions_callback, -1)
+        ToolTip(b, "Reduce a  2 dimensions with PCS and TSNE")
+
         b = buttons.add_button("Cluster", self.cluster_callback, -1)
         ToolTip(b, "Compute clusters on reduced data")
         b = buttons.add_button("Plot", self.plot_callback, -1)
@@ -363,6 +367,14 @@ class EmbeddingsExplorer(AppBase):
 
         if self.experiment_id == -1 or len(keyword) < 2:
             message.showwarning("DB Error", "get_db_embeddings_callback(): Please set database and/or keyword")
+            return
+
+        if self.subsampleParam.get_value():
+            print("Loading subsample of data (Not implemented)")
+            # get all the queries for a experiment/keyword combo
+            sql = "CALL get_random_tweets(%s, %s, %s)"
+            vals = (1, 2, self.rows_param.get_as_int())
+
             return
 
         print("\t Loading from DB")
