@@ -81,7 +81,7 @@ class GPT3GeneratorFrame:
 
     def build_frame(self, frm: ttk.Frame, text_width:int, label_width:int):
         engine_list = self.oai.list_models(exclude_list = [":", "ada", "embed", "similarity", "code", "edit", "search", "audio", "instruct", "2020", "if", "insert", "whisper"])
-        engine_list = sorted(engine_list)
+        engine_list = sorted(engine_list, reverse=True)
         row = 0
         self.generate_model_combo = TopicComboExt(frm, row, "Model:", self.dp, entry_width=25, combo_width=25)
         self.generate_model_combo.set_combo_list(engine_list)
