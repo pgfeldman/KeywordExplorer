@@ -115,7 +115,7 @@ class KeywordExplorer(AppBase):
         row = self.token_list.get_next_row()
 
         engine_list = self.oai.list_models(exclude_list = [":", "ada", "embed", "similarity", "code", "edit", "search", "audio", "instruct", "2020", "if", "insert", "whisper"])
-        engine_list = sorted(engine_list)
+        engine_list = sorted(engine_list, reverse=True)
         self.engine_list = ListField(lf, row, "Engines", width=text_width, label_width=label_width, static_list=True)
         self.engine_list.set_text(list=engine_list)
         self.engine_list.set_callback(self.set_engine_callback)
