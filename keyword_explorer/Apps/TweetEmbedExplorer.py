@@ -29,10 +29,27 @@ from keyword_explorer.tkUtils.TextField import TextField
 
 from typing import Dict, List, Any
 
-# General TODO:
-# Move "selected experiment" and "keyword" out of the tabs
-# Add a "Create Corpora" tab
-# Implement calls to GPT embeddings and verify on small dataset. I could even try Aaron's Wikipedia cats vs computers idea but use tweets
+class SubsampleInfo:
+    experiment_id:int
+    tweet_row:int
+    query_row:int
+    keyword:str
+    unsaved:bool
+
+    def __init__(self, experiment_id:int, tweet_row:int, query_row:int, keyword:str, unsaved:bool = False):
+        self.experiment_id = experiment_id
+        self.tweet_row = tweet_row
+        self.query_row = query_row
+        self.keyword = keyword
+        self.unsaved = unsaved
+
+    def to_db(self, msi:MySqlInterface):
+        # Only save if this is new
+        if self.unsaved:
+            sql = "insert into table_subsampled (experiment_id, tweet_row, query_row, keyword) VALUES (%s, %s, %s, %s)"
+            vals = (self.experiment_id, self.tweet_row, self.query_row, self.keyword)
+            msi.write_sql_values_get_row(sql, vals)
+
 class EmbeddingsExplorer(AppBase):
     oai: OpenAIComms
     msi: MySqlInterface
@@ -57,6 +74,7 @@ class EmbeddingsExplorer(AppBase):
     speech_text_field:TextField
     experiment_id: int
     speech_df:pd.DataFrame
+    subsample_list:List
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -64,13 +82,14 @@ class EmbeddingsExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "EmbeddingsExplorer"
-        self.app_version = "3.20.23"
+        self.app_version = "3.22.23"
         self.geom = (640, 620)
         self.oai = OpenAIComms()
         self.tkws = TweetKeywords()
         self.msi = MySqlInterface(user_name="root", db_name="twitter_v2")
         self.mr = ManifoldReduction()
         self.cg = CorporaGenerator(self.msi)
+        self.subsample_list = []
 
         if not self.oai.key_exists():
             message.showwarning("Key Error", "Could not find Environment key 'OPENAI_KEY'")
@@ -220,9 +239,8 @@ class EmbeddingsExplorer(AppBase):
         buttons = Buttons(tab, row, "Commands", label_width=10)
         b = buttons.add_button("Retreive", self.retreive_tweet_data_callback, -1)
         ToolTip(b, "Get the high-dimensional embeddings from the DB")
-        b = buttons.add_button("Subset", self.reduce_dimensions_callback, -1)
+        b = buttons.add_button("Reduce", self.reduce_dimensions_callback, -1)
         ToolTip(b, "Reduce a  2 dimensions with PCS and TSNE")
-
         b = buttons.add_button("Cluster", self.cluster_callback, -1)
         ToolTip(b, "Compute clusters on reduced data")
         b = buttons.add_button("Plot", self.plot_callback, -1)
@@ -288,6 +306,11 @@ class EmbeddingsExplorer(AppBase):
 
     def store_reduced_and_clustering_callback(self):
         print("store_reduced_and_clustering_callback")
+        if self.subsampleParam.get_value():
+            si:SubsampleInfo
+            for si in self.subsample_list:
+                si.to_db(self.msi)
+
         et:EmbeddedText
         rows = 0
         for et in self.mr.embedding_list:
@@ -362,29 +385,72 @@ class EmbeddingsExplorer(AppBase):
         print("store_user_callback(): complete")
 
     def retreive_tweet_data_callback(self):
-        print("retreive_tweet_data_callback")
+        print("TweetEmbedExplorer.retreive_tweet_data_callback()")
         keyword = self.keyword_combo.get_text()
 
         if self.experiment_id == -1 or len(keyword) < 2:
             message.showwarning("DB Error", "get_db_embeddings_callback(): Please set database and/or keyword")
             return
 
+        tweet_result = []
         if self.subsampleParam.get_value():
-            print("Loading subsample of data (Not implemented)")
-            # get all the queries for a experiment/keyword combo
+            subsample_exists = False
+            print("Checking if subsample exists")
+            if self.keyword_combo.get_text() == 'all_keywords':
+                sql = "select * from table_subsampled where experiment_id = %s"
+                vals = (self.experiment_id,)
+            else:
+                sql = "select * from table_subsampled where experiment_id = %s and keyword = %s"
+                vals = (self.experiment_id,self.keyword_combo.get_text())
+            results = self.msi.read_data(sql, vals)
+            num_rows = self.rows_param.get_as_int()
+            if len(results) >= num_rows:
+                subsample_exists = True
+                # TODO: load up the self.subsample_list
+            print("\tSubsample test: Found {} rows".format(num_rows))
+
+            # If no subsamples exist, get some
+            print("\tLoading subsample of data")
+            # get the min and max query_id of queries for a experiment/keyword combo
+            if self.keyword_combo.get_text() == 'all_keywords':
+                sql = "select MIN(id) as min_query, max(id)as max_query from table_query where experiment_id = %s"
+                vals = (self.experiment_id,)
+            else:
+                sql = "select MIN(id) as min_query, max(id)as max_query from table_query where experiment_id = %s and keyword = %s"
+                vals = (self.experiment_id,self.keyword_combo.get_text())
+
+            results = self.msi.read_data(sql, vals)
+            if len(results) == 0:
+                return
+
+            # get the number of tweets
+            min_query = results[0]['min_query']
+            max_query = results[0]['max_query']
+            print("\tExperiment {}: query range = {:,} - {:,}".format(self.experiment_id, min_query, max_query))
             sql = "CALL get_random_tweets(%s, %s, %s)"
-            vals = (1, 2, self.rows_param.get_as_int())
+            num_rows = self.rows_param.get_as_int()
+            vals = (min_query, max_query, num_rows)
+            print("\tLoading {} subsampled rows from DB".format(num_rows))
+            tweet_result = self.msi.read_data(sql, vals)
+            print("\tGot {} tweets back".format(len(tweet_result)))
+            si:SubsampleInfo
+            d:Dict
 
-            return
+            # Load up the subsampled_list with new values to save later
+            self.subsample_list = []
+            for d in tweet_result:
+                si = SubsampleInfo(self.experiment_id, d['row_id'], d['query_id'], self.keyword_combo.get_text())
+                self.subsample_list.append(si)
 
-        print("\t Loading from DB")
-        query = 'select tweet_row, tweet_id, embedding, moderation, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s'
-        values = (self.experiment_id,)
-        if keyword != 'all_keywords':
-            query = 'select tweet_row, tweet_id, text, embedding, moderation, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s and keyword = %s'
-            values = (self.experiment_id, keyword)
-        result = self.msi.read_data(query, values, True)
-        print("\t Loaded {} records from DB".format(len(result)))
+        else:
+            print("\tLoading full data from DB")
+            query = 'select tweet_row, tweet_id, embedding, moderation, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s'
+            values = (self.experiment_id,)
+            if keyword != 'all_keywords':
+                query = 'select tweet_row, tweet_id, text, embedding, moderation, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s and keyword = %s'
+                values = (self.experiment_id, keyword)
+            tweet_result = self.msi.read_data(query, values, True)
+            print("\t Loaded {} records from DB".format(len(tweet_result)))
         row_dict:Dict
 
         print("\tLoading embedding parameters")
@@ -403,12 +469,13 @@ class EmbeddingsExplorer(AppBase):
         print("\tClearing ManifoldReduction")
         self.mr.clear()
         self.canvas_frame.clear_Nodes()
-        print("\tLoading {} rows".format(len(result)))
+        print("\tLoading {} rows".format(len(tweet_result)))
         count = 0
         et:EmbeddedText
         moderation_list = []
-        for row_dict in result:
-            et = self.mr.load_row(row_dict['tweet_row'], row_dict['embedding'], None, None)
+        for row_dict in tweet_result:
+            row_id = self.safe_dict(row_dict, 'tweet_row', row_dict['id'])
+            et = self.mr.load_row(row_id, row_dict['embedding'], None, None)
             et.text = self.safe_dict(row_dict, 'text', "unset")
             reduced = self.safe_dict(row_dict, 'reduced', None)
             cluster_id = self.safe_dict(row_dict, 'cluster_id', None)
@@ -420,7 +487,7 @@ class EmbeddingsExplorer(AppBase):
                 jmod['text'] = et.text
                 moderation_list.append(jmod)
             if count % 1000 == 0:
-                self.dp.dprint("loaded {} of {} records".format(count, len(result)))
+                self.dp.dprint("loaded {} of {} records".format(count, len(tweet_result)))
             count += 1
 
         if len(moderation_list) > 0:
@@ -459,13 +526,15 @@ class EmbeddingsExplorer(AppBase):
 
     def plot_callback(self):
         print("Plotting")
-        keyword = self.keyword_combo.get_text()
+        title = self.keyword_combo.get_text()
+        if title == 'all_keywords':
+            title = self.experiment_combo.get_text()
         perplexity = self.perplexity_param.get_as_int()
         eps = self.eps_param.get_as_int()
         min_samples = self.min_samples_param.get_as_int()
         pca_dim = self.pca_dim_param.get_as_int()
         self.mr.plot("{}\ndim: {}, eps: {}, min_sample: {}, perplex = {}".format(
-            keyword, pca_dim, eps, min_samples, perplexity))
+            title, pca_dim, eps, min_samples, perplexity))
         plt.show()
 
     def explore_callback(self):
@@ -644,6 +713,9 @@ class EmbeddingsExplorer(AppBase):
         ax.set_xticklabels(plot_df.columns)
         ax.set_xlabel('Variable')
         ax.set_ylabel('Value')
+        title = self.keyword_combo.get_text()
+        if title == 'all_keywords':
+            title = self.experiment_combo.get_text()
         ax.set_title('[{}] moderated speech - {:,} results'.format(self.keyword_combo.get_text(), len(plot_df.index)))
         plt.show()
 
