@@ -40,9 +40,30 @@ SET character_set_client = utf8;
   `cluster_name` tinyint NOT NULL,
   `reduced` tinyint NOT NULL,
   `is_thread` tinyint NOT NULL,
-  `embedding` tinyint NOT NULL
+  `embedding` tinyint NOT NULL,
+  `moderation` tinyint NOT NULL
 ) ENGINE=MyISAM */;
 SET character_set_client = @saved_cs_client;
+
+--
+-- Table structure for table `table_embedding_params`
+--
+
+DROP TABLE IF EXISTS `table_embedding_params`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `table_embedding_params` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `experiment_id` int(11) DEFAULT NULL,
+  `keyword` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `model` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `PCA_dim` int(11) DEFAULT NULL,
+  `EPS` float DEFAULT NULL,
+  `min_samples` int(11) DEFAULT NULL,
+  `perplexity` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
 -- Table structure for table `table_exclude`
@@ -73,7 +94,7 @@ CREATE TABLE `table_experiment` (
   `sample_end` datetime DEFAULT NULL,
   `keywords` text DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -92,7 +113,7 @@ CREATE TABLE `table_query` (
   `end_time` datetime DEFAULT NULL,
   `date_executed` datetime DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2737 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=50547 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -114,13 +135,14 @@ CREATE TABLE `table_tweet` (
   `id` bigint(20) NOT NULL,
   `text` text DEFAULT NULL,
   `topic_name` varchar(255) DEFAULT NULL,
-  `embedding` text DEFAULT NULL,
-  `reduced` varchar(255) DEFAULT NULL,
+  `moderation` text DEFAULT NULL,
+  `reduced` blob DEFAULT NULL,
   `cluster_id` int(11) DEFAULT NULL,
   `cluster_name` varchar(255) DEFAULT NULL,
+  `embedding` blob DEFAULT NULL,
   PRIMARY KEY (`row_id`),
   UNIQUE KEY `value` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=30050 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=17122302 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -180,7 +202,7 @@ SET character_set_client = @saved_cs_client;
 /*!50001 SET collation_connection      = utf8mb4_unicode_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `keyword_tweet_view` AS select `te`.`name` AS `name`,`te`.`id` AS `experiment_id`,`te`.`sample_start` AS `start`,`te`.`sample_end` AS `end`,`te`.`keywords` AS `keywords`,`tq`.`query` AS `query`,`tq`.`keyword` AS `keyword`,`tt`.`author_id` AS `author_id`,`tt`.`conversation_id` AS `conversation_id`,`tt`.`id` AS `tweet_id`,`tt`.`row_id` AS `tweet_row`,`tt`.`text` AS `text`,`tt`.`cluster_id` AS `cluster_id`,`tt`.`cluster_name` AS `cluster_name`,`tt`.`reduced` AS `reduced`,`tt`.`is_thread` AS `is_thread`,`tt`.moderation AS `embedding` from ((`table_experiment` `te` join `table_query` `tq` on(`te`.`id` = `tq`.`experiment_id`)) join `table_tweet` `tt` on(`tq`.`id` = `tt`.`query_id`)) */;
+/*!50001 VIEW `keyword_tweet_view` AS select `te`.`name` AS `name`,`te`.`id` AS `experiment_id`,`te`.`sample_start` AS `start`,`te`.`sample_end` AS `end`,`te`.`keywords` AS `keywords`,`tq`.`query` AS `query`,`tq`.`keyword` AS `keyword`,`tt`.`author_id` AS `author_id`,`tt`.`conversation_id` AS `conversation_id`,`tt`.`id` AS `tweet_id`,`tt`.`row_id` AS `tweet_row`,`tt`.`text` AS `text`,`tt`.`cluster_id` AS `cluster_id`,`tt`.`cluster_name` AS `cluster_name`,`tt`.`reduced` AS `reduced`,`tt`.`is_thread` AS `is_thread`,`tt`.`embedding` AS `embedding`,`tt`.`moderation` AS `moderation` from ((`table_experiment` `te` join `table_query` `tq` on(`te`.`id` = `tq`.`experiment_id`)) join `table_tweet` `tt` on(`tq`.`id` = `tt`.`query_id`)) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -213,4 +235,4 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2022-10-13  9:07:49
+-- Dump completed on 2023-03-21 18:25:52

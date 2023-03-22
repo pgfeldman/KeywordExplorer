@@ -44,6 +44,7 @@ class ContextExplorer(AppBase):
     rows_field:DataField
     keyword_filtered_field:DataField
     narrative_project_name_field:DataField
+    generate_model_combo:TopicComboExt
     experiment_id_list:List
 
 
@@ -58,17 +59,17 @@ class ContextExplorer(AppBase):
         self.experiment_field.set_text(experiment_str)
         self.load_experiment_list()
         self.experiment_id_list = []
+        self.so.add_object("generate_model_combo", self.generate_model_combo, TopicComboExt)
         # self.test_data_callback()
 
     def setup_app(self):
         self.app_name = "ContextExplorer"
-        self.app_version = "3.10.2023"
-        self.geom = (840, 670)
+        self.app_version = "3.14.2023"
+        self.geom = (840, 730)
         self.oai = OpenAIComms()
         self.oae = OpenAIEmbeddings()
         self.so = SharedObjects()
         self.msi = MySqlInterface(user_name="root", db_name="gpt_summary")
-        self.gpt_frame = GPTContextFrame(self.oai, self.dp, self.so)
 
         if not self.oai.key_exists():
             message.showwarning("Key Error", "Could not find Environment key 'OPENAI_KEY'")
@@ -133,6 +134,15 @@ class ContextExplorer(AppBase):
         b = buttons.add_button("Export", self.save_to_narrative_maps_jason_callback, width=-1)
         ToolTip(b, "Export Project to JSON")
         row = buttons.get_next_row()
+
+        engine_list = self.oai.list_models(exclude_list = [":", "ada", "embed", "similarity", "code", "edit", "search", "audio", "instruct", "2020", "if", "insert", "whisper"])
+        engine_list = sorted(engine_list)
+        self.generate_model_combo = TopicComboExt(lf, row, "Model:", self.dp, entry_width=25, combo_width=25)
+        self.generate_model_combo.set_combo_list(engine_list)
+        self.generate_model_combo.set_text(engine_list[0])
+        self.generate_model_combo.tk_combo.current(0)
+        ToolTip(self.generate_model_combo.tk_combo, "The GPT-3 model used to generate text")
+        row = self.generate_model_combo.get_next_row()
 
         s = ttk.Style()
         s.configure('TNotebook.Tab', font=self.default_font)
@@ -351,8 +361,7 @@ class ContextExplorer(AppBase):
             tk.messagebox.showwarning("Warning!", "Please create or select a database first")
             return
 
-        probe_str =  "{}\n{}".format(self.generator_frame.context_text_field.get_text(),
-                                     self.generator_frame.prompt_text_field.get_text())
+        probe_str =  "{}".format(self.generator_frame.context_text_field.get_text())
         name = self.narrative_project_name_field.get_text()
         dict = {"probe_str": probe_str, "name":name}
         self.save_experiment_json(dict)

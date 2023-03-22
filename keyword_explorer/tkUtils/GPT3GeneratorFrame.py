@@ -80,7 +80,7 @@ class GPT3GeneratorFrame:
         self.so = so
 
     def build_frame(self, frm: ttk.Frame, text_width:int, label_width:int):
-        engine_list = self.oai.list_models(keep_list = ["davinci"], exclude_list = ["embed", "similarity", "code", "edit", "search", "audio", "instruct", "2020", "if", "insert"])
+        engine_list = self.oai.list_models(exclude_list = [":", "ada", "embed", "similarity", "code", "edit", "search", "audio", "instruct", "2020", "if", "insert", "whisper"])
         engine_list = sorted(engine_list)
         row = 0
         self.generate_model_combo = TopicComboExt(frm, row, "Model:", self.dp, entry_width=25, combo_width=25)
@@ -213,6 +213,15 @@ class GPT3GeneratorFrame:
         self.prompt_text_field.set_text(prompt)
         self.response_text_field.clear()
 
+    def get_list(self, to_parse:str, regex_str:str = ",") -> List:
+        rlist = re.split(regex_str, to_parse)
+        to_return = []
+        for t in rlist:
+            if t != None:
+                to_return.append(t.strip())
+        to_return = [x for x in to_return if x] # filter out the blanks
+        return to_return
+
     def parse_response_callback(self):
         # get the regex
         split_regex = self.regex_field.get_text()
@@ -220,7 +229,7 @@ class GPT3GeneratorFrame:
         # get the prompt and respnse text blocks
         self.saved_prompt_text = self.prompt_text_field.get_text()
         self.saved_response_text = self.response_text_field.get_text()
-        full_text = self.saved_prompt_text + " " + self.saved_response_text
+        full_text = self.saved_response_text
 
         # build the list of parsed text
         self.parsed_full_text_list = self.get_list(full_text, split_regex)

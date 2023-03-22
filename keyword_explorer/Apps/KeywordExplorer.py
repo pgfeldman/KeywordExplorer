@@ -40,7 +40,7 @@ class KeywordExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "KeywordExplorer"
-        self.app_version = "12.11.22"
+        self.app_version = "3.17.2023"
         self.geom = (850, 790)
         self.oai = OpenAIComms()
         self.tvc = TwitterV2Counts()
@@ -114,8 +114,10 @@ class KeywordExplorer(AppBase):
         ToolTip(self.token_list.tk_list, "Sets the maxumum number of tokens that the GPT can use in a response")
         row = self.token_list.get_next_row()
 
+        engine_list = self.oai.list_models(exclude_list = [":", "ada", "embed", "similarity", "code", "edit", "search", "audio", "instruct", "2020", "if", "insert", "whisper"])
+        engine_list = sorted(engine_list)
         self.engine_list = ListField(lf, row, "Engines", width=text_width, label_width=label_width, static_list=True)
-        self.engine_list.set_text(list=self.oai.engines)
+        self.engine_list.set_text(list=engine_list)
         self.engine_list.set_callback(self.set_engine_callback)
         ToolTip(self.engine_list.tk_list, "Sets the GPT engine. Includes the original and most recent engines")
         row = self.engine_list.get_next_row()
@@ -175,7 +177,8 @@ class KeywordExplorer(AppBase):
 
     def set_engine_callback(self, event:tk.Event = None):
         engine_str = self.engine_list.get_selected()
-        self.engine_list.set_label("Engines\n({})".format(engine_str))
+        self.oai.engine = engine_str
+        self.engine_list.set_label("Engines\n{}".format(engine_str))
 
     def set_tokens_callback(self, event:tk.Event = None):
         token_str = self.token_list.get_selected()

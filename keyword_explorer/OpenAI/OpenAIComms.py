@@ -36,6 +36,7 @@ class OpenAIComms:
     presence_penalty:float = 0.3 # Number between 0 and 1 that penalizes new tokens based on whether they appear in the text so far. Increases the model's likelihood to talk about new topics.
     frequency_penalty:float = 0.3 # Number between 0 and 1 that penalizes new tokens based on their existing frequency in the text so far. Decreases the model's likelihood to repeat the same line verbatim.
     ERROR_MSG = "ERROR_MSG-ERROR_MSG-ERROR_MSG"
+    chat_models = ['gpt-3.5', 'gpt-4']
 
     def __init__(self, engine_id:int = 0):
         self.engine = self.engines[engine_id]
@@ -87,10 +88,11 @@ class OpenAIComms:
 
     def get_prompt_result_params(self, prompt:str, engine:str = "text-davinci-003", max_tokens:int = 30, temperature:float = 0.4, top_p:float = 1, logprobs:int = 1,
                                  num_responses:int = 1, presence_penalty:float = 0.3, frequency_penalty:float = 0.3) -> str:
-        if "gpt-3.5" in engine:
+
+        if any([x in engine for x in self.chat_models]):
             print("OpenAICommsget_prompt_result_params(): Using Chat interface")
             l = [ChatUnit(prompt, CHAT_ROLES.USER)]
-            return self.get_chat_complete(l, max_tokens=max_tokens, temperature=temperature, top_p=top_p,
+            return self.get_chat_complete(l, engine=engine, max_tokens=max_tokens, temperature=temperature, top_p=top_p,
                                           presence_penalty=presence_penalty, frequency_penalty=frequency_penalty)
 
         goodread = False
@@ -118,10 +120,10 @@ class OpenAIComms:
 
 
     def get_prompt_result(self, prompt:str, print_result:bool = False) -> List:
-        if "gpt-3.5" in self.engine:
+        if any([x in self.engine for x in self.chat_models]):
             print("OpenAICommsget_prompt_result_params(): Using Chat interface")
             l = [ChatUnit(prompt, CHAT_ROLES.USER)]
-            return [self.get_chat_complete(l, max_tokens=self.max_tokens, temperature=self.temperature, top_p=self.top_p,
+            return [self.get_chat_complete(l, engine=self.engine, max_tokens=self.max_tokens, temperature=self.temperature, top_p=self.top_p,
                                           presence_penalty=self.presence_penalty, frequency_penalty=self.frequency_penalty)]
         to_return = []
         goodread = False
@@ -189,10 +191,10 @@ class OpenAIComms:
                     i += 1
                 return d_list
 
-            except (openai.error.APIError, openai.error.RateLimitError) as e:
+            except (openai.error.APIError, openai.error.RateLimitError, openai.error.APIConnectionError) as e:
                 waitcount += 1
                 time_to_wait = 5 * waitcount
-                print("OpenAIComms.get_embedding_list error, returning early. Message = {}".format(e.user_message))
+                print("OpenAIComms.get_embedding_list error. Message = {}".format(e.user_message))
                 if waitcount > 5:
                     print("OpenAIComms.get_embedding_list error, returning early.")
                     return [{"text":"unset", "embedding":np.array([0, 0, 0])}]
@@ -200,15 +202,29 @@ class OpenAIComms:
                 time.sleep(time_to_wait)
 
     def get_moderation_vals(self, test_list:List) -> List:
-        response = openai.Moderation.create(
-            input=test_list
-        )
-        output = response["results"]
-        to_return = []
-        for i in range(len(test_list)):
-            jsn = output[i]["category_scores"]
-            to_return.append({"text":test_list[i], "category_scores":jsn})
-        return to_return
+
+        good_read = False
+        waitcount = 0
+        while not good_read:
+            try:
+                response = openai.Moderation.create(
+                    input=test_list
+                )
+                output = response["results"]
+                to_return = []
+                for i in range(len(test_list)):
+                    jsn = output[i]["category_scores"]
+                    to_return.append({"text":test_list[i], "category_scores":jsn})
+                return to_return
+            except (openai.error.APIError, openai.error.RateLimitError, openai.error.APIConnectionError) as e:
+                waitcount += 1
+                time_to_wait = 5 * waitcount
+                print("OpenAIComms.get_moderation_vals error. Message = {}".format(e.user_message))
+                if waitcount > 5:
+                    print("OpenAIComms.get_moderation_vals error, returning early.")
+                    return [{"text":"unset", "category_scores": {}}]
+                print("OpenAIComms.get_moderation_vals waiting {} seconds".format(time_to_wait))
+                time.sleep(time_to_wait)
 
     def set_engine(self, id:int = -1, name:str = None):
         if id != -1:

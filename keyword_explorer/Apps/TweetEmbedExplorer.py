@@ -4,6 +4,9 @@ import numpy as np
 import tkinter.messagebox as message
 import tkinter as tk
 from tkinter import ttk
+from tkinter import filedialog
+from datetime import datetime, timedelta
+import pandas as pd
 from matplotlib import pyplot as plt
 import matplotlib.colors as mcolors
 
@@ -14,6 +17,7 @@ from keyword_explorer.tkUtils.CanvasFrame import CanvasFrame
 from keyword_explorer.tkUtils.TopicComboExt import TopicComboExt
 from keyword_explorer.tkUtils.DataField import DataField
 from keyword_explorer.tkUtils.LabeledParam import LabeledParam
+from keyword_explorer.tkUtils.SelectParam import SelectParam
 from keyword_explorer.tkUtils.Buttons import Buttons
 from keyword_explorer.tkUtils.ToolTip import ToolTip
 from keyword_explorer.tkUtils.MoveableNode import MovableNode
@@ -21,6 +25,7 @@ from keyword_explorer.tkUtils.Checkboxes import Checkboxes, DIR
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
 from keyword_explorer.utils.ManifoldReduction import ManifoldReduction, EmbeddedText
 from keyword_explorer.utils.CorporaGenerator import CorporaGenerator
+from keyword_explorer.tkUtils.TextField import TextField
 
 from typing import Dict, List, Any
 
@@ -45,10 +50,13 @@ class EmbeddingsExplorer(AppBase):
     min_samples_param: LabeledParam
     perplexity_param: LabeledParam
     rows_param: LabeledParam
+    subsampleParam:SelectParam
     tweet_option_checkboxes:Checkboxes
     author_option_checkboxes:Checkboxes
     generation_options:Checkboxes
+    speech_text_field:TextField
     experiment_id: int
+    speech_df:pd.DataFrame
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -56,8 +64,8 @@ class EmbeddingsExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "EmbeddingsExplorer"
-        self.app_version = "3.8.23"
-        self.geom = (600, 620)
+        self.app_version = "3.20.23"
+        self.geom = (640, 620)
         self.oai = OpenAIComms()
         self.tkws = TweetKeywords()
         self.msi = MySqlInterface(user_name="root", db_name="twitter_v2")
@@ -70,6 +78,7 @@ class EmbeddingsExplorer(AppBase):
         if not self.tkws.key_exists():
             message.showwarning("Key Error", "Could not find Environment key 'BEARER_TOKEN_2'")
         self.experiment_id = -1
+        self.speech_df = pd.DataFrame()
 
 
     def build_app_view(self, row: int, text_width: int, label_width: int) -> int:
@@ -77,12 +86,13 @@ class EmbeddingsExplorer(AppBase):
         keywords = ["foo", "bar", "bas"]
         print("build_app_view")
 
-        self.experiment_combo = TopicComboExt(self, row, "Experiment:", self.dp, entry_width=20, combo_width=20)
+        combo_width = 30
+        self.experiment_combo = TopicComboExt(self, row, "Experiment:", self.dp, entry_width=20, combo_width=combo_width)
         self.experiment_combo.set_combo_list(experiments)
         self.experiment_combo.set_callback(self.keyword_callback)
         row = self.experiment_combo.get_next_row()
         ToolTip(self.experiment_combo.tk_combo, "Select the experiment you want to explore here")
-        self.keyword_combo = TopicComboExt(self, row, "Keyword:", self.dp, entry_width=20, combo_width=20)
+        self.keyword_combo = TopicComboExt(self, row, "Keyword:", self.dp, entry_width=20, combo_width=combo_width)
         self.keyword_combo.set_combo_list(keywords)
         ToolTip(self.keyword_combo.tk_combo, "Select the keyword for the experiment. 'all_keywords' gets everything")
         b = self.keyword_combo.add_button("Num Entries:", command=lambda: self.get_keyword_entries_callback(
@@ -103,6 +113,10 @@ class EmbeddingsExplorer(AppBase):
         canvas_tab = ttk.Frame(tab_control)
         tab_control.add(canvas_tab, text='Canvas')
         self.build_graph_tab(canvas_tab)
+
+        speech_tab = ttk.Frame(tab_control)
+        tab_control.add(speech_tab, text='Speech')
+        self.build_speech_tab(speech_tab, text_width, label_width)
 
         corpora_tab = ttk.Frame(tab_control)
         tab_control.add(corpora_tab, text='Corpora')
@@ -195,6 +209,7 @@ class EmbeddingsExplorer(AppBase):
         self.rows_param = LabeledParam(f, 8, "Limit:")
         self.rows_param.set_text('1000')
         ToolTip(self.rows_param.tk_entry, "The number of rows that the full list will be subsampled down to\nfor performance")
+        self.subsampleParam = SelectParam(f, 10, "Subsample", None)
         return row + 1
 
     def build_graph_tab(self, tab: ttk.Frame):
@@ -205,8 +220,9 @@ class EmbeddingsExplorer(AppBase):
         buttons = Buttons(tab, row, "Commands", label_width=10)
         b = buttons.add_button("Retreive", self.retreive_tweet_data_callback, -1)
         ToolTip(b, "Get the high-dimensional embeddings from the DB")
-        b = buttons.add_button("Reduce", self.reduce_dimensions_callback, -1)
-        ToolTip(b, "Reduce to 2 dimensions with PCS and TSNE")
+        b = buttons.add_button("Subset", self.reduce_dimensions_callback, -1)
+        ToolTip(b, "Reduce a  2 dimensions with PCS and TSNE")
+
         b = buttons.add_button("Cluster", self.cluster_callback, -1)
         ToolTip(b, "Compute clusters on reduced data")
         b = buttons.add_button("Plot", self.plot_callback, -1)
@@ -227,6 +243,21 @@ class EmbeddingsExplorer(AppBase):
         b = self.exclude_cluster_field.add_button("Exclude", self.exclude_cluster_callback)
         ToolTip(b, "Add cluster ID to the exclude table for this experiment")
         row = self.exclude_cluster_field.get_next_row()
+
+    def build_speech_tab(self, frm: ttk.Frame, text_width: int, label_width: int):
+        row = 0
+        self.speech_text_field = TextField(frm, row, 'Speech:', text_width, height=11, label_width=label_width)
+        ToolTip(self.speech_text_field.tk_text, "Speech categories are displayed here")
+        row = self.speech_text_field.get_next_row()
+
+        buttons = Buttons(frm, row, "Actions")
+        b = buttons.add_button("Retrieve", self.retreive_tweet_data_callback)
+        ToolTip(b, "Load speech data if available")
+        b = buttons.add_button("Plot", self.plot_speech_data)
+        ToolTip(b, "Plot speech classes if available")
+        b = buttons.add_button("Save", self.save_speech_data)
+        ToolTip(b, "Save raw chart data to spreadsheet")
+        row = buttons.get_next_row()
 
     def color_excluded_clusters(self):
         keyword = self.keyword_combo.get_text()
@@ -266,7 +297,25 @@ class EmbeddingsExplorer(AppBase):
             # print("store_reduced_and_clustering_callback\n\t{}\n\t{}".format(sql, vals))
             self.msi.write_sql_values_get_row(sql, vals)
             rows += 1
+
+
+        # get the embedding model entry
+        sql = "select * from table_embedding_params where experiment_id = %s AND keyword = %s"
+        vals = (self.experiment_id, self.keyword_combo.get_text())
+        results = self.msi.read_data(sql, vals)
+        # insert if there is no experiment_id that matches, otherwise update
+        if len(results) == 0:
+            sql = "insert into table_embedding_params (experiment_id, keyword, model, PCA_dim, EPS, min_samples, perplexity) values (%s, %s, %s, %s, %s, %s, %s)"
+            vals = (self.experiment_id, self.keyword_combo.get_text(), self.engine_combo.get_text(), self.pca_dim_param.get_as_int(), self.eps_param.get_as_float(),
+                    self.min_samples_param.get_as_int(), self.perplexity_param.get_as_int())
+            self.msi.write_sql_values_get_row(sql, vals)
+        else:
+            sql = "update table_embedding_params set PCA_dim = %s, EPS = %s, min_samples = %s, perplexity = %s where experiment_id = %s and keyword = %s"
+            vals = (self.pca_dim_param.get_as_int(), self.eps_param.get_as_float(), self.min_samples_param.get_as_int(), self.perplexity_param.get_as_int(),
+                    self.experiment_id, self.keyword_combo.get_text())
+            self.msi.write_sql_values_get_row(sql, vals)
         message.showinfo("DB Write", "Wrote {} rows of reduced and cluster data".format(rows))
+
 
     def store_clustering_callback(self):
         print("store_clustering_callback")
@@ -313,21 +362,43 @@ class EmbeddingsExplorer(AppBase):
         print("store_user_callback(): complete")
 
     def retreive_tweet_data_callback(self):
-        print("get_db_embeddings_callback")
+        print("retreive_tweet_data_callback")
         keyword = self.keyword_combo.get_text()
 
         if self.experiment_id == -1 or len(keyword) < 2:
             message.showwarning("DB Error", "get_db_embeddings_callback(): Please set database and/or keyword")
             return
 
+        if self.subsampleParam.get_value():
+            print("Loading subsample of data (Not implemented)")
+            # get all the queries for a experiment/keyword combo
+            sql = "CALL get_random_tweets(%s, %s, %s)"
+            vals = (1, 2, self.rows_param.get_as_int())
+
+            return
+
         print("\t Loading from DB")
-        query = 'select tweet_row, tweet_id, embedding, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s'
+        query = 'select tweet_row, tweet_id, embedding, moderation, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s'
         values = (self.experiment_id,)
         if keyword != 'all_keywords':
-            query = 'select tweet_row, tweet_id, text, embedding, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s and keyword = %s'
+            query = 'select tweet_row, tweet_id, text, embedding, moderation, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s and keyword = %s'
             values = (self.experiment_id, keyword)
         result = self.msi.read_data(query, values, True)
+        print("\t Loaded {} records from DB".format(len(result)))
         row_dict:Dict
+
+        print("\tLoading embedding parameters")
+        sql = "select * from table_embedding_params where experiment_id = %s and keyword = %s"
+        vals = (self.experiment_id, self.keyword_combo.get_text())
+        results = self.msi.read_data(sql, vals)
+        for d in results:
+            print("\t{}".format(d))
+        if len(results) > 0:
+            row_dict = results[0]
+            self.pca_dim_param.set_text(self.safe_dict(row_dict, 'PCA_dim', self.pca_dim_param.get_as_int()))
+            self.eps_param.set_text(self.safe_dict(row_dict, 'EPS', self.eps_param.get_as_float()))
+            self.min_samples_param.set_text(self.safe_dict(row_dict, 'min_samples', self.min_samples_param.get_as_int()))
+            self.perplexity_param.set_text(self.safe_dict(row_dict, 'perplexity', self.perplexity_param.get_as_int()))
 
         print("\tClearing ManifoldReduction")
         self.mr.clear()
@@ -335,6 +406,7 @@ class EmbeddingsExplorer(AppBase):
         print("\tLoading {} rows".format(len(result)))
         count = 0
         et:EmbeddedText
+        moderation_list = []
         for row_dict in result:
             et = self.mr.load_row(row_dict['tweet_row'], row_dict['embedding'], None, None)
             et.text = self.safe_dict(row_dict, 'text', "unset")
@@ -342,9 +414,22 @@ class EmbeddingsExplorer(AppBase):
             cluster_id = self.safe_dict(row_dict, 'cluster_id', None)
             cluster_name = self.safe_dict(row_dict, 'cluster_name', None)
             et.set_optional(reduced, cluster_id, cluster_name)
+            mod = self.safe_dict(row_dict, 'moderation', None)
+            if mod != None:
+                jmod = json.loads(mod)
+                jmod['text'] = et.text
+                moderation_list.append(jmod)
             if count % 1000 == 0:
                 self.dp.dprint("loaded {} of {} records".format(count, len(result)))
             count += 1
+
+        if len(moderation_list) > 0:
+            self.speech_df = pd.DataFrame(moderation_list)
+            stats = self.speech_df.agg(['mean', 'std']).T
+            self.speech_text_field.clear()
+            self.speech_text_field.set_text(stats.to_string())
+        else:
+            self.speech_df = pd.DataFrame()
 
         self.mr.calc_xy_range()
 
@@ -444,54 +529,78 @@ class EmbeddingsExplorer(AppBase):
     def label_clusters_callback(self):
         pass
 
-    def get_oai_embeddings_callback(self):
+    def get_oai_embeddings_callback(self, api_limit = 500, db_limit = 10000, debug = False):
         print("get_oai_embeddings_callback")
+        if debug:
+            api_limit = 10
+            db_limit = 100
         keyword = self.keyword_combo.get_text()
 
         if self.experiment_id == -1 or len(keyword) < 2:
             message.showwarning("DB Error", "get_oai_embeddings_callback(): Please set database and/or keyword")
             return
 
-        get_remaining_sql = "select tweet_row, text from keyword_tweet_view where experiment_id = %s and embedding is NULL LIMIT 100"
-        get_remaining_values = (self.experiment_id,)
+        # do a big pull because pulls take a long time
+        get_remaining_sql = "select tweet_row, text from keyword_tweet_view where experiment_id = %s and embedding is NULL limit %s"
+        get_remaining_values = (self.experiment_id, db_limit)
         if keyword != 'all_keywords':
-            get_remaining_sql = "select tweet_row, text from keyword_tweet_view where experiment_id = %s and keyword = %s and embedding is NULL"
-            get_remaining_values = (self.experiment_id, keyword)
+            get_remaining_sql = "select tweet_row, text from keyword_tweet_view where experiment_id = %s and keyword = %s and embedding is NULL limit %s"
+            get_remaining_values = (self.experiment_id, keyword, db_limit)
 
         engine = self.engine_combo.get_text()
         print("get_embeddings_callback() Experiment id = {}, Keyword = {}, Engine = {}".format(self.experiment_id, keyword, engine))
         results = self.msi.read_data(get_remaining_sql, get_remaining_values)
         count = len(results)
+        print("\tGetting embeddings and moderations for {} rows".format(len(results)))
+        total = 0
         while len(results) > 0:
-            print("\tGetting embeddings for {} rows".format(len(results)))
             d:Dict
-            # create a list of text
-            s_list = []
-            for d in results:
-                s_list.append(d['text'])
+            #chunk up the returned list to send off to the api
+            for i in range(0, len(results), api_limit):
+                # create a list of text
+                s_list = []
+                sub_results = []
+                last_r = min(i+api_limit, len(results))
+                for d in results[i:last_r]:
+                    s_list.append(d['text'])
+                    sub_results.append(d)
+                print("First ({}/{}) = {}".format(i, sub_results[0]['tweet_row'], s_list[0][:40].strip()))
+                print("Last ({}/{}) = {}".format(last_r, sub_results[-1]['tweet_row'], s_list[-1][:40].strip()))
 
-            # send that list to get embeddings
-            embd_list = self.oai.get_embedding_list(s_list, engine)
-            print("\tGetting moderations for {} rows".format(len(results)))
-            mod_list = self.oai.get_moderation_vals(s_list)
-            row_dict:Dict
-            for i in range(len(results)):
-                rd = results[i]
-                tweet_row = rd['tweet_row']
-                tweet = rd['text']
-                d = embd_list[i]
-                embedding = d['embedding']
-                embd_s = np.array(embedding)
-                d = mod_list[i]
-                mods = d['category_scores']
-                mods_s = json.dumps(mods)
-                # print("row_id: {} text: {} embed: {}, mods = {}".format(tweet_row, tweet, embedding, mods_s))
-                sql = "update table_tweet set embedding = %s, moderation = %s where row_id = %s"
-                values = (embd_s.dumps(), mods_s, tweet_row)
-                self.msi.write_sql_values_get_row(sql, values)
+                # send that list to get embeddings
+                print("\tGetting embeddings for {} rows".format(len(sub_results)))
+                embd_list = self.oai.get_embedding_list(s_list, engine)
+                print("\tGetting moderations for {} rows".format(len(sub_results)))
+                mod_list = self.oai.get_moderation_vals(s_list)
+                row_dict:Dict
+                print("\tUpdating DB")
+                for j in range(len(sub_results)):
+                    rd = sub_results[j]
+                    tweet_row = rd['tweet_row']
+                    d = embd_list[j]
+                    embedding = d['embedding']
+                    embd_s = np.array(embedding)
+                    d = mod_list[j]
+                    mods = d['category_scores']
+                    mods_s = json.dumps(mods)
+                    # print("row_id: {} text: {} embed: {}, mods = {}".format(tweet_row, tweet, embedding, mods_s))
+                    sql = "update table_tweet set embedding = %s, moderation = %s where row_id = %s"
+                    values = (embd_s.dumps(), mods_s, tweet_row)
+                    if debug:
+                        print("\tTweetEmbedExplorer.get_oai_embeddings_callback() Writing {}/{} ({})".format(i, j, i*api_limit + j))
+                    else:
+                        # print("\t[{}] row: {} embd: {}, mod: {}".format(total, tweet_row, embd_s, mods_s))
+                        self.msi.write_sql_values_get_row(sql, values)
+                        total += 1
+                print("\tUpdated DB with {}/{} entries".format(len(sub_results), total+1))
 
             print("\tEmbedded {} records".format(count))
+            if debug:
+                print("\tbreaking early")
+                break
+            print("\tLooking for more NULL rows")
             results = self.msi.read_data(get_remaining_sql, get_remaining_values)
+            print("\tGetting embeddings and moderations for {} rows".format(len(results)))
             count += len(results)
         print("TweetEmbedExplorer.get_oai_embeddings_callback(): Finished! Embedded a total of {} records".format(count))
 
@@ -525,6 +634,27 @@ class EmbeddingsExplorer(AppBase):
             l.append(row_dict['keyword'])
         self.keyword_combo.set_combo_list(l)
 
+    def plot_speech_data(self):
+        plot_df = self.speech_df
+        if 'text' in self.speech_df:
+            plot_df = self.speech_df.drop(["text"], axis=1)
+        print("plot_speech_data")
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax.boxplot(plot_df.values)
+        ax.set_xticklabels(plot_df.columns)
+        ax.set_xlabel('Variable')
+        ax.set_ylabel('Value')
+        ax.set_title('[{}] moderated speech - {:,} results'.format(self.keyword_combo.get_text(), len(plot_df.index)))
+        plt.show()
+
+    def save_speech_data(self):
+        print("save_speech_data")
+        default = "{}_{}.xlsx".format(self.experiment_field.get_text(), self.keyword_combo.get_text())
+        filename = filedialog.asksaveasfilename(filetypes=(("Excel files", "*.xlsx"),("All Files", "*.*")), title="Save Excel File", initialfile=default)
+        if filename:
+            print("saving to {}".format(filename))
+            with pd.ExcelWriter(filename) as writer:
+                self.speech_df.to_excel(writer, index=False)
 
     def setup(self):
         # set up the canvas
