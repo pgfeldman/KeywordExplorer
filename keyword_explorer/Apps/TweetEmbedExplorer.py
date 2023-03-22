@@ -29,10 +29,27 @@ from keyword_explorer.tkUtils.TextField import TextField
 
 from typing import Dict, List, Any
 
-# General TODO:
-# Move "selected experiment" and "keyword" out of the tabs
-# Add a "Create Corpora" tab
-# Implement calls to GPT embeddings and verify on small dataset. I could even try Aaron's Wikipedia cats vs computers idea but use tweets
+class SubsampleInfo:
+    experiment_id:int
+    tweet_row:int
+    query_row:int
+    keyword:str
+    unsaved:bool
+
+    def __init__(self, experiment_id:int, tweet_row:int, query_row:int, keyword:str, unsaved:bool = False):
+        self.experiment_id = experiment_id
+        self.tweet_row = tweet_row
+        self.query_row = query_row
+        self.keyword = keyword
+        self.unsaved = unsaved
+
+    def to_db(self, msi:MySqlInterface):
+        # Only save if this is new
+        if self.unsaved:
+            sql = "insert into table_subsampled (experiment_id, tweet_row, query_row, keyword) VALUES (%s, %s, %s, %s)"
+            vals = (self.experiment_id, self.tweet_row, self.query_row, self.keyword)
+            msi.write_sql_values_get_row(sql, vals)
+
 class EmbeddingsExplorer(AppBase):
     oai: OpenAIComms
     msi: MySqlInterface
@@ -57,6 +74,7 @@ class EmbeddingsExplorer(AppBase):
     speech_text_field:TextField
     experiment_id: int
     speech_df:pd.DataFrame
+    subsample_list:List
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -71,6 +89,7 @@ class EmbeddingsExplorer(AppBase):
         self.msi = MySqlInterface(user_name="root", db_name="twitter_v2")
         self.mr = ManifoldReduction()
         self.cg = CorporaGenerator(self.msi)
+        self.subsample_list = []
 
         if not self.oai.key_exists():
             message.showwarning("Key Error", "Could not find Environment key 'OPENAI_KEY'")
@@ -287,6 +306,11 @@ class EmbeddingsExplorer(AppBase):
 
     def store_reduced_and_clustering_callback(self):
         print("store_reduced_and_clustering_callback")
+        if self.subsampleParam.get_value():
+            si:SubsampleInfo
+            for si in self.subsample_list:
+                si.to_db(self.msi)
+
         et:EmbeddedText
         rows = 0
         for et in self.mr.embedding_list:
@@ -361,7 +385,7 @@ class EmbeddingsExplorer(AppBase):
         print("store_user_callback(): complete")
 
     def retreive_tweet_data_callback(self):
-        print("retreive_tweet_data_callback")
+        print("TweetEmbedExplorer.retreive_tweet_data_callback()")
         keyword = self.keyword_combo.get_text()
 
         if self.experiment_id == -1 or len(keyword) < 2:
@@ -370,10 +394,31 @@ class EmbeddingsExplorer(AppBase):
 
         tweet_result = []
         if self.subsampleParam.get_value():
-            print("Loading subsample of data (Not implemented)")
+            subsample_exists = False
+            print("Checking if subsample exists")
+            if self.keyword_combo.get_text() == 'all_keywords':
+                sql = "select * from table_subsampled where experiment_id = %s"
+                vals = (self.experiment_id,)
+            else:
+                sql = "select * from table_subsampled where experiment_id = %s and keyword = %s"
+                vals = (self.experiment_id,self.keyword_combo.get_text())
+            results = self.msi.read_data(sql, vals)
+            num_rows = self.rows_param.get_as_int()
+            if len(results) >= num_rows:
+                subsample_exists = True
+                # TODO: load up the self.subsample_list
+            print("\tSubsample test: Found {} rows".format(num_rows))
+
+            # If no subsamples exist, get some
+            print("\tLoading subsample of data")
             # get the min and max query_id of queries for a experiment/keyword combo
-            sql = "select MIN(id) as min_query, max(id)as max_query from table_query where experiment_id = %s"
-            vals = (self.experiment_id,)
+            if self.keyword_combo.get_text() == 'all_keywords':
+                sql = "select MIN(id) as min_query, max(id)as max_query from table_query where experiment_id = %s"
+                vals = (self.experiment_id,)
+            else:
+                sql = "select MIN(id) as min_query, max(id)as max_query from table_query where experiment_id = %s and keyword = %s"
+                vals = (self.experiment_id,self.keyword_combo.get_text())
+
             results = self.msi.read_data(sql, vals)
             if len(results) == 0:
                 return
@@ -388,6 +433,15 @@ class EmbeddingsExplorer(AppBase):
             print("\tLoading {} subsampled rows from DB".format(num_rows))
             tweet_result = self.msi.read_data(sql, vals)
             print("\tGot {} tweets back".format(len(tweet_result)))
+            si:SubsampleInfo
+            d:Dict
+
+            # Load up the subsampled_list with new values to save later
+            self.subsample_list = []
+            for d in tweet_result:
+                si = SubsampleInfo(self.experiment_id, d['row_id'], d['query_id'], self.keyword_combo.get_text())
+                self.subsample_list.append(si)
+
         else:
             print("\tLoading full data from DB")
             query = 'select tweet_row, tweet_id, embedding, moderation, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s'
