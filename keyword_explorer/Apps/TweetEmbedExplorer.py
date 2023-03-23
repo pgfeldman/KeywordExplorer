@@ -474,7 +474,11 @@ class EmbeddingsExplorer(AppBase):
         et:EmbeddedText
         moderation_list = []
         for row_dict in tweet_result:
-            row_id = self.safe_dict(row_dict, 'tweet_row', row_dict['id'])
+            if 'tweet_row' in row_dict:
+                row_id = row_dict['tweet_row']
+            else:
+                row_id = row_dict['row_id']
+            #row_id = self.safe_dict(row_dict, 'tweet_row', row_dict['row_id'])
             et = self.mr.load_row(row_id, row_dict['embedding'], None, None)
             et.text = self.safe_dict(row_dict, 'text', "unset")
             reduced = self.safe_dict(row_dict, 'reduced', None)
