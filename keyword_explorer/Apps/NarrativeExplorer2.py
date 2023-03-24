@@ -457,6 +457,7 @@ class NarrativeExplorer2(AppBase):
             et.set_optional(mapped, cluster_id, cluster_name, run_id)
             print(et.to_string())
         self.mr.calc_clusters()
+        message.showinfo("get_db_embeddings_callback", "Loaded ({:,}) embeddings".format(len(results)))
 
     def get_current_params(self) -> Dict:
         generator_settings = self.generator_frame.get_settings()

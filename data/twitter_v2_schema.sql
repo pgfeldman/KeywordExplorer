@@ -46,6 +46,36 @@ SET character_set_client = utf8;
 SET character_set_client = @saved_cs_client;
 
 --
+-- Temporary table structure for view `subsample_tweet_view`
+--
+
+DROP TABLE IF EXISTS `subsample_tweet_view`;
+/*!50001 DROP VIEW IF EXISTS `subsample_tweet_view`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `subsample_tweet_view` (
+  `row_id` tinyint NOT NULL,
+  `query_id` tinyint NOT NULL,
+  `conversation_id` tinyint NOT NULL,
+  `is_thread` tinyint NOT NULL,
+  `author_id` tinyint NOT NULL,
+  `created_at` tinyint NOT NULL,
+  `in_reply_to_user_id` tinyint NOT NULL,
+  `lang` tinyint NOT NULL,
+  `id` tinyint NOT NULL,
+  `text` tinyint NOT NULL,
+  `topic_name` tinyint NOT NULL,
+  `moderation` tinyint NOT NULL,
+  `reduced` tinyint NOT NULL,
+  `cluster_id` tinyint NOT NULL,
+  `cluster_name` tinyint NOT NULL,
+  `embedding` tinyint NOT NULL,
+  `experiment_id` tinyint NOT NULL,
+  `keyword` tinyint NOT NULL
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
 -- Table structure for table `table_embedding_params`
 --
 
@@ -62,7 +92,7 @@ CREATE TABLE `table_embedding_params` (
   `min_samples` int(11) DEFAULT NULL,
   `perplexity` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -114,6 +144,23 @@ CREATE TABLE `table_query` (
   `date_executed` datetime DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=50547 DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `table_subsampled`
+--
+
+DROP TABLE IF EXISTS `table_subsampled`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `table_subsampled` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `experiment_id` int(11) DEFAULT NULL,
+  `tweet_row` int(11) DEFAULT NULL,
+  `query_row` int(11) DEFAULT NULL,
+  `keyword` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=21001 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -208,6 +255,25 @@ SET character_set_client = @saved_cs_client;
 /*!50001 SET collation_connection      = @saved_col_connection */;
 
 --
+-- Final view structure for view `subsample_tweet_view`
+--
+
+/*!50001 DROP TABLE IF EXISTS `subsample_tweet_view`*/;
+/*!50001 DROP VIEW IF EXISTS `subsample_tweet_view`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_unicode_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
+/*!50001 VIEW `subsample_tweet_view` AS select `tt`.`row_id` AS `row_id`,`tt`.`query_id` AS `query_id`,`tt`.`conversation_id` AS `conversation_id`,`tt`.`is_thread` AS `is_thread`,`tt`.`author_id` AS `author_id`,`tt`.`created_at` AS `created_at`,`tt`.`in_reply_to_user_id` AS `in_reply_to_user_id`,`tt`.`lang` AS `lang`,`tt`.`id` AS `id`,`tt`.`text` AS `text`,`tt`.`topic_name` AS `topic_name`,`tt`.`moderation` AS `moderation`,`tt`.`reduced` AS `reduced`,`tt`.`cluster_id` AS `cluster_id`,`tt`.`cluster_name` AS `cluster_name`,`tt`.`embedding` AS `embedding`,`ts`.`experiment_id` AS `experiment_id`,`ts`.`keyword` AS `keyword` from (`table_subsampled` `ts` join `table_tweet` `tt` on(`ts`.`tweet_row` = `tt`.`row_id`)) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
 -- Final view structure for view `tweet_user_cluster_view`
 --
 
@@ -235,4 +301,4 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-03-21 18:25:52
+-- Dump completed on 2023-03-24 12:33:40

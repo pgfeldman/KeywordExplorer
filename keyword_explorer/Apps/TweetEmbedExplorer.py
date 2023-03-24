@@ -34,21 +34,17 @@ class SubsampleInfo:
     tweet_row:int
     query_row:int
     keyword:str
-    unsaved:bool
 
-    def __init__(self, experiment_id:int, tweet_row:int, query_row:int, keyword:str, unsaved:bool = False):
+    def __init__(self, experiment_id:int, tweet_row:int, query_row:int, keyword:str):
         self.experiment_id = experiment_id
         self.tweet_row = tweet_row
         self.query_row = query_row
         self.keyword = keyword
-        self.unsaved = unsaved
 
     def to_db(self, msi:MySqlInterface):
-        # Only save if this is new
-        if self.unsaved:
-            sql = "insert into table_subsampled (experiment_id, tweet_row, query_row, keyword) VALUES (%s, %s, %s, %s)"
-            vals = (self.experiment_id, self.tweet_row, self.query_row, self.keyword)
-            msi.write_sql_values_get_row(sql, vals)
+        sql = "insert into table_subsampled (experiment_id, tweet_row, query_row, keyword) VALUES (%s, %s, %s, %s)"
+        vals = (self.experiment_id, self.tweet_row, self.query_row, self.keyword)
+        msi.write_sql_values_get_row(sql, vals)
 
 class EmbeddingsExplorer(AppBase):
     oai: OpenAIComms
@@ -82,7 +78,7 @@ class EmbeddingsExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "EmbeddingsExplorer"
-        self.app_version = "3.22.23"
+        self.app_version = "3.23.23"
         self.geom = (640, 620)
         self.oai = OpenAIComms()
         self.tkws = TweetKeywords()
@@ -306,10 +302,6 @@ class EmbeddingsExplorer(AppBase):
 
     def store_reduced_and_clustering_callback(self):
         print("store_reduced_and_clustering_callback")
-        if self.subsampleParam.get_value():
-            si:SubsampleInfo
-            for si in self.subsample_list:
-                si.to_db(self.msi)
 
         et:EmbeddedText
         rows = 0
@@ -393,56 +385,78 @@ class EmbeddingsExplorer(AppBase):
             return
 
         tweet_result = []
+        # if the subsample box is checked, retrieve or select a subsample list of tweets.
+        subsample_exists = False
         if self.subsampleParam.get_value():
-            subsample_exists = False
-            print("Checking if subsample exists")
+            num_rows = self.rows_param.get_as_int()
+            print("\tChecking if {} subsamples exists".format(num_rows))
             if self.keyword_combo.get_text() == 'all_keywords':
-                sql = "select * from table_subsampled where experiment_id = %s"
+                sql = "select * from subsample_tweet_view where experiment_id = %s"
                 vals = (self.experiment_id,)
             else:
-                sql = "select * from table_subsampled where experiment_id = %s and keyword = %s"
+                sql = "select * from subsample_tweet_view where experiment_id = %s and keyword = %s"
                 vals = (self.experiment_id,self.keyword_combo.get_text())
-            results = self.msi.read_data(sql, vals)
-            num_rows = self.rows_param.get_as_int()
-            if len(results) >= num_rows:
-                subsample_exists = True
-                # TODO: load up the self.subsample_list
-            print("\tSubsample test: Found {} rows".format(num_rows))
-
-            # If no subsamples exist, get some
-            print("\tLoading subsample of data")
-            # get the min and max query_id of queries for a experiment/keyword combo
-            if self.keyword_combo.get_text() == 'all_keywords':
-                sql = "select MIN(id) as min_query, max(id)as max_query from table_query where experiment_id = %s"
-                vals = (self.experiment_id,)
-            else:
-                sql = "select MIN(id) as min_query, max(id)as max_query from table_query where experiment_id = %s and keyword = %s"
-                vals = (self.experiment_id,self.keyword_combo.get_text())
-
-            results = self.msi.read_data(sql, vals)
-            if len(results) == 0:
-                return
-
-            # get the number of tweets
-            min_query = results[0]['min_query']
-            max_query = results[0]['max_query']
-            print("\tExperiment {}: query range = {:,} - {:,}".format(self.experiment_id, min_query, max_query))
-            sql = "CALL get_random_tweets(%s, %s, %s)"
-            num_rows = self.rows_param.get_as_int()
-            vals = (min_query, max_query, num_rows)
-            print("\tLoading {} subsampled rows from DB".format(num_rows))
             tweet_result = self.msi.read_data(sql, vals)
-            print("\tGot {} tweets back".format(len(tweet_result)))
-            si:SubsampleInfo
-            d:Dict
+            print("\tSubsample test: Found {} rows".format(len(tweet_result)))
+            if len(tweet_result) >= num_rows:
+                print("\tLoading existing samples")
+                # we have found existing subsamples, so we don't have to make any
+                subsample_exists = True
+            else:
+                print("\tNot enough samples found {} found vs. {} needed. Clearing subsample list for new manifold reduction".format(len(tweet_result), num_rows))
+                # clear out the subsample list
+                tweet_result = []
+                if self.keyword_combo.get_text() == 'all_keywords':
+                    sql = "delete from table_subsampled where experiment_id = %s"
+                    vals = (self.experiment_id,)
+                else:
+                    sql = "delete from table_subsampled where experiment_id = %s and keyword = %s"
+                    vals = (self.experiment_id,self.keyword_combo.get_text())
+                self.msi.write_sql_values_get_row(sql, vals)
 
-            # Load up the subsampled_list with new values to save later
-            self.subsample_list = []
-            for d in tweet_result:
-                si = SubsampleInfo(self.experiment_id, d['row_id'], d['query_id'], self.keyword_combo.get_text())
-                self.subsample_list.append(si)
 
-        else:
+            # If no subsamples exist, get some from the main list
+            if subsample_exists == False:
+                print("\tCreating a subsample of data")
+                # get the min and max query_id of queries for a experiment/keyword combo
+                if self.keyword_combo.get_text() == 'all_keywords':
+                    sql = "select MIN(id) as min_query, max(id)as max_query from table_query where experiment_id = %s"
+                    vals = (self.experiment_id,)
+                else:
+                    sql = "select MIN(id) as min_query, max(id)as max_query from table_query where experiment_id = %s and keyword = %s"
+                    vals = (self.experiment_id,self.keyword_combo.get_text())
+
+                results = self.msi.read_data(sql, vals)
+                if len(results) == 0:
+                    message.showwarning("DB Error", "get_db_embeddings_callback(): Got zero query ids")
+                    return
+
+                # get the number of tweets
+                min_query = results[0]['min_query']
+                max_query = results[0]['max_query']
+                print("\tExperiment {}: query range = {:,} - {:,}".format(self.experiment_id, min_query, max_query))
+                sql = "CALL get_random_tweets(%s, %s, %s)"
+                num_rows = self.rows_param.get_as_int()
+                vals = (min_query, max_query, num_rows)
+                print("\tLoading {} NEW subsampled rows from DB".format(num_rows))
+                tweet_result = self.msi.read_data(sql, vals)
+                print("\tGot {} tweets back".format(len(tweet_result)))
+                if len(results) == 0:
+                    message.showwarning("DB Error", "get_db_embeddings_callback(): Got zero subsampled tweets")
+                    return
+
+                # we have created subsamples, so set the flag to True and store them in the DB
+                subsample_exists = True
+                # Load up the subsampled_list and save
+                si:SubsampleInfo
+                d:Dict
+                self.subsample_list = []
+                for d in tweet_result:
+                    si = SubsampleInfo(self.experiment_id, d['row_id'], d['query_id'], self.keyword_combo.get_text())
+                    si.to_db(self.msi)
+                    self.subsample_list.append(si)
+
+        if subsample_exists == False:
             print("\tLoading full data from DB")
             query = 'select tweet_row, tweet_id, embedding, moderation, cluster_id, cluster_name, reduced from keyword_tweet_view where experiment_id = %s'
             values = (self.experiment_id,)
