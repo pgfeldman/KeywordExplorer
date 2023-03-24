@@ -126,7 +126,7 @@ class TweetCountExplorer(AppBase):
 
         if len(clean_list) == 0:
             message.showwarning("Keyword(s) too short",
-                                "Please enter something longer than [{}] text area".format(keyword))
+                                "Please enter something longer than [{}] text area".format(key_list))
             return
         tweet_options = self.query_options_field.get_text()
         granularity = self.sample_list.get_selected()

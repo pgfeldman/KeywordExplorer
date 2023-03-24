@@ -71,7 +71,7 @@ class TweetDownloader(AppBase):
 
     def setup_app(self):
         self.app_name = "TweetDownloader"
-        self.app_version = "11.14.22"
+        self.app_version = "03.24.2023"
         self.geom = (1000, 560)
         self.console_lines = 10
         self.text_width = 70
@@ -270,6 +270,18 @@ class TweetDownloader(AppBase):
         end_dt = start_dt + timedelta(days = duration)
         self.end_date_field.set_date(end_dt)
 
+    def clean_key_list(self, key_list) -> List:
+        clean_list = []
+        keyword:str
+        for keyword in key_list:
+            if len(keyword) > 2:
+                clean_list.append(keyword.strip())
+
+        if len(clean_list) == 0:
+            message.showwarning("Keyword(s) too short",
+                                "Please enter something longer than [{}] text area".format(key_list))
+        return clean_list
+
     def collect_thread_callback(self):
         row_dict:Dict
         tk:TweetKeyword
@@ -309,6 +321,7 @@ class TweetDownloader(AppBase):
         clamp = self.clamp_field.get_as_int()
         # get the keywords
         key_list = self.keyword_text_field.get_list("\n")
+        key_list = self.clean_key_list(key_list)
         # set up the counters for corpus size
         corpus_size_dict = {}
         for s in key_list:
@@ -385,6 +398,7 @@ class TweetDownloader(AppBase):
 
         # get the keywords
         key_list = self.keyword_text_field.get_list("\n")
+        key_list = self.clean_key_list(key_list)
         # set up the counters for corpus size
         corpus_size_dict = {}
         for s in key_list:
@@ -456,6 +470,7 @@ class TweetDownloader(AppBase):
     def calc_rates_callback(self):
         corpus_size = int(self.corpus_size_field.get_text())
         key_list = self.keyword_text_field.get_list("\n")
+        key_list = self.clean_key_list(key_list)
         start_dt = self.start_date_field.get_date()
         i = 0
         highest = KeywordData("unset", 0)
@@ -491,6 +506,7 @@ class TweetDownloader(AppBase):
     def launch_twitter_callback(self):
         # single word
         key_list = self.keyword_text_field.get_list("\n")
+        key_list = self.clean_key_list(key_list)
         start_dt = self.start_date_field.get_date()
         end_dt = self.end_date_field.get_date()
         self.log_action("Launch_twitter", {"twitter_start": start_dt.strftime("%Y-%m-%d"), "twitter_end":end_dt.strftime("%Y-%m-%d"), "terms":" ".join(key_list)})
