@@ -53,6 +53,8 @@ class NarrativeExplorer2(AppBase):
     generator_frame: GPT3GeneratorFrame
     embedding_frame: GPT3EmbeddingFrame
     experiment_combo: TopicComboExt
+    recurse_depth_list:ListField
+    style_list:ListField
     new_experiment_button:Buttons
     embed_state_text_field:TextField
     embedded_field:DataField
@@ -79,7 +81,7 @@ class NarrativeExplorer2(AppBase):
 
     def setup_app(self):
         self.app_name = "NarrativeExplorer2"
-        self.app_version = "3.15.2023"
+        self.app_version = "3.30.2023"
         self.geom = (840, 670)
         self.oai = OpenAIComms()
         self.msi = MySqlInterface(user_name="root", db_name="narrative_maps")
@@ -169,6 +171,16 @@ class NarrativeExplorer2(AppBase):
         row = self.reduced_field.get_next_row()
         self.clusters_field = DataField(lf, row, 'Clusters:', text_width, label_width=label_width)
         row = self.clusters_field.get_next_row()
+        self.style_list = ListField(lf, row, "Style", width=text_width, label_width=label_width, static_list=True)
+        self.style_list.set_text(text='Story, List')
+        self.style_list.set_callback(self.set_style_callback)
+        ToolTip(self.style_list.tk_list, "Creates a narrative or recursive context for generation - Not implemented")
+        row = self.style_list.get_next_row()
+        self.recurse_depth_list = ListField(lf, row, "Depth\n(2)", width=text_width, label_width=label_width, static_list=True)
+        self.recurse_depth_list.set_text(text='2, 3, 4, 5')
+        self.recurse_depth_list.set_callback(self.set_recurse_depth_callback)
+        ToolTip(self.recurse_depth_list.tk_list, "The  recursion depth for lists - Not implemented")
+        row = self.recurse_depth_list.get_next_row()
 
     def build_generator_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
         self.generator_frame.build_frame(tab, text_width, label_width)
@@ -234,6 +246,14 @@ class NarrativeExplorer2(AppBase):
                 to_return.append(t.strip())
         to_return = [x for x in to_return if x] # filter out the blanks
         return to_return
+
+    def set_style_callback(self, event:tk.Event = None):
+        style_str = self.style_list.get_selected()
+        self.style_list.set_label("Style\n({})".format(style_str))
+
+    def set_recurse_depth_callback(self, event:tk.Event = None):
+        depth_str = self.recurse_depth_list.get_selected()
+        self.recurse_depth_list.set_label("Depth\n({})".format(depth_str))
 
     def create_experiment_callback(self):
         print("create_experiment_callback")
