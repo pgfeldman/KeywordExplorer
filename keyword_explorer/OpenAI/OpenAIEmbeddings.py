@@ -214,7 +214,7 @@ class OpenAIEmbeddings:
         #return "\n\n###\n\n".join(reversed(returns))
         return ("\n\n###\n\n".join(returns), origins)
 
-    def build_text_to_summarize(self, results:List, count:int, words_to_summarize = 200) -> Dict:
+    def build_text_to_summarize(self, results:List, row_count:int, words_to_summarize = 200, overlap = 2) -> Dict:
         num_lines = len(results)
         d:Dict
         text:str
@@ -222,9 +222,12 @@ class OpenAIEmbeddings:
         row_list = []
         origin_list = []
         word_count = 0
-        while word_count < words_to_summarize and count < num_lines:
+        # we want to overlap our summaries a bit for better coverage
+        if row_count > overlap:
+            row_count -= overlap
+        while word_count < words_to_summarize and row_count < num_lines:
             #print("count = {}".format(count))
-            d = results[count]
+            d = results[row_count]
             text = d['parsed_text']
             word_count += text.count(" ")
             row_list.append(d['text_id'])
@@ -236,10 +239,10 @@ class OpenAIEmbeddings:
 
             # query = "{} [{}] {}".format(query, d['text_id'], text)
             query = "{} {}.".format(query, text)
-            count += 1
+            row_count += 1
 
         query = "{}\n\nSummary:".format(query)
-        d = {'query':query, 'count':count, 'row_list':row_list, 'origins':origin_list}
+        d = {'query':query, 'count':row_count, 'row_list':row_list, 'origins':origin_list}
         return d
 
     def summarize_raw_text(self, text_name:str, group_name:str, max_lines = -1, words_to_summarize = 200) -> int:

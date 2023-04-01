@@ -103,6 +103,8 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.buttons = Buttons(frm, row, "Actions")
         b = self.buttons.add_button("Ask Question", self.new_prompt_callback, width=-1)
         ToolTip(b, "Gets answer from the GPT")
+        b = self.buttons.add_button("Auto-Q", self.auto_question_callback, width=-1)
+        ToolTip(b, "Randomly selects a level-1 summary and then creates a question based on it")
         b = self.buttons.add_button("Summarize", self.get_summmary_callback, width=-1)
         ToolTip(b, "Gets Summary from the GPT")
         b = self.buttons.add_button("Narrative", self.get_story_callback, width=-1)
@@ -148,6 +150,9 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.dp.dprint("Submitting Question: {}".format(question))
         answer = oae.get_response(full_question, model=model)
         self.response_text_field.set_text(answer)
+
+    def auto_question_callback(self):
+        print("Implement me!")
 
     def get_summmary_callback(self):
         generate_model_combo:TopicComboExt = self.so.get_object("generate_model_combo")

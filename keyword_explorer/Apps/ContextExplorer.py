@@ -416,21 +416,25 @@ class ContextExplorer(AppBase):
                 results.append(d)
             row_dict:Dict
             count = 0
-            words_to_summarize = 200
-            engine = self.oae.DEFAULT_SUMMARY_MODEL
+            words_to_summarize = 300
+            #engine = self.oae.DEFAULT_SUMMARY_MODEL
+            engine = self.generate_model_combo.get_text()
+            print("\tUsing {}".format(engine))
             while count < num_rows:
-                d = self.oae.build_text_to_summarize(results, count, words_to_summarize)
+                d = self.oae.build_text_to_summarize(results, count, words_to_summarize, overlap=2)
                 # run the query and store the result. Update the parsed text table with the summary id
-                summary = self.oai.get_prompt_result_params(d['query'], engine=engine, temperature=0, presence_penalty=0.8, frequency_penalty=0, max_tokens=128)
+                summary = self.oai.get_prompt_result_params(d['query'], engine=engine, temperature=0, presence_penalty=0.8, frequency_penalty=0, max_tokens=256)
                 if summary == self.oai.ERROR_MSG:
-                    print("ContextExplorer.test_file_callback() got {} from self.oai.get_prompt_result_params({})".format(summary, d['query']))
+                    print("\ttest_file_callback() got {} from self.oai.get_prompt_result_params({})".format(summary, d['query']))
                     continue
 
                 embd = self.oai.get_embedding_list([summary])
                 mod = self.oai.get_moderation_vals([summary])
-                print("Summary: {}\n\tEmbedding: {}\n\tSpeech: {}\n".format(summary, embd[0]['embedding'], mod[0]['category_scores']))
+                print("\tSummary[{}]: {}\n\tEmbedding: {}\n\tSpeech: {}\n".format(count, summary, embd[0]['embedding'], mod[0]['category_scores']))
 
                 count = d['count']
+
+        print("\ttest_file_callback(): Complete")
 
 
 def main():
