@@ -1,3 +1,4 @@
+import random
 import re
 import pandas as pd
 import tkinter as tk
@@ -60,12 +61,12 @@ class GPTContextFrame(GPT3GeneratorFrame):
         ToolTip(self.keyword_filter.tk_entry, "Keywords (separated by OR) to filter available data")
         row = self.keyword_filter.get_next_row()
 
-        self.context_prompt = TextField(frm, row, "Context:", text_width, height=1, label_width=label_width)
+        self.context_prompt = TextField(frm, row, "Context:", text_width, height=4, label_width=label_width)
         self.context_prompt.set_text("Working on whaling ships")
         ToolTip(self.context_prompt.tk_text, "The prompt that will provide context")
         row = self.context_prompt.get_next_row()
 
-        self.prompt_text_field = TextField(frm, row, "Prompt:", text_width, height=1, label_width=label_width)
+        self.prompt_text_field = TextField(frm, row, "Prompt:", text_width, height=4, label_width=label_width)
         self.prompt_text_field.set_text("Why is Ahab obsessed with Moby Dick?")
         ToolTip(self.prompt_text_field.tk_text, "The prompt that the GPT will use to generate text from")
         row = self.prompt_text_field.get_next_row()
@@ -114,7 +115,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
         b = self.buttons.add_button("Clear", self.clear_callback, width=-1)
         ToolTip(b, "Clears all the fields")
 
-    def set_project_dataframe(self, df:DataField):
+    def set_project_dataframe(self, df:pd.DataFrame):
         self.project_df = df
 
     def handle_checkboxes(self, event = None):
@@ -131,7 +132,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
             return
         oae = OpenAIEmbeddings()
         ctx_question = self.context_prompt.get_text()
-        if self.prompt_query_cb.get_val():
+        if self.prompt_query_cb.get_val() or len(ctx_question) < 5:
             ctx_question = self.prompt_text_field.get_text()
         context, origins_list = oae.create_context(ctx_question, self.project_df)
 
@@ -152,7 +153,32 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.response_text_field.set_text(answer)
 
     def auto_question_callback(self):
-        print("Implement me!")
+        print("GPTContextFrame.auto_question_callback()")
+        if self.project_df.empty:
+            tk.messagebox.showwarning("Warning!", "Please import data first")
+            return
+
+        num_lines = 4
+        first_line = random.randrange(0, len(self.project_df.index)-num_lines)
+
+        s = self.project_df.iloc[first_line]['parsed_text']
+        context_str = "Create a short question that uses the following context\n\nContext:{}".format(s)
+        for i in range(first_line+1, first_line+num_lines, 1):
+            s = self.project_df.iloc[i]['parsed_text']
+            context_str += "\n\n###\n\n{}".format(s)
+        context_str += "\n\nShort question:"
+        # print("\tcontext = {}".format(context_str))
+
+        generate_model_combo:TopicComboExt = self.so.get_object("generate_model_combo")
+        model = generate_model_combo.get_text()
+        print("\tusing model {}".format(model))
+
+        oae = OpenAIEmbeddings()
+        question = oae.get_response(context_str, max_tokens=256, model=model)
+        self.prompt_text_field.set_text(question)
+        self.tab_control.select(0)
+
+
 
     def get_summmary_callback(self):
         generate_model_combo:TopicComboExt = self.so.get_object("generate_model_combo")
@@ -231,8 +257,9 @@ class GPTContextFrame(GPT3GeneratorFrame):
         response = oae.get_response(prompt, model=model)
         self.response_text_field.set_text(response)
 
-    def clear_callback(self):
-        self.keyword_filter.clear()
+    def clear_callback(self, clear_keywords = True):
+        if clear_keywords:
+            self.keyword_filter.clear()
         self.context_prompt.clear()
         self.prompt_text_field.clear()
         self.response_text_field.clear()

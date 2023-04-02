@@ -60,12 +60,13 @@ class ContextExplorer(AppBase):
         self.load_experiment_list()
         self.experiment_id_list = []
         self.so.add_object("generate_model_combo", self.generate_model_combo, TopicComboExt)
+        self.so.add_object("MySqlInterface", self.msi, MySqlInterface)
         # self.test_data_callback()
 
     def setup_app(self):
         self.app_name = "ContextExplorer"
-        self.app_version = "3.14.2023"
-        self.geom = (840, 730)
+        self.app_version = "4.2.2023"
+        self.geom = (840, 770)
         self.oai = OpenAIComms()
         self.oae = OpenAIEmbeddings()
         self.so = SharedObjects()
@@ -283,7 +284,7 @@ class ContextExplorer(AppBase):
             kw_list = kw_str.split("OR")
             kw_list = [s.strip() for s in kw_list]
         print("load_data_callback")
-        df:pd.DataFrame
+        df = pd.DataFrame()
         if self.experiment_id == -1:
             tk.messagebox.showwarning("Warning!", "Please create or select a database first")
         level = self.level_combo.tk_combo.get()
@@ -329,6 +330,9 @@ class ContextExplorer(AppBase):
 
         self.generator_frame.set_project_dataframe(df)
         self.keyword_filtered_field.set_text("{:,}".format(len(df.index)))
+
+        self.generator_frame.clear_callback(clear_keywords=False)
+        self.generator_frame.auto_question_callback()
 
     def get_current_params(self) -> Dict:
         d = self.generator_frame.get_settings().to_dict()
@@ -382,13 +386,14 @@ class ContextExplorer(AppBase):
             answer = tk.messagebox.askyesno("Warning!", "This will read, process, and store large amounts of data\ntarget = [{}]\ngroup = [{}]\nfile = [{}]\nlines = [{:,}]\nProceed?".format(
                 text_name, group_name, textfile, len(s_list)))
             if answer == True:
+                engine = self.generate_model_combo.get_text()
                 level = int(self.target_level_combo.get_text())
                 print("ContextExplorer.load_file_callback(): Getting embeddings")
                 df = self.oae.get_embeddings(s_list)
                 print("ContextExplorer.load_file_callback(): Storing data Dataframe = \n{}".format(df))
                 self.oae.store_project_data(text_name, group_name, df)
                 print("ContextExplorer.load_file_callback(): Summarizing Level 1")
-                self.oae.summarize_raw_text(text_name, group_name)
+                self.oae.summarize_raw_text(text_name, group_name, engine=engine, max_tokens=256)
                 for i in range(1, level):
                     print("ContextExplorer.load_file_callback(): Summarizing Level {}".format(i+1))
                     self.oae.summarize_summary_text(text_name, group_name, source_level=i)

@@ -42,7 +42,7 @@ class OpenAIEmbeddings:
         full_prompt=f"Using the following context, write a short story, based on the prompt.\n\nContext: {context}\n\n---\n\nStory: {prompt}"
         return full_prompt
 
-    def get_response(self, prompt, model=DEFAULT_TEXT_MODEL, max_tokens=150):
+    def get_response(self, prompt, model=DEFAULT_TEXT_MODEL, max_tokens=256):
         try:
             result = self.oac.get_prompt_result_params(prompt, max_tokens=max_tokens, temperature=0, top_p=1, frequency_penalty=0, presence_penalty=0, engine=model)
             return result
@@ -245,7 +245,7 @@ class OpenAIEmbeddings:
         d = {'query':query, 'count':row_count, 'row_list':row_list, 'origins':origin_list}
         return d
 
-    def summarize_raw_text(self, text_name:str, group_name:str, max_lines = -1, words_to_summarize = 200) -> int:
+    def summarize_raw_text(self, text_name:str, group_name:str, max_lines = -1, words_to_summarize = 200, engine=DEFAULT_TEXT_MODEL, max_tokens = 256) -> int:
         # take some set of lines from the parsed text table and produce summary lines in the summary text table
         print("OpenAIEmbeddings.summarize_raw_text(): saving to '{}':'{}'".format(text_name, group_name))
         d:Dict
@@ -271,7 +271,7 @@ class OpenAIEmbeddings:
         while count < num_lines:
             d = self.build_text_to_summarize(results, count, words_to_summarize)
             # run the query and store the result. Update the parsed text table with the summary id
-            summary = self.oac.get_prompt_result_params(d['query'], engine=self.DEFAULT_SUMMARY_MODEL, temperature=0, presence_penalty=0.8, frequency_penalty=0, max_tokens=128)
+            summary = self.oac.get_prompt_result_params(d['query'], engine=engine, temperature=0, presence_penalty=0.8, frequency_penalty=0, max_tokens=max_tokens)
             sql = "insert into table_summary_text (source, level, summary_text, origins) values (%s, %s, %s, %s)"
             vals = (project_id, level, summary, str(d['origins']))
             row_id = self.msi.write_sql_values_get_row(sql, vals)
