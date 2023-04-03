@@ -34,8 +34,8 @@ class OpenAIEmbeddings:
         prompt=f"Answer the question based on the context below.\n\nContext: {context}\n\n---\n\nQuestion: {question}\nAnswer:"
         return prompt
 
-    def create_summary(self, context:str) -> str:
-        full_prompt=f"Summarize the following: {context}\n\n---\n\nSummary:"
+    def create_summary(self, context:str, word_len = 100) -> str:
+        full_prompt="Summarize the following in approximately {} words: {}\n\n---\n\nSummary (approximately {} words):".format(word_len, context, word_len)
         return full_prompt
 
     def create_narrative(self, prompt:str, context:str) -> str:
@@ -172,7 +172,7 @@ class OpenAIEmbeddings:
 
         print("OpenAIEmbeddings.set_summary_embeddings() Processed {} embeddings".format(len(df.index)))
 
-    def create_context(self, question:str, df:pd.DataFrame, max_len=300, size="ada") -> [str, List]:
+    def create_context(self, question:str, df:pd.DataFrame, max_len=400, size="ada") -> [str, List]:
         """
         Create a context for a question by finding the most similar context from the dataframe
         """
@@ -214,10 +214,10 @@ class OpenAIEmbeddings:
         #return "\n\n###\n\n".join(reversed(returns))
         return ("\n\n###\n\n".join(returns), origins)
 
-    def build_text_to_summarize(self, results:List, row_count:int, words_to_summarize = 200, overlap = 2) -> Dict:
+    def build_text_to_summarize(self, results:List, row_count:int, words_to_summarize = 200, overlap = 2, word_len = 100) -> Dict:
         num_lines = len(results)
         d:Dict
-        text:str
+        context:str = ""
         query = "Provide a summary of the following:\n"
         row_list = []
         origin_list = []
@@ -229,7 +229,7 @@ class OpenAIEmbeddings:
             #print("count = {}".format(count))
             d = results[row_count]
             text = d['parsed_text']
-            word_count += text.count(" ")
+            word_count += context.count(" ")
             row_list.append(d['text_id'])
             if 'origins' in d: # this would be from a summary
                 l = ast.literal_eval(d['origins'])
@@ -238,10 +238,10 @@ class OpenAIEmbeddings:
                 origin_list.append(d['text_id'])
 
             # query = "{} [{}] {}".format(query, d['text_id'], text)
-            query = "{} {}.".format(query, text)
+            context = "{} {}.".format(context, text)
             row_count += 1
 
-        query = "{}\n\nSummary:".format(query)
+        query = self.create_summary(context, word_len)
         d = {'query':query, 'count':row_count, 'row_list':row_list, 'origins':origin_list}
         return d
 

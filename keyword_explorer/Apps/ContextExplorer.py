@@ -65,8 +65,8 @@ class ContextExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "ContextExplorer"
-        self.app_version = "4.2.2023"
-        self.geom = (840, 770)
+        self.app_version = "4.3.2023"
+        self.geom = (860, 770)
         self.oai = OpenAIComms()
         self.oae = OpenAIEmbeddings()
         self.so = SharedObjects()

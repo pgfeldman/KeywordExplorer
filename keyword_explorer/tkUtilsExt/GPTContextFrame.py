@@ -114,6 +114,8 @@ class GPTContextFrame(GPT3GeneratorFrame):
         ToolTip(b, "Extends the GPT's response")
         b = self.buttons.add_button("Clear", self.clear_callback, width=-1)
         ToolTip(b, "Clears all the fields")
+        b = self.buttons.add_button("Copy", self.clear_callback, width=-1)
+        ToolTip(b, "Copies engine, prompt, context, and response to clipboard")
 
     def set_project_dataframe(self, df:pd.DataFrame):
         self.project_df = df
@@ -127,6 +129,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
         model = generate_model_combo.get_text()
         print("using model {}".format(model))
         self.tab_control.select(0)
+        self.response_text_field.clear()
         if self.project_df.empty:
             tk.messagebox.showwarning("Warning!", "Please import data first")
             return
@@ -189,6 +192,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
         if self.project_df.empty:
             tk.messagebox.showwarning("Warning!", "Please import data first")
             return
+        self.response_text_field.clear()
         oae = OpenAIEmbeddings()
         ctx_prompt = self.context_prompt.get_text()
         if self.prompt_query_cb.get_val():
@@ -218,6 +222,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
         if self.project_df.empty:
             tk.messagebox.showwarning("Warning!", "Please import data first")
             return
+        self.response_text_field.clear()
         oae = OpenAIEmbeddings()
         ctx_prompt = self.context_prompt.get_text()
         if self.prompt_query_cb.get_val():
@@ -265,6 +270,9 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.response_text_field.clear()
         self.context_text_field.clear()
         self.sources_text_field.clear()
+
+    def clibpboard_callback(self):
+        print("clibpboard_callback")
 
     def set_params(self, settings:GPTContextSettings):
         self.prompt_text_field.clear()
