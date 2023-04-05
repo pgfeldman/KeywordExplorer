@@ -4,6 +4,7 @@ import pandas as pd
 import tkinter as tk
 from tkinter import ttk
 import tkinter.messagebox as message
+import pyperclip
 
 from keyword_explorer.tkUtils.Buttons import Buttons
 from keyword_explorer.tkUtils.TextField import TextField
@@ -114,7 +115,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
         ToolTip(b, "Extends the GPT's response")
         b = self.buttons.add_button("Clear", self.clear_callback, width=-1)
         ToolTip(b, "Clears all the fields")
-        b = self.buttons.add_button("Copy", self.clear_callback, width=-1)
+        b = self.buttons.add_button("Copy", self.clibpboard_callback, width=-1)
         ToolTip(b, "Copies engine, prompt, context, and response to clipboard")
 
     def set_project_dataframe(self, df:pd.DataFrame):
@@ -273,6 +274,16 @@ class GPTContextFrame(GPT3GeneratorFrame):
 
     def clibpboard_callback(self):
         print("clibpboard_callback")
+        generate_model_combo:TopicComboExt = self.so.get_object("generate_model_combo")
+        context = self.context_prompt.get_text()
+        prompt = self.prompt_text_field.get_text()
+        if self.prompt_query_cb.get_val() or len(context) < 5:
+            context = prompt
+        s = "Model: {}\n\nContext: {}\n\nPrompt: {}\n\nResponse: {}".format(
+            generate_model_combo.get_text(), context, prompt, self. response_text_field.get_text())
+        pyperclip.copy(s)
+        pyperclip.paste()
+        print("\tPased {} to clipboard".format(s))
 
     def set_params(self, settings:GPTContextSettings):
         self.prompt_text_field.clear()
