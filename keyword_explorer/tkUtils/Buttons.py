@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from typing import List, Callable, Any
+from typing import Dict, Callable, Any
 
 class Buttons():
     tk_label:tk.Label
@@ -10,8 +10,10 @@ class Buttons():
     row = 0
     col:int = 0
     parent:'tk.Frame'
+    label_dict:Dict
 
     def __init__(self, parent:'tk.Frame', row:int, label:str, label_width:int=20, sticky="nsew"):
+        self.label_dict = {}
         self.parent = parent
         self.row = row
         self.tk_label = tk.Label(parent, text=label, width=label_width, anchor="w")#, background="pink")
@@ -25,10 +27,17 @@ class Buttons():
     def add_button(self, name:str,  command:Callable, width:int = 10, sticky:Any = (tk.N, tk.W)) -> ttk.Button:
         if width < 0:
             width = len(name)+1
-        b = ttk.Button(self.wrapper, text=name, width=width, command=command)
+        sv = tk.StringVar()
+        sv.set(name)
+        b = ttk.Button(self.wrapper, textvariable=sv, width=width, command=command)
         b.grid(column=self.col, row=0, sticky=sticky, pady=2, padx=5)
         self.col += 1
+        self.label_dict[name] = sv
         return b
+
+    def change_button_label(self, name:str, label:str):
+        sv:tk.StringVar = self.label_dict[name]
+        sv.set(label)
 
     def get_next_row(self):
         return self.row + 1

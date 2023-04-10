@@ -48,6 +48,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
     prompt_query_cb:Checkbox
     ignore_context_cb:Checkbox
     tab_control:ttk.Notebook
+    buttons:Buttons
     project_df:pd.DataFrame
 
     def __init__(self, *args, **kwargs):
@@ -117,6 +118,8 @@ class GPTContextFrame(GPT3GeneratorFrame):
         ToolTip(b, "Clears all the fields")
         b = self.buttons.add_button("Copy", self.clibpboard_callback, width=-1)
         ToolTip(b, "Copies engine, prompt, context, and response to clipboard")
+
+        self.so.add_object("context_buttons", self.buttons, Buttons)
 
     def set_project_dataframe(self, df:pd.DataFrame):
         self.project_df = df

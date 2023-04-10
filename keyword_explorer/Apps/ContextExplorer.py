@@ -21,6 +21,7 @@ from keyword_explorer.tkUtils.TextField import TextField
 from keyword_explorer.tkUtils.DataField import DataField
 from keyword_explorer.tkUtils.TopicComboExt import TopicComboExt
 from keyword_explorer.tkUtils.LabeledParam import LabeledParam
+from keyword_explorer.tkUtils.ListField import ListField
 from keyword_explorer.OpenAI.OpenAIComms import OpenAIComms
 from keyword_explorer.OpenAI.OpenAIEmbeddings import OpenAIEmbeddings
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
@@ -45,6 +46,7 @@ class ContextExplorer(AppBase):
     keyword_filtered_field:DataField
     narrative_project_name_field:DataField
     generate_model_combo:TopicComboExt
+    style_list:ListField
     experiment_id_list:List
 
 
@@ -57,6 +59,7 @@ class ContextExplorer(AppBase):
         dt = datetime.now()
         experiment_str = "{}_{}_{}".format(self.app_name, getpass.getuser(), dt.strftime("%H:%M:%S"))
         self.experiment_field.set_text(experiment_str)
+        self.set_style_callback()
         self.load_experiment_list()
         self.experiment_id_list = []
         self.so.add_object("generate_model_combo", self.generate_model_combo, TopicComboExt)
@@ -86,7 +89,7 @@ class ContextExplorer(AppBase):
 
         lf = tk.LabelFrame(self, text="Params")
         lf.grid(row=row, column=2, sticky="nsew", padx=5, pady=2)
-        self.build_params(lf, int(text_width/3), int(label_width/2))
+        self.build_params(lf, int(text_width/3), int(label_width*.75))
         return row + 1
 
     def load_experiment_list(self):
@@ -169,6 +172,12 @@ class ContextExplorer(AppBase):
         self.keyword_filtered_field = DataField(lf, row, 'Filtered:', text_width, label_width=label_width)
         row = self.keyword_filtered_field.get_next_row()
 
+        self.style_list = ListField(lf, row, "Style", width=text_width, label_width=label_width, static_list=True)
+        self.style_list.set_text(text='Story, List, Sequence')
+        self.style_list.set_callback(self.set_style_callback)
+        ToolTip(self.style_list.tk_list, "Creates a narrative or recursive context for generation - Not implemented")
+        row = self.style_list.get_next_row()
+
     def build_generator_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
         self.generator_frame.build_frame(tab, text_width, label_width)
 
@@ -198,6 +207,18 @@ class ContextExplorer(AppBase):
         ToolTip(b, "Performs a small test on 100 lines of text and does not save to DB")
         b = buttons.add_button("Load File", self.load_file_callback, width=-1)
         ToolTip(b, "Loads new text into a project, splits into chunks and finds embeddings")
+
+    def set_style_callback(self, event:tk.Event = None):
+        buttons:Buttons = self.so.get_object("context_buttons")
+        style_str = self.style_list.get_selected()
+        buttons.change_button_label("Narrative", style_str)
+        self.style_list.set_label("Style\n({})".format(style_str))
+        if style_str == "Story":
+            print("Set story regex")
+        elif style_str == "List":
+            print("Set list regex")
+        elif style_str == "Sequence":
+            print("Set Sequence regex")
 
     def load_project_callback(self, event = None):
         print("load_project_callback")
