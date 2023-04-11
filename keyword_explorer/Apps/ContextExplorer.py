@@ -47,6 +47,8 @@ class ContextExplorer(AppBase):
     narrative_project_name_field:DataField
     generate_model_combo:TopicComboExt
     style_list:ListField
+    action_buttons:Buttons
+    action_buttons2:Buttons
     experiment_id_list:List
 
 
@@ -68,7 +70,7 @@ class ContextExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "ContextExplorer"
-        self.app_version = "4.3.2023"
+        self.app_version = "4.11.2023"
         self.geom = (860, 770)
         self.oai = OpenAIComms()
         self.oae = OpenAIEmbeddings()
@@ -132,12 +134,12 @@ class ContextExplorer(AppBase):
         ToolTip(self.narrative_project_name_field.tk_entry, "Project name to export NarrativeMaps")
         row = self.narrative_project_name_field.get_next_row()
 
-        buttons = Buttons(lf, row, "Actions")
-        b = buttons.add_button("Load Data", self.load_data_callback, width=-1)
+        self.action_buttons = Buttons(lf, row, "Actions")
+        b = self.action_buttons.add_button("Load Data", self.load_data_callback, width=-1)
         ToolTip(b, "Load data for selected project")
-        b = buttons.add_button("Export", self.save_to_narrative_maps_jason_callback, width=-1)
+        b = self.action_buttons.add_button("Export", self.save_to_narrative_maps_jason_callback, width=-1)
         ToolTip(b, "Export Project to JSON")
-        row = buttons.get_next_row()
+        row = self.action_buttons.get_next_row()
 
         engine_list = self.oai.list_models(exclude_list = [":", "ada", "embed", "similarity", "code", "edit", "search", "audio", "instruct", "2020", "if", "insert", "whisper"])
         engine_list = sorted(engine_list, reverse=True)
@@ -202,10 +204,10 @@ class ContextExplorer(AppBase):
         ToolTip(self.regex_field.tk_entry, "The regex used to parse the file. Editable")
         row = self.regex_field.get_next_row()
 
-        buttons = Buttons(tab, row, "Actions")
-        b = buttons.add_button("Test", self.test_file_callback, width=-1)
+        self.action_buttons2 = Buttons(tab, row, "Actions")
+        b = self.action_buttons2.add_button("Test", self.test_file_callback, width=-1)
         ToolTip(b, "Performs a small test on 100 lines of text and does not save to DB")
-        b = buttons.add_button("Load File", self.load_file_callback, width=-1)
+        b = self.action_buttons2.add_button("Load File", self.load_file_callback, width=-1)
         ToolTip(b, "Loads new text into a project, splits into chunks and finds embeddings")
 
     def set_style_callback(self, event:tk.Event = None):
