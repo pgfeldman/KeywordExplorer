@@ -36,6 +36,7 @@ html_end = html_str = '''
 class GoogleExplorer(AppBase):
     search_field:DataField
     search_frame:HtmlFrame
+    action_buttons:Buttons
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -43,7 +44,7 @@ class GoogleExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "GoogleExplorer"
-        self.app_version = "3.14.22"
+        self.app_version = "4.11.2023"
         self.geom = (850, 850)
         if not gs.key_exists():
             message.showwarning("Key Error", "Could not find Environment key 'GOOGLE_CSE_KEY'")
@@ -60,9 +61,9 @@ class GoogleExplorer(AppBase):
         ToolTip(self.search_field.tk_entry, "Type your search term or phrase here")
         row = self.search_field.get_next_row()
 
-        buttons = Buttons(parent, row, "Actions:", label_width)
-        buttons.add_button("Search", self.search_callback)
-        row = buttons.get_next_row()
+        self.action_buttons = Buttons(parent, row, "Actions:", label_width)
+        self.action_buttons.add_button("Search", self.search_callback)
+        row = self.action_buttons.get_next_row()
 
 
         self.search_frame = HtmlFrame(parent) #create HTML browser

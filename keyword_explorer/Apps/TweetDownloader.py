@@ -51,6 +51,8 @@ class TweetDownloader(AppBase):
     highest_count_field:DataField
     percent_field:DataField
     query_options_field:DataField
+    collect_buttons:Buttons
+    analytics_buttons:Buttons
     # option_checkboxes:Checkboxes
     experiment_combo: TopicComboExt
     db_option_checkboxes: Checkboxes
@@ -118,22 +120,21 @@ class TweetDownloader(AppBase):
         b = self.duration_field.add_button("set end", self.set_end_callback)
         ToolTip(b, "Reset the end date based on the start date and duration")
         row = self.duration_field.get_next_row()
-        buttons = Buttons(lf, row, "Collect:", label_width=label_width)
-        b = buttons.add_button("Balanced", self.collect_balanced_callback)
+        self.collect_buttons = Buttons(lf, row, "Collect:", label_width=label_width)
+        b = self.collect_buttons.add_button("Balanced", self.collect_balanced_callback)
         ToolTip(b, "Collect the same number (Samples/Clamp) of tweets per day for each item\nUses each day's smallest count")
-        b = buttons.add_button("Percent", self.collect_percent_callback)
+        b = self.collect_buttons.add_button("Percent", self.collect_percent_callback)
         ToolTip(b, "Collect a proportional (Percent) sample with\nan upper clamp (Samples/Clamp) per day for all terms\nMinimum of 10 samples per day")
-        row = buttons.get_next_row()
-        b = buttons.add_button("Threads", self.collect_thread_callback)
+        b = self.collect_buttons.add_button("Threads", self.collect_thread_callback)
         ToolTip(b, "Collect all the treads that are associated with the downloaded tweets. \nReliably works for the past 7 days but *may also* work over longer times")
-        row = buttons.get_next_row()
+        row = self.collect_buttons.get_next_row()
 
-        buttons = Buttons(lf, row, "Analytics:", label_width=label_width)
-        b = buttons.add_button("Calc rates", self.calc_rates_callback)
+        self.analytics_buttons = Buttons(lf, row, "Analytics:", label_width=label_width)
+        b = self.analytics_buttons.add_button("Calc rates", self.calc_rates_callback)
         ToolTip(b, "Gets the rough number of tweets per day per term\n and prints to the Console window")
-        b = buttons.add_button("Browser", self.launch_twitter_callback)
+        b = self.analytics_buttons.add_button("Browser", self.launch_twitter_callback)
         ToolTip(b, "Open tabs in the default browser for each term over the time period")
-        row = buttons.get_next_row()
+        row = self.analytics_buttons.get_next_row()
 
     def build_twitter_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0

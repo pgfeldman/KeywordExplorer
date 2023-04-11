@@ -67,6 +67,10 @@ class EmbeddingsExplorer(AppBase):
     tweet_option_checkboxes:Checkboxes
     author_option_checkboxes:Checkboxes
     generation_options:Checkboxes
+    corpora_action_buttons:Buttons
+    speech_action_buttons:Buttons
+    canvas_command_buttons:Buttons
+    db_buttons:Buttons
     speech_text_field:TextField
     experiment_id: int
     speech_df:pd.DataFrame
@@ -175,10 +179,10 @@ class EmbeddingsExplorer(AppBase):
         cb = self.generation_options.add_checkbox("Include excluded clusters", lambda: self.set_corpora_flag_callback("excluded_culsters_flag"), dir=DIR.ROW)
         ToolTip(cb.cb, "Include all clusters that were flagged for exclusion")
         row = self.generation_options.get_next_row()
-        buttons = Buttons(tab, row, "Corpora")
-        b = buttons.add_button("Set folder", self.cg.set_folder)
+        self.corpora_action_buttons = Buttons(tab, row, "Corpora")
+        b = self.corpora_action_buttons.add_button("Set folder", self.cg.set_folder)
         ToolTip(b, "Set the folder for all test/train files to be written to")
-        b = buttons.add_button("Generate", lambda: self.cg.write_files(self.experiment_id, self.keyword_combo.get_text()))
+        b = self.corpora_action_buttons.add_button("Generate", lambda: self.cg.write_files(self.experiment_id, self.keyword_combo.get_text()))
         ToolTip(b, "Write all test/train files to the selected directory")
 
 
@@ -195,16 +199,16 @@ class EmbeddingsExplorer(AppBase):
         b = self.keyword_count_field.add_button("Get Embeddings", self.get_oai_embeddings_callback)
         row = self.keyword_count_field.get_next_row()
         ToolTip(b, "Get embeddings for each tweet using the\nselected engine and store them with the\ntweets in the DB")
-        buttons = Buttons(tab, row, "Update DB")
-        b = buttons.add_button("Reduced+Clusters", self.store_reduced_and_clustering_callback, -1)
+        self.db_buttons = Buttons(tab, row, "Update DB")
+        b = self.db_buttons.add_button("Reduced+Clusters", self.store_reduced_and_clustering_callback, -1)
         ToolTip(b, "Add cluster ids and reduced embeddings (from the Canvas tab)\n to the db along with each tweet")
-        b = buttons.add_button("Clusters", self.store_clustering_callback, -1)
+        b = self.db_buttons.add_button("Clusters", self.store_clustering_callback, -1)
         ToolTip(b, "Add just the cluster ids (from the Canvas tab)\n to the db along with each tweet")
-        b = buttons.add_button("Topic Names", self.implement_me, -1)
+        b = self.db_buttons.add_button("Topic Names", self.implement_me, -1)
         ToolTip(b, "Not implemented. Will guess at topic names using GPT-3")
-        b = buttons.add_button("Users", self.store_user_callback, -1)
+        b = self.db_buttons.add_button("Users", self.store_user_callback, -1)
         ToolTip(b, "Fora each tweet's user id, create an\nentry in the db for that user using\n the twitter API")
-        row = buttons.get_next_row()
+        row = self.db_buttons.get_next_row()
 
     def build_param_row(self, parent:tk.Frame, row:int) -> int:
         f = tk.Frame(parent)
@@ -232,20 +236,20 @@ class EmbeddingsExplorer(AppBase):
         row = self.build_param_row(tab, row)
         f = tk.Frame(tab)
         # add "select clusters" field and "export corpus" button
-        buttons = Buttons(tab, row, "Commands", label_width=10)
-        b = buttons.add_button("Retreive", self.retreive_tweet_data_callback, -1)
+        self.canvas_command_buttons = Buttons(tab, row, "Commands", label_width=10)
+        b = self.canvas_command_buttons.add_button("Retreive", self.retreive_tweet_data_callback, -1)
         ToolTip(b, "Get the high-dimensional embeddings from the DB")
-        b = buttons.add_button("Reduce", self.reduce_dimensions_callback, -1)
+        b = self.canvas_command_buttons.add_button("Reduce", self.reduce_dimensions_callback, -1)
         ToolTip(b, "Reduce a  2 dimensions with PCS and TSNE")
-        b = buttons.add_button("Cluster", self.cluster_callback, -1)
+        b = self.canvas_command_buttons.add_button("Cluster", self.cluster_callback, -1)
         ToolTip(b, "Compute clusters on reduced data")
-        b = buttons.add_button("Plot", self.plot_callback, -1)
+        b = self.canvas_command_buttons.add_button("Plot", self.plot_callback, -1)
         ToolTip(b, "Plot the clustered points using PyPlot")
-        b = buttons.add_button("Explore", self.explore_callback, -1)
+        b = self.canvas_command_buttons.add_button("Explore", self.explore_callback, -1)
         ToolTip(b, "Interactive graph of a subsample of points")
-        b = buttons.add_button("Topics", self.label_clusters_callback, -1)
+        b = self.canvas_command_buttons.add_button("Topics", self.label_clusters_callback, -1)
         ToolTip(b, "Use GPT to guess at topic names for clusters\n(not implemented)")
-        row = buttons.get_next_row()
+        row = self.canvas_command_buttons.get_next_row()
 
         f = tk.Frame(tab)
         f.grid(row=row, column=0, columnspan=2, sticky="nsew", padx=1, pady=1)
@@ -264,14 +268,14 @@ class EmbeddingsExplorer(AppBase):
         ToolTip(self.speech_text_field.tk_text, "Speech categories are displayed here")
         row = self.speech_text_field.get_next_row()
 
-        buttons = Buttons(frm, row, "Actions")
-        b = buttons.add_button("Retrieve", self.retreive_tweet_data_callback)
+        self.speech_action_buttons = Buttons(frm, row, "Actions")
+        b = self.speech_action_buttons.add_button("Retrieve", self.retreive_tweet_data_callback)
         ToolTip(b, "Load speech data if available")
-        b = buttons.add_button("Plot", self.plot_speech_data)
+        b = self.speech_action_buttons.add_button("Plot", self.plot_speech_data)
         ToolTip(b, "Plot speech classes if available")
-        b = buttons.add_button("Save", self.save_speech_data)
+        b = self.speech_action_buttons.add_button("Save", self.save_speech_data)
         ToolTip(b, "Save raw chart data to spreadsheet")
-        row = buttons.get_next_row()
+        row = self.speech_action_buttons.get_next_row()
 
     def color_excluded_clusters(self):
         keyword = self.keyword_combo.get_text()

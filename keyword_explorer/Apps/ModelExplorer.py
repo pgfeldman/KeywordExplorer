@@ -35,6 +35,7 @@ class ModelExplorer(AppBase):
     spreadsheet_checkbox:Checkbox
     seed_checkbox:Checkbox
     db_checkbox:Checkbox
+    action_buttons:Buttons
     msi: MySqlInterface
     sequence_regex:Pattern
     element_regex:Pattern
@@ -107,9 +108,9 @@ class ModelExplorer(AppBase):
         self.probe_field.set_text(']][[text: ')
         row = self.probe_field.get_next_row()
 
-        buttons = Buttons(parent, row, "Actions:", label_width)
-        buttons.add_button("Run", self.run_probe_callback)
-        row = buttons.get_next_row()
+        self.action_buttons = Buttons(parent, row, "Actions:", label_width)
+        self.action_buttons.add_button("Run", self.run_probe_callback)
+        row = self.action_buttons.get_next_row()
 
         self.gpt_response_frame = tk.Text(parent)
         self.gpt_response_frame.grid(row = row, column=0, columnspan = 2, sticky="nsew", padx=5, pady=2)

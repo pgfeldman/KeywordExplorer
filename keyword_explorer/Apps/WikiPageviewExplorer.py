@@ -27,6 +27,8 @@ class WikiPageviewExplorer(AppBase):
     end_date_field:DateEntryField
     sample_list:ListField
     multi_count_list:List
+    topic_action_buttons:Buttons
+    views_action_buttons:Buttons
     totals_dict:dict
     user_agent:str
 
@@ -78,12 +80,12 @@ class WikiPageviewExplorer(AppBase):
         self.response_text_field = TextField(lf, row, 'Response', text_width, height=10, label_width=label_width)
         ToolTip(self.response_text_field.tk_text, "List of best matches in English Wikipedia\nSelect the desired results to examine and\nclick 'Copy Selected'")
         row = self.response_text_field.get_next_row()
-        buttons = Buttons(lf, row, "Actions", label_width=label_width)
-        b = buttons.add_button("Search", self.search_wiki_callback, width=-1)
+        self.topic_action_buttons = Buttons(lf, row, "Actions", label_width=label_width)
+        b = self.topic_action_buttons.add_button("Search", self.search_wiki_callback, width=-1)
         ToolTip(b, "Search for best matches in English Wikipedia")
-        b = buttons.add_button("Copy Selected", self.copy_selected_callback, width=-1)
+        b = self.topic_action_buttons.add_button("Copy Selected", self.copy_selected_callback, width=-1)
         ToolTip(b, "Copy selected responses to 'Pages' below for views")
-        row = buttons.get_next_row()
+        row = self.topic_action_buttons.get_next_row()
 
     def build_page_views(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
@@ -94,18 +96,18 @@ class WikiPageviewExplorer(AppBase):
         row = self.start_date_field.get_next_row()
         self.end_date_field = DateEntryField(lf, row, 'End Date', text_width, label_width=label_width)
         row = self.end_date_field.get_next_row()
-        buttons = Buttons(lf, row, "Actions", label_width=label_width)
-        b = buttons.add_button("Clear", self.clear_pageviews_callback)
+        self.views_action_buttons = Buttons(lf, row, "Actions", label_width=label_width)
+        b = self.views_action_buttons.add_button("Clear", self.clear_pageviews_callback)
         ToolTip(b, "Clears the topics from the Views text area")
-        b = buttons.add_button("Test Pages", self.test_pages_callback, width=-1)
+        b = self.views_action_buttons.add_button("Test Pages", self.test_pages_callback, width=-1)
         ToolTip(b, "Query page views between Start Date and End Date and plot results")
-        b = buttons.add_button("Plot", self.plot_callback, width=-1)
+        b = self.views_action_buttons.add_button("Plot", self.plot_callback, width=-1)
         ToolTip(b, "Plot page views")
-        b = buttons.add_button("Save", self.save_callback, width=-1)
+        b = self.views_action_buttons.add_button("Save", self.save_callback, width=-1)
         ToolTip(b, "Save page views to Excel file")
-        b = buttons.add_button("Show Pages", self.show_pages_callback, width=-1)
+        b = self.views_action_buttons.add_button("Show Pages", self.show_pages_callback, width=-1)
         ToolTip(b, "Launch each Wikipedia page as a separate tab in the default browser")
-        row = buttons.get_next_row()
+        row = self.views_action_buttons.get_next_row()
 
     def build_page_view_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0

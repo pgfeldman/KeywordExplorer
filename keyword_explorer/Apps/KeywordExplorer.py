@@ -33,6 +33,8 @@ class KeywordExplorer(AppBase):
     engine_list:ListField
     sample_list:ListField
     query_options_field:DataField
+    action_buttons:Buttons
+    action_buttons2:Buttons
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -97,14 +99,14 @@ class KeywordExplorer(AppBase):
         ToolTip(self.regex_field.tk_entry, "The regex used to parse the GPT response. Editable")
         row = self.regex_field.get_next_row()
 
-        buttons = Buttons(lf, row, "Actions", label_width=label_width)
-        b = buttons.add_button("New prompt", self.new_prompt_callback, width=-1)
+        self.action_buttons = Buttons(lf, row, "Actions", label_width=label_width)
+        b = self.action_buttons.add_button("New prompt", self.new_prompt_callback, width=-1)
         ToolTip(b, "Sends the prompt to the GPT-3")
-        b = buttons.add_button("Extend prompt", self.extend_prompt_callback, width=-1)
+        b = self.action_buttons.add_button("Extend prompt", self.extend_prompt_callback, width=-1)
         ToolTip(b, "Uses the previous prompt and response as the new prompt")
-        b = buttons.add_button("Parse response", self.parse_response_callback, width=-1)
+        b = self.action_buttons.add_button("Parse response", self.parse_response_callback, width=-1)
         ToolTip(b, "Applies the regex in the 'Parse Regex' field to each line in the resonse text \nthat is longer than Max Chars and places the parsed results in the 'Test Keyords' area below")
-        row = buttons.get_next_row()
+        row = self.action_buttons.get_next_row()
 
     def build_gpt_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
@@ -136,18 +138,18 @@ class KeywordExplorer(AppBase):
         row = self.start_date_field.get_next_row()
         self.end_date_field = DateEntryField(lf, row, 'End Date', text_width, label_width=label_width)
         row = self.end_date_field.get_next_row()
-        buttons = Buttons(lf, row, "Actions", label_width=label_width)
-        b = buttons.add_button("Clear", self.clear_counts_callbacks, width=-1)
+        self.action_buttons2 = Buttons(lf, row, "Actions", label_width=label_width)
+        b = self.action_buttons2.add_button("Clear", self.clear_counts_callbacks, width=-1)
         ToolTip(b, "Clears any old data from the plot")
-        b = buttons.add_button("Test Keyword", self.test_keyword_callback, width=-1)
+        b = self.action_buttons2.add_button("Test Keyword", self.test_keyword_callback, width=-1)
         ToolTip(b, "Query Twitter for each keyword and plot")
-        b = buttons.add_button("Plot", self.plot_counts_callback, width=-1)
+        b = self.action_buttons2.add_button("Plot", self.plot_counts_callback, width=-1)
         ToolTip(b, "Plot the current data")
-        b = buttons.add_button("Save", self.save_callback, width=-1)
+        b = self.action_buttons2.add_button("Save", self.save_callback, width=-1)
         ToolTip(b, "Save the results as an xlsx file")
-        b = buttons.add_button("Launch Twitter", self.launch_twitter_callback, width=-1)
+        b = self.action_buttons2.add_button("Launch Twitter", self.launch_twitter_callback, width=-1)
         ToolTip(b, "Open tabs in the default browser for each term over the time period")
-        row = buttons.get_next_row()
+        row = self.action_buttons2.get_next_row()
 
     def build_twitter_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
