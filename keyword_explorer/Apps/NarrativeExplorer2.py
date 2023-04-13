@@ -82,7 +82,7 @@ class NarrativeExplorer2(AppBase):
     def setup_app(self):
         self.app_name = "NarrativeExplorer2"
         self.app_version = "3.30.2023"
-        self.geom = (840, 670)
+        self.geom = (870, 670)
         self.oai = OpenAIComms()
         self.msi = MySqlInterface(user_name="root", db_name="narrative_maps")
         self.mr = ManifoldReduction()

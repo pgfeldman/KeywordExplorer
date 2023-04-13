@@ -72,7 +72,7 @@ CREATE TABLE `table_parsed_text` (
   `embedding` blob DEFAULT NULL,
   `moderation` text DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=51527 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=56203 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -87,7 +87,7 @@ CREATE TABLE `table_source` (
   `text_name` varchar(255) DEFAULT NULL,
   `group_name` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=latin1 COMMENT='The source doc for the parsed text';
+) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=latin1 COMMENT='The source doc for the parsed text';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -107,7 +107,7 @@ CREATE TABLE `table_summary_text` (
   `origins` text DEFAULT NULL,
   `moderation` text DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6274 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=7492 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -157,4 +157,4 @@ CREATE TABLE `table_summary_text` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-03-21 18:24:21
+-- Dump completed on 2023-04-13  9:38:39
