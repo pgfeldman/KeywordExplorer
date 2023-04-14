@@ -15,7 +15,7 @@ from keyword_explorer.Apps.AppBase import AppBase
 from keyword_explorer.tkUtils.Buttons import Buttons
 from keyword_explorer.tkUtils.ToolTip import ToolTip
 from keyword_explorer.tkUtils.Checkboxes import Checkboxes
-from keyword_explorer.tkUtilsExt.GPTContextFrame import GPTContextFrame, GPTContextSettings
+from keyword_explorer.tkUtilsExt.GPTContextFrame import GPTContextFrame, GPTContextSettings, PROMPT_TYPE
 from keyword_explorer.tkUtils.ListField import ListField
 from keyword_explorer.tkUtils.TextField import TextField
 from keyword_explorer.tkUtils.DataField import DataField
@@ -61,7 +61,6 @@ class ContextExplorer(AppBase):
         dt = datetime.now()
         experiment_str = "{}_{}_{}".format(self.app_name, getpass.getuser(), dt.strftime("%H:%M:%S"))
         self.experiment_field.set_text(experiment_str)
-        self.set_style_callback()
         self.load_experiment_list()
         self.experiment_id_list = []
         self.so.add_object("generate_model_combo", self.generate_model_combo, TopicComboExt)
@@ -174,11 +173,16 @@ class ContextExplorer(AppBase):
         self.keyword_filtered_field = DataField(lf, row, 'Filtered:', text_width, label_width=label_width)
         row = self.keyword_filtered_field.get_next_row()
 
-        self.style_list = ListField(lf, row, "Style", width=text_width, label_width=label_width, static_list=True)
-        self.style_list.set_text(text='Story, List, Sequence')
+        self.style_list = ListField(lf, row, "Style\n({})".format(PROMPT_TYPE.NARRATIVE.value), width=text_width, label_width=label_width, static_list=True)
+        # self.style_list.set_text(text='Story, List, Sequence')
+        self.style_list.clear()
+        self.style_list.add_entry(PROMPT_TYPE.NARRATIVE.value)
+        self.style_list.add_entry(PROMPT_TYPE.LIST.value)
+        self.style_list.add_entry(PROMPT_TYPE.SEQUENCE.value)
         self.style_list.set_callback(self.set_style_callback)
         ToolTip(self.style_list.tk_list, "Creates a narrative or recursive context for generation - Not implemented")
         row = self.style_list.get_next_row()
+        self.style_list.tk_list.select_set(0)
 
     def build_generator_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
         self.generator_frame.build_frame(tab, text_width, label_width)
@@ -213,13 +217,14 @@ class ContextExplorer(AppBase):
     def set_style_callback(self, event:tk.Event = None):
         buttons:Buttons = self.so.get_object("context_buttons")
         style_str = self.style_list.get_selected()
-        buttons.change_button_label("Narrative", style_str)
+        buttons.change_button_label(PROMPT_TYPE.NARRATIVE.value, style_str)
         self.style_list.set_label("Style\n({})".format(style_str))
-        if style_str == "Story":
-            print("Set story regex")
-        elif style_str == "List":
-            print("Set list regex")
-        elif style_str == "Sequence":
+        if style_str == PROMPT_TYPE.NARRATIVE.value:
+            self.generator_frame.prompt_text_field.set_text("Once upon a time there was a")
+        elif style_str == PROMPT_TYPE.LIST.value:
+            self.generator_frame.prompt_text_field.set_text("Here's a list of items/concepts/phrases that are similar to '{}'|| first concept seed || second concept seed")
+        elif style_str == PROMPT_TYPE.SEQUENCE.value:
+            self.generator_frame.prompt_text_field.set_text("List the sequence of events that starts with {} and ends with {} || aaa && bbb ||| ccc &&& ddd")
             print("Set Sequence regex")
 
     def load_project_callback(self, event = None):

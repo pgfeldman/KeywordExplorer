@@ -42,6 +42,10 @@ class OpenAIEmbeddings:
         full_prompt=f"Using the following context, write a short story, based on the prompt.\n\nContext: {context}\n\n---\n\nStory: {prompt}"
         return full_prompt
 
+    def create_list(self, prompt:str, context:str) -> str:
+        full_prompt=f"Using the following context, produce a list, based on the prompt.\n\nContext: {context}\n\n---\n\n{prompt}\n1)"
+        return full_prompt
+
     def get_response(self, prompt, model=DEFAULT_TEXT_MODEL, max_tokens=256):
         try:
             result = self.oac.get_prompt_result_params(prompt, max_tokens=max_tokens, temperature=0, top_p=1, frequency_penalty=0, presence_penalty=0, engine=model)

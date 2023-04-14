@@ -5,6 +5,7 @@ import tkinter as tk
 from tkinter import ttk
 import tkinter.messagebox as message
 import pyperclip
+from enum import Enum
 
 from keyword_explorer.tkUtils.Buttons import Buttons
 from keyword_explorer.tkUtils.TextField import TextField
@@ -40,6 +41,15 @@ class GPTContextSettings:
                 'context_prompt':self.context_prompt,
                 'keywords':self.keywords}
 
+class PROMPT_TYPE(Enum):
+    def __str__(self):
+        return str(self.value)
+
+    NARRATIVE = "Narrative"
+    LIST = "List"
+    SEQUENCE = "Sequence"
+    STORY = "Story"
+
 
 class GPTContextFrame(GPT3GeneratorFrame):
     keyword_filter:DataField
@@ -50,6 +60,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
     tab_control:ttk.Notebook
     buttons:Buttons
     project_df:pd.DataFrame
+
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -110,7 +121,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
         ToolTip(b, "Randomly selects a level-1 summary and then creates a question based on it")
         b = self.buttons.add_button("Summarize", self.get_summmary_callback, width=-1)
         ToolTip(b, "Gets Summary from the GPT")
-        b = self.buttons.add_button("Narrative", self.get_story_callback, width=-1)
+        b = self.buttons.add_button(PROMPT_TYPE.NARRATIVE.value, self.get_story_callback, width=-1)
         ToolTip(b, "Gets Story from the GPT")
         b = self.buttons.add_button("Extend", self.extend_callback, width=-1)
         ToolTip(b, "Extends the GPT's response")
@@ -226,6 +237,8 @@ class GPTContextFrame(GPT3GeneratorFrame):
         if self.project_df.empty:
             tk.messagebox.showwarning("Warning!", "Please import data first")
             return
+
+        prompt_type = self.buttons.get_button_label(PROMPT_TYPE.NARRATIVE.value)
         self.response_text_field.clear()
         oae = OpenAIEmbeddings()
         ctx_prompt = self.context_prompt.get_text()
@@ -236,7 +249,16 @@ class GPTContextFrame(GPT3GeneratorFrame):
         prompt = self.prompt_text_field.get_text()
         full_prompt = prompt
         if self.ignore_context_cb.get_val() == False:
-            full_prompt = oae.create_narrative(prompt=prompt, context=context)
+            if prompt_type == PROMPT_TYPE.NARRATIVE.value:
+                full_prompt = oae.create_narrative(prompt=prompt, context=context)
+            elif prompt_type == PROMPT_TYPE.LIST.value:
+                split_regex = re.compile(r"\|+")
+                response_regex = re.compile(r"\d+\W+")
+                print("\t{} not enabled yet".format(prompt_type))
+                return
+            elif prompt_type == PROMPT_TYPE.SEQUENCE.value:
+                print("\t{} not enabled yet".format(prompt_type))
+                return
 
         self.context_text_field.clear()
         self.context_text_field.set_text(full_prompt)
@@ -245,7 +267,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.sources_text_field.clear()
         self.sources_text_field.set_text("\n\n".join(origins))
 
-        self.dp.dprint("Submitting story prompt: {}".format(prompt))
+        self.dp.dprint("Submitting {} prompt: {}".format(prompt_type, prompt))
         answer = oae.get_response(full_prompt, max_tokens=256, model=model)
         self.response_text_field.set_text(answer)
 

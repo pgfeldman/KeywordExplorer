@@ -39,6 +39,13 @@ class Buttons():
         sv:tk.StringVar = self.label_dict[name]
         sv.set(label)
 
+    def get_button_label(self, name:str) -> str:
+        sv:tk.StringVar = self.label_dict[name]
+        return sv.get()
+
+    def get_label_dict(self) -> Dict:
+        return self.label_dict
+
     def get_next_row(self):
         return self.row + 1
 
