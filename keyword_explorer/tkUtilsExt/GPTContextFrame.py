@@ -254,6 +254,12 @@ class GPTContextFrame(GPT3GeneratorFrame):
             elif prompt_type == PROMPT_TYPE.LIST.value:
                 split_regex = re.compile(r"\|+")
                 response_regex = re.compile(r"\d+\W+")
+                query_list = split_regex.split(full_prompt)
+                template_s = query_list[0].strip()
+                for i in range(1, len(query_list)):
+                    s = query_list[i].strip()
+                    query_str = template_s.format(s)
+                    print(query_str)
                 print("\t{} not enabled yet".format(prompt_type))
                 return
             elif prompt_type == PROMPT_TYPE.SEQUENCE.value:

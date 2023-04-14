@@ -215,6 +215,7 @@ class ContextExplorer(AppBase):
         ToolTip(b, "Loads new text into a project, splits into chunks and finds embeddings")
 
     def set_style_callback(self, event:tk.Event = None):
+        print("ContextExplorer.set_style_callback()")
         buttons:Buttons = self.so.get_object("context_buttons")
         style_str = self.style_list.get_selected()
         buttons.change_button_label(PROMPT_TYPE.NARRATIVE.value, style_str)
