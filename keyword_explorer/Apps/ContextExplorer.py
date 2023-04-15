@@ -218,6 +218,9 @@ class ContextExplorer(AppBase):
         print("ContextExplorer.set_style_callback()")
         buttons:Buttons = self.so.get_object("context_buttons")
         style_str = self.style_list.get_selected()
+        if style_str == "unset":
+            # We have a bad call, so don't do anything more
+            return
         buttons.change_button_label(PROMPT_TYPE.NARRATIVE.value, style_str)
         self.style_list.set_label("Style\n({})".format(style_str))
         if style_str == PROMPT_TYPE.NARRATIVE.value:
