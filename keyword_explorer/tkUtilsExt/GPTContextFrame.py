@@ -51,6 +51,9 @@ class PROMPT_TYPE(Enum):
     STORY = "Story"
     QUESTION = "Question"
     TWEET = "Tweet"
+    SCIENCE_TWEET = "Science Tweet"
+    FACTOID = "Factoid"
+    PRESS_RELEASE = "Press Release"
 
 
 class GPTContextFrame(GPT3GeneratorFrame):
@@ -137,6 +140,12 @@ class GPTContextFrame(GPT3GeneratorFrame):
         ToolTip(b, "Randomly selects a level-1 summary and then creates a question based on it")
         b = self.auto_buttons.add_button("Tweet", lambda:self.auto_question_callback(type=PROMPT_TYPE.TWEET), width=-1)
         ToolTip(b, "Randomly selects a level-1 summary and then creates a tweet based on it")
+        b = self.auto_buttons.add_button("Science Tweet", lambda:self.auto_question_callback(type=PROMPT_TYPE.SCIENCE_TWEET), width=-1)
+        ToolTip(b, "Randomly selects a level-1 summary and then creates a tweet in the style of Science Twitter based on it")
+        b = self.auto_buttons.add_button("Factoid", lambda:self.auto_question_callback(type=PROMPT_TYPE.FACTOID), width=-1)
+        ToolTip(b, "Randomly selects a level-1 summary and then creates a factoid based on it")
+        b = self.auto_buttons.add_button("Press release", lambda:self.auto_question_callback(type=PROMPT_TYPE.PRESS_RELEASE), width=-1)
+        ToolTip(b, "Randomly selects a level-1 summary and then creates a press release based on it")
         row = self.auto_buttons.get_next_row()
 
     def set_project_dataframe(self, df:pd.DataFrame):
@@ -183,13 +192,22 @@ class GPTContextFrame(GPT3GeneratorFrame):
             tk.messagebox.showwarning("Warning!", "Please import data first")
             return
 
-        num_lines = 4
+        num_lines = 5
         first_line = random.randrange(0, len(self.project_df.index)-num_lines)
 
         s = self.project_df.iloc[first_line]['parsed_text']
         prompt_type = "short question"
         if type == PROMPT_TYPE.TWEET:
             prompt_type = "short tweet"
+        elif type == PROMPT_TYPE.SCIENCE_TWEET:
+            prompt_type = "short tweet in the style of Science Twitter"
+        elif type == PROMPT_TYPE.FACTOID:
+            prompt_type = "factoid"
+        elif type == PROMPT_TYPE.PRESS_RELEASE:
+            topic = self.prompt_text_field.get_text()
+            if len(topic) < 3:
+                topic = "the book Stampede Theory, by Philip Feldman"
+            prompt_type = "press release for {}".format(topic)
         context_str = "Create a {} that uses the following context\n\nContext:{}".format(prompt_type, s)
         for i in range(first_line+1, first_line+num_lines, 1):
             s = self.project_df.iloc[i]['parsed_text']
@@ -202,7 +220,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
         print("\tusing model {}".format(model))
 
         oae = OpenAIEmbeddings()
-        question = oae.get_response(context_str, max_tokens=256, model=model)
+        question = oae.get_response(context_str, max_tokens=512, model=model)
         if type == PROMPT_TYPE.QUESTION:
             self.prompt_text_field.set_text(question)
         else:
