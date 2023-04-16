@@ -49,6 +49,8 @@ class PROMPT_TYPE(Enum):
     LIST = "List"
     SEQUENCE = "Sequence"
     STORY = "Story"
+    QUESTION = "Question"
+    TWEET = "Tweet"
 
 
 class GPTContextFrame(GPT3GeneratorFrame):
@@ -117,8 +119,6 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.buttons = Buttons(frm, row, "Actions")
         b = self.buttons.add_button("Ask Question", self.new_prompt_callback, width=-1)
         ToolTip(b, "Gets answer from the GPT")
-        b = self.buttons.add_button("Auto-Q", self.auto_question_callback, width=-1)
-        ToolTip(b, "Randomly selects a level-1 summary and then creates a question based on it")
         b = self.buttons.add_button("Summarize", self.get_summmary_callback, width=-1)
         ToolTip(b, "Gets Summary from the GPT")
         b = self.buttons.add_button(PROMPT_TYPE.NARRATIVE.value, self.get_story_callback, width=-1)
@@ -129,8 +129,15 @@ class GPTContextFrame(GPT3GeneratorFrame):
         ToolTip(b, "Clears all the fields")
         b = self.buttons.add_button("Copy", self.clibpboard_callback, width=-1)
         ToolTip(b, "Copies engine, prompt, context, and response to clipboard")
-
+        row = self.buttons.get_next_row()
         self.so.add_object("context_buttons", self.buttons, Buttons)
+
+        self.auto_buttons = Buttons(frm, row, "Automatic")
+        b = self.auto_buttons.add_button("Question", self.auto_question_callback, width=-1)
+        ToolTip(b, "Randomly selects a level-1 summary and then creates a question based on it")
+        b = self.auto_buttons.add_button("Tweet", lambda:self.auto_question_callback(type=PROMPT_TYPE.TWEET), width=-1)
+        ToolTip(b, "Randomly selects a level-1 summary and then creates a tweet based on it")
+        row = self.auto_buttons.get_next_row()
 
     def set_project_dataframe(self, df:pd.DataFrame):
         self.project_df = df
@@ -170,7 +177,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
         answer = oae.get_response(full_question, model=model)
         self.response_text_field.set_text(answer)
 
-    def auto_question_callback(self):
+    def auto_question_callback(self, type = PROMPT_TYPE.QUESTION):
         print("GPTContextFrame.auto_question_callback()")
         if self.project_df.empty:
             tk.messagebox.showwarning("Warning!", "Please import data first")
@@ -180,11 +187,14 @@ class GPTContextFrame(GPT3GeneratorFrame):
         first_line = random.randrange(0, len(self.project_df.index)-num_lines)
 
         s = self.project_df.iloc[first_line]['parsed_text']
-        context_str = "Create a short question that uses the following context\n\nContext:{}".format(s)
+        prompt_type = "short question"
+        if type == PROMPT_TYPE.TWEET:
+            prompt_type = "short tweet"
+        context_str = "Create a {} that uses the following context\n\nContext:{}".format(prompt_type, s)
         for i in range(first_line+1, first_line+num_lines, 1):
             s = self.project_df.iloc[i]['parsed_text']
             context_str += "\n\n###\n\n{}".format(s)
-        context_str += "\n\nShort question:"
+        context_str += "\n\n{}:".format(prompt_type)
         # print("\tcontext = {}".format(context_str))
 
         generate_model_combo:TopicComboExt = self.so.get_object("generate_model_combo")
@@ -193,7 +203,10 @@ class GPTContextFrame(GPT3GeneratorFrame):
 
         oae = OpenAIEmbeddings()
         question = oae.get_response(context_str, max_tokens=256, model=model)
-        self.prompt_text_field.set_text(question)
+        if type == PROMPT_TYPE.QUESTION:
+            self.prompt_text_field.set_text(question)
+        else:
+            self.response_text_field.set_text(question)
         self.tab_control.select(0)
 
 
