@@ -216,7 +216,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
         context_str = "Create a {} that uses the following context\n\nContext:{}".format(prompt_type, s)
         for i in range(first_line+1, first_line+num_lines, 1):
             series = self.project_df.iloc[i]
-            print("series = {}".format(series))
+            # print("series = {}".format(series))
             s = series['parsed_text']
             context_str += "\n\n###\n\n{}".format(s)
             origin = series['origins']
