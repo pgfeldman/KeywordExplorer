@@ -1,5 +1,6 @@
 import random
 import re
+import ast
 import pandas as pd
 import tkinter as tk
 from tkinter import ttk
@@ -192,6 +193,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
             tk.messagebox.showwarning("Warning!", "Please import data first")
             return
 
+        oae = OpenAIEmbeddings()
         num_lines = 5
         first_line = random.randrange(0, len(self.project_df.index)-num_lines)
 
@@ -209,11 +211,22 @@ class GPTContextFrame(GPT3GeneratorFrame):
                 topic = "the book Stampede Theory, by Philip Feldman"
                 self.prompt_text_field.set_text(topic)
             prompt_type = "press release for {}".format(topic)
+
+        origins_list = []
         context_str = "Create a {} that uses the following context\n\nContext:{}".format(prompt_type, s)
         for i in range(first_line+1, first_line+num_lines, 1):
-            s = self.project_df.iloc[i]['parsed_text']
+            series = self.project_df.iloc[i]
+            print("series = {}".format(series))
+            s = series['parsed_text']
             context_str += "\n\n###\n\n{}".format(s)
+            origin = series['origins']
+            origins_list += origin
         context_str += "\n\n{}:".format(prompt_type)
+        self.context_text_field.clear()
+        self.context_text_field.set_text(context_str)
+        origins = oae.get_origins_text(origins_list)
+        self.sources_text_field.clear()
+        self.sources_text_field.set_text("\n\n".join(origins))
         # print("\tcontext = {}".format(context_str))
 
         generate_model_combo:TopicComboExt = self.so.get_object("generate_model_combo")
