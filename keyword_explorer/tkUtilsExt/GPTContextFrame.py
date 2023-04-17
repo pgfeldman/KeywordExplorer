@@ -207,6 +207,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
             topic = self.prompt_text_field.get_text()
             if len(topic) < 3:
                 topic = "the book Stampede Theory, by Philip Feldman"
+                self.prompt_text_field.set_text(topic)
             prompt_type = "press release for {}".format(topic)
         context_str = "Create a {} that uses the following context\n\nContext:{}".format(prompt_type, s)
         for i in range(first_line+1, first_line+num_lines, 1):
