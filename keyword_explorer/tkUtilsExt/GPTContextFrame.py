@@ -55,6 +55,7 @@ class PROMPT_TYPE(Enum):
     SCIENCE_TWEET = "Science Tweet"
     FACTOID = "Factoid"
     PRESS_RELEASE = "Press Release"
+    TWEET_THREAD = "Tweet Thread"
 
 
 class GPTContextFrame(GPT3GeneratorFrame):
@@ -143,6 +144,8 @@ class GPTContextFrame(GPT3GeneratorFrame):
         ToolTip(b, "Randomly selects a level-1 summary and then creates a tweet based on it")
         b = self.auto_buttons.add_button("Science Tweet", lambda:self.auto_question_callback(type=PROMPT_TYPE.SCIENCE_TWEET), width=-1)
         ToolTip(b, "Randomly selects a level-1 summary and then creates a tweet in the style of Science Twitter based on it")
+        b = self.auto_buttons.add_button("Thread", lambda:self.auto_question_callback(type=PROMPT_TYPE.TWEET_THREAD), width=-1)
+        ToolTip(b, "Randomly selects a level-1 summary and then creates a thread in the style of Science Twitter based on it")
         b = self.auto_buttons.add_button("Factoid", lambda:self.auto_question_callback(type=PROMPT_TYPE.FACTOID), width=-1)
         ToolTip(b, "Randomly selects a level-1 summary and then creates a factoid based on it")
         b = self.auto_buttons.add_button("Press release", lambda:self.auto_question_callback(type=PROMPT_TYPE.PRESS_RELEASE), width=-1)
@@ -205,6 +208,8 @@ class GPTContextFrame(GPT3GeneratorFrame):
             prompt_type = "short tweet in the style of Science Twitter"
         elif type == PROMPT_TYPE.FACTOID:
             prompt_type = "factoid"
+        elif type == PROMPT_TYPE.TWEET_THREAD:
+            prompt_type = "science Twitter thread"
         elif type == PROMPT_TYPE.PRESS_RELEASE:
             topic = self.prompt_text_field.get_text()
             if len(topic) < 3:
