@@ -226,9 +226,9 @@ class ContextExplorer(AppBase):
         if style_str == PROMPT_TYPE.NARRATIVE.value:
             self.generator_frame.prompt_text_field.set_text("Once upon a time there was a")
         elif style_str == PROMPT_TYPE.LIST.value:
-            self.generator_frame.prompt_text_field.set_text("Here's a list of items/concepts/phrases that are similar to '{}'|| first concept seed || second concept seed")
+            self.generator_frame.prompt_text_field.set_text("Produce a list of items/concepts/phrases that are similar to '{}'|| first concept seed || second concept seed")
         elif style_str == PROMPT_TYPE.SEQUENCE.value:
-            self.generator_frame.prompt_text_field.set_text("List the sequence of events that starts with {} and ends with {} || aaa && bbb ||| ccc &&& ddd")
+            self.generator_frame.prompt_text_field.set_text("Produce the sequence of events that starts with {} and ends with {} || aaa && bbb || ccc &&& ddd")
             print("Set Sequence regex")
 
     def load_project_callback(self, event = None):

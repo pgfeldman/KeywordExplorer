@@ -43,7 +43,11 @@ class OpenAIEmbeddings:
         return full_prompt
 
     def create_list(self, prompt:str, context:str) -> str:
-        full_prompt=f"Using the following context, produce a list, based on the prompt.\n\nContext: {context}\n\n---\n\n{prompt}\n1)"
+        full_prompt=f"Using the following context, {prompt}, based on the prompt.\n\nContext: {context}\n\n---\n\n{prompt}\n1)"
+        return full_prompt
+
+    def create_sequence(self, prompt:str, context:str) -> str:
+        full_prompt=f"Using the following context, {prompt}, based on the prompt.\n\nContext: {context}\n\n---\n\n{prompt}\n1)"
         return full_prompt
 
     def get_response(self, prompt, model=DEFAULT_TEXT_MODEL, max_tokens=256):
@@ -180,7 +184,7 @@ class OpenAIEmbeddings:
         """
         Create a context for a question by finding the most similar context from the dataframe
         """
-        print("Text: [{}]".format(question))
+        # print("Text: [{}]".format(question))
         # Get the embeddings for the question
         # return openai.Embedding.create(input = [text], model=engine)['data'][0]['embedding']
         #q_embeddings = openai.Embedding.create(input=question, engine='text-embedding-ada-002')['data'][0]['embedding']

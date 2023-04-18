@@ -281,9 +281,9 @@ class GPTContextFrame(GPT3GeneratorFrame):
     def get_gpt_list(self, oae:OpenAIEmbeddings, ctx_prompt:str, prompt:str, model:str):
         split_regex = re.compile(r"\|+")
         context, origins_list = oae.create_context(ctx_prompt, self.project_df)
-        full_prompt = prompt
+
         # split the prompt and iterate over the seeds to produce the total output:
-        query_list = split_regex.split(full_prompt)
+        query_list = split_regex.split(prompt)
         template_s = query_list[0].strip()
         response_dict = {}
         for i in range(1, len(query_list)):
@@ -303,27 +303,64 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.sources_text_field.clear()
         self.sources_text_field.set_text("\n\n".join(origins))
 
+        response_regex = re.compile(r"\d+\W+|\n\d+\W+")
         s = ""
+        val:str
         for key, val in response_dict.items():
-            s += "{}:\n{}\n".format(key, val)
+            s += "{}:\n".format(key)
+            val_list = response_regex.split(val)
+            for i in range(len(val_list)):
+                s += "\t[{}] {}\n".format(i, val_list[i])
         self.response_text_field.set_text(s)
 
     def get_gpt_sequence(self, oae:OpenAIEmbeddings, ctx_prompt:str, prompt:str, model:str):
+        print("GPTContextFrame.get_gpt_sequence()")
+        print("\tRaw prompt = {}".format(prompt))
+        print("\tContext prompt = {}".format(ctx_prompt))
+        print("\tModel = {}".format(model))
         context, origins_list = oae.create_context(ctx_prompt, self.project_df)
-        full_prompt = prompt
-        if self.ignore_context_cb.get_val() == False or len(ctx_prompt) < 3:
-            full_prompt = oae.create_sequence(prompt=prompt, context=context)
+        split_regex_1 = re.compile(r"\|+")
+        split_regex_2 = re.compile(r"&+")
+        query_list = split_regex_1.split(prompt)
+        template_s = query_list[0].strip()
+        response_dict = {}
+        for i in range(1, len(query_list)):
+            s = query_list[i].strip()
+            s_list = split_regex_2.split(s)
+            if len(s_list) == 2:
+                s1 = s_list[0].strip()
+                s2 = s_list[1].strip()
+                if ctx_prompt == prompt:
+                    print("\tGetting new context using '{}, {}' ".format(s1, s2))
+                    context, origins_list = oae.create_context("{}, {}".format(s1, s2), self.project_df)
+                query_str = template_s.format(s1, s2)
+                full_prompt = query_str
+                if self.ignore_context_cb.get_val() == False:
+                    full_prompt = oae.create_sequence(prompt=query_str, context=context)
+                print("\tSubmitting Sequence prompt: {}".format(full_prompt))
+                response = oae.get_response(full_prompt, max_tokens=256, model=model)
+
+                if len(response) > 3:
+                    print("\tStoring response")
+                    response_dict[query_str] = response
+
 
         self.context_text_field.clear()
-        self.context_text_field.set_text(full_prompt)
+        self.context_text_field.set_text(context)
 
         origins = oae.get_origins_text(origins_list)
         self.sources_text_field.clear()
         self.sources_text_field.set_text("\n\n".join(origins))
 
-        self.dp.dprint("Submitting Sequence prompt: {}".format(prompt))
-        answer = oae.get_response(full_prompt, max_tokens=256, model=model)
-        self.response_text_field.set_text(answer)
+        response_regex = re.compile(r"\d+\W+|\n\d+\W+")
+        s = ""
+        val:str
+        for key, val in response_dict.items():
+            s += "\n{}:\n".format(key)
+            val_list = response_regex.split(val)
+            for i in range(len(val_list)):
+                s += "\t[{}] {}\n".format(i, val_list[i])
+        self.response_text_field.set_text(s)
 
     def get_gpt_story(self, oae:OpenAIEmbeddings, ctx_prompt:str, prompt:str, model:str):
         context, origins_list = oae.create_context(ctx_prompt, self.project_df)
@@ -356,7 +393,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.response_text_field.clear()
         oae = OpenAIEmbeddings()
         ctx_prompt = self.context_prompt.get_text()
-        if self.prompt_query_cb.get_val():
+        if self.prompt_query_cb.get_val() or len(ctx_prompt) < 3:
             ctx_prompt = self.prompt_text_field.get_text()
 
         prompt = self.prompt_text_field.get_text()
