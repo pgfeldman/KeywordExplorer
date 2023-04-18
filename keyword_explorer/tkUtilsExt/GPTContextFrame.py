@@ -278,6 +278,70 @@ class GPTContextFrame(GPT3GeneratorFrame):
         answer = oae.get_response(full_prompt, max_tokens=256, model=model)
         self.response_text_field.set_text(answer)
 
+    def get_gpt_list(self, oae:OpenAIEmbeddings, ctx_prompt:str, prompt:str, model:str):
+        split_regex = re.compile(r"\|+")
+        context, origins_list = oae.create_context(ctx_prompt, self.project_df)
+        full_prompt = prompt
+        # split the prompt and iterate over the seeds to produce the total output:
+        query_list = split_regex.split(full_prompt)
+        template_s = query_list[0].strip()
+        response_dict = {}
+        for i in range(1, len(query_list)):
+            s = query_list[i].strip()
+            query_str = template_s.format(s)
+            full_prompt = query_str
+            self.dp.dprint("Submitting List prompt: {}".format(query_str))
+            if self.ignore_context_cb.get_val() == False:
+                full_prompt = oae.create_list(prompt=prompt, context=context)
+            response = oae.get_response(full_prompt, max_tokens=256, model=model)
+            response_dict[query_str] = response
+
+        self.context_text_field.clear()
+        self.context_text_field.set_text(full_prompt)
+
+        origins = oae.get_origins_text(origins_list)
+        self.sources_text_field.clear()
+        self.sources_text_field.set_text("\n\n".join(origins))
+
+        s = ""
+        for key, val in response_dict.items():
+            s += "{}:\n{}\n".format(key, val)
+        self.response_text_field.set_text(s)
+
+    def get_gpt_sequence(self, oae:OpenAIEmbeddings, ctx_prompt:str, prompt:str, model:str):
+        context, origins_list = oae.create_context(ctx_prompt, self.project_df)
+        full_prompt = prompt
+        if self.ignore_context_cb.get_val() == False or len(ctx_prompt) < 3:
+            full_prompt = oae.create_sequence(prompt=prompt, context=context)
+
+        self.context_text_field.clear()
+        self.context_text_field.set_text(full_prompt)
+
+        origins = oae.get_origins_text(origins_list)
+        self.sources_text_field.clear()
+        self.sources_text_field.set_text("\n\n".join(origins))
+
+        self.dp.dprint("Submitting Sequence prompt: {}".format(prompt))
+        answer = oae.get_response(full_prompt, max_tokens=256, model=model)
+        self.response_text_field.set_text(answer)
+
+    def get_gpt_story(self, oae:OpenAIEmbeddings, ctx_prompt:str, prompt:str, model:str):
+        context, origins_list = oae.create_context(ctx_prompt, self.project_df)
+        full_prompt = prompt
+        if self.ignore_context_cb.get_val() == False:
+            full_prompt = oae.create_narrative(prompt=prompt, context=context)
+
+        self.context_text_field.clear()
+        self.context_text_field.set_text(full_prompt)
+
+        origins = oae.get_origins_text(origins_list)
+        self.sources_text_field.clear()
+        self.sources_text_field.set_text("\n\n".join(origins))
+
+        self.dp.dprint("Submitting Story prompt: {}".format(prompt))
+        answer = oae.get_response(full_prompt, max_tokens=256, model=model)
+        self.response_text_field.set_text(answer)
+
     def get_story_callback(self):
         generate_model_combo:TopicComboExt = self.so.get_object("generate_model_combo")
         model = generate_model_combo.get_text()
@@ -294,38 +358,14 @@ class GPTContextFrame(GPT3GeneratorFrame):
         ctx_prompt = self.context_prompt.get_text()
         if self.prompt_query_cb.get_val():
             ctx_prompt = self.prompt_text_field.get_text()
-        context, origins_list = oae.create_context(ctx_prompt, self.project_df)
 
         prompt = self.prompt_text_field.get_text()
-        full_prompt = prompt
-        if self.ignore_context_cb.get_val() == False:
-            if prompt_type == PROMPT_TYPE.NARRATIVE.value:
-                full_prompt = oae.create_narrative(prompt=prompt, context=context)
-            elif prompt_type == PROMPT_TYPE.LIST.value:
-                split_regex = re.compile(r"\|+")
-                response_regex = re.compile(r"\d+\W+")
-                query_list = split_regex.split(full_prompt)
-                template_s = query_list[0].strip()
-                for i in range(1, len(query_list)):
-                    s = query_list[i].strip()
-                    query_str = template_s.format(s)
-                    print(query_str)
-                print("\t{} not enabled yet".format(prompt_type))
-                return
-            elif prompt_type == PROMPT_TYPE.SEQUENCE.value:
-                print("\t{} not enabled yet".format(prompt_type))
-                return
-
-        self.context_text_field.clear()
-        self.context_text_field.set_text(full_prompt)
-
-        origins = oae.get_origins_text(origins_list)
-        self.sources_text_field.clear()
-        self.sources_text_field.set_text("\n\n".join(origins))
-
-        self.dp.dprint("Submitting {} prompt: {}".format(prompt_type, prompt))
-        answer = oae.get_response(full_prompt, max_tokens=256, model=model)
-        self.response_text_field.set_text(answer)
+        if prompt_type == PROMPT_TYPE.NARRATIVE.value:
+            self.get_gpt_story(oae, ctx_prompt, prompt, model)
+        elif prompt_type == PROMPT_TYPE.LIST.value:
+            self.get_gpt_list(oae, ctx_prompt, prompt, model)
+        elif prompt_type == PROMPT_TYPE.SEQUENCE.value:
+            self.get_gpt_sequence(oae, ctx_prompt, prompt, model)
 
     def extend_callback(self):
         generate_model_combo:TopicComboExt = self.so.get_object("generate_model_combo")
