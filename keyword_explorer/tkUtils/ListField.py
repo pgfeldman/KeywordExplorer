@@ -1,5 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
+import inspect
+import re
+
 from typing import Union, List, Callable
 
 
@@ -12,15 +15,15 @@ class ListField:
     term_list = ["call", "me", "Ishmael"]
     tvar:tk.StringVar = None
     lvar:tk.StringVar = None
-    callback_fn:Callable = None
-    callback_fn2:Callable = None
+    lf_callback_fn:Callable = Union[None, Callable]
     sel_list:List
     last_selected:str = None
     static_list:bool = False
 
     def __init__(self, parent:'ttk.Frame', row:int, label:str, width:int = 20, height: int = 3, selectmode=tk.BROWSE, label_width:int=20, static_list:bool = False):
         self.static_list = static_list
-        self.callback_fn = None
+        self.lf_callback_fn = None
+        self.name = label
         self.sel_list = []
         self.last_selected = 'unset'
         self.tvar = tk.StringVar(value=self.term_list)
@@ -110,7 +113,15 @@ class ListField:
         return self.last_selected
 
     def set_callback(self, fn:Callable):
-        self.callback_fn = fn
+        self.lf_callback_fn = fn
+
+    def inspect(self):
+        fi:inspect.FrameInfo
+        count = 0
+        print("ListField.inspect()\n\tlabel: {}\n".format(self.name))
+        for fi in inspect.stack():
+            filename = re.split(r"(/)|(\\)", fi.filename)
+            print("\tCall stack[{}] = {}() (line {} in {})".format(count, fi.function, fi.lineno, filename[-1]))
 
     def on_selected(self, event:tk.Event):
         if not self.static_list:
@@ -123,5 +134,7 @@ class ListField:
                         self.tk_list.selection_clear(0, tk.END)
             self.sel_list = sel_list
 
-        if self.callback_fn != None:
-            self.callback_fn(event)
+        if self.lf_callback_fn != None:
+            print("ListField.on_selected()")
+            #self.inspect()
+            self.lf_callback_fn(event)

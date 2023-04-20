@@ -353,13 +353,16 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.sources_text_field.set_text("\n\n".join(origins))
 
         response_regex = re.compile(r"\d+\W+|\n\d+\W+")
+        response_regex = re.compile(r"\d+[):,.]+|\n+")
         s = ""
         val:str
         for key, val in response_dict.items():
             s += "\n{}:\n".format(key)
             val_list = response_regex.split(val)
             for i in range(len(val_list)):
-                s += "\t[{}] {}\n".format(i, val_list[i])
+                val_str = val_list[i].strip()
+                if len(val_str) > 2:
+                    s += "\t[{}] {}\n".format(i, val_str)
         self.response_text_field.set_text(s)
 
     def get_gpt_story(self, oae:OpenAIEmbeddings, ctx_prompt:str, prompt:str, model:str):

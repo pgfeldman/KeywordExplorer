@@ -5,25 +5,27 @@ from typing import List, Callable, Union
 import keyword_explorer.tkUtils.ConsoleDprint as DP
 
 class TopicComboExt():
-    tk_label = tk.Label
-    tk_entry = tk.Entry
-    tk_text = tk.Text
-    tk_combo = ttk.Combobox
+    name:str
+    tk_label:tk.Label
+    tk_entry:tk.Entry
+    tk_text:tk.Text
+    tk_combo:ttk.Combobox
     wrapper:tk.Frame
-    row = 0
+    row:int = 0
     col:int = 0
     combo_str_var:tk.StringVar
     combo_vals:List
     parent:'tk.Frame'
     dp:DP.ConsoleDprint
-    callback_fn:Union[None, Callable]
+    callback_fn:Callable
+    callback_exists:bool
     default_behavior:bool
     use_text_field:bool
 
     def __init__(self, parent:'tk.Frame', row:int, label:str, dprint:DP.ConsoleDprint,
                  entry_width:int = 30, combo_width:int = 30, label_width:int=20, use_text_field:bool = False):
         self.parent = parent
-
+        self.name = label
         self.set_dprint(dprint)
         self.row = row
         self.combo_str_var = tk.StringVar(value="Option 4")
@@ -31,6 +33,7 @@ class TopicComboExt():
         self.tk_label = ttk.Label(parent, text=label, width=label_width)
         self.use_text_field = use_text_field
         self.callback_fn = None
+        self.callback_exists = False
 
         self.wrapper = tk.Frame(parent)
         if self.use_text_field == True:
@@ -59,6 +62,7 @@ class TopicComboExt():
         self.tk_label.config(text = s)
 
     def set_callback(self, fn:Callable):
+        self.callback_exists = True
         self.callback_fn = fn
 
     def set_dprint(self, con:DP.ConsoleDprint):
@@ -98,7 +102,8 @@ class TopicComboExt():
         self.tk_combo['values'] = self.combo_vals
 
     def on_combobox_selected(self, event:tk.Event):
-        if self.callback_fn != None:
+        if self.callback_exists:
+            print("TopicComboExt.on_combobox_selected() name = {}".format(self.name))
             self.callback_fn(event)
         else:
             print("TopicCombo().on_combobox_selected: selected: {}".format(self.tk_combo.get()))

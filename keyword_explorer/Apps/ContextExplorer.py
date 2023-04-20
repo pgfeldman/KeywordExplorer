@@ -49,6 +49,7 @@ class ContextExplorer(AppBase):
     style_list:ListField
     action_buttons:Buttons
     action_buttons2:Buttons
+    param_buttons:Buttons
     experiment_id_list:List
 
 
@@ -69,7 +70,7 @@ class ContextExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "ContextExplorer"
-        self.app_version = "4.18.2023"
+        self.app_version = "4.20.2023"
         self.geom = (910, 790)
         self.oai = OpenAIComms()
         self.oae = OpenAIEmbeddings()
@@ -179,10 +180,16 @@ class ContextExplorer(AppBase):
         self.style_list.add_entry(PROMPT_TYPE.NARRATIVE.value)
         self.style_list.add_entry(PROMPT_TYPE.LIST.value)
         self.style_list.add_entry(PROMPT_TYPE.SEQUENCE.value)
-        self.style_list.set_callback(self.set_style_callback)
-        ToolTip(self.style_list.tk_list, "Creates a narrative or recursive context for generation - Not implemented")
+        # self.style_list.set_callback(self.set_style_callback)
+        ToolTip(self.style_list.tk_list, "Select the mode of behavior that the prompt will generate")
         row = self.style_list.get_next_row()
         self.style_list.tk_list.select_set(0)
+
+        self.param_buttons = Buttons(lf, row, 'Actions')
+        b = self.param_buttons.add_button("Set Style", self.set_style_callback)
+        ToolTip(b, "Selects the mode from the list above.\nA hack to avoid a list callback bug")
+        row = self.param_buttons.get_next_row()
+
 
     def build_generator_tab(self, tab: ttk.Frame, text_width:int, label_width:int):
         self.generator_frame.build_frame(tab, text_width, label_width)
@@ -215,7 +222,7 @@ class ContextExplorer(AppBase):
         ToolTip(b, "Loads new text into a project, splits into chunks and finds embeddings")
 
     def set_style_callback(self, event:tk.Event = None):
-        print("ContextExplorer.set_style_callback()")
+        print("ContextExplorer.set_style_callback(): event = {}".format(event))
         buttons:Buttons = self.so.get_object("context_buttons")
         style_str = self.style_list.get_selected()
         if style_str == "unset":
