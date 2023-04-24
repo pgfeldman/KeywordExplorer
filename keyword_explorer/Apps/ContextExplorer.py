@@ -6,7 +6,7 @@ from tkinter import ttk
 import tkinter.messagebox as message
 from datetime import datetime
 from tkinter import filedialog
-from matplotlib import pyplot as plt
+from enum import Enum
 import matplotlib.colors as mcolors
 
 import pandas as pd
@@ -29,6 +29,14 @@ from keyword_explorer.utils.ManifoldReduction import ManifoldReduction, Embedded
 from keyword_explorer.utils.SharedObjects import SharedObjects
 
 from typing import List, Dict
+
+class CONTEXT_TEMPLATE(Enum):
+    def __str__(self):
+        return str(self.value)
+
+    STORY = "Once upon a time there was"
+    LIST = "Produce a list of items/concepts/phrases that are similar to '{}'|| first concept seed || second concept seed"
+    SEQUENCE = "Produce the sequence of events that starts with '{}' and ends with '{}' || aaa && bbb || ccc && ddd"
 
 class ContextExplorer(AppBase):
     oai: OpenAIComms
@@ -231,11 +239,11 @@ class ContextExplorer(AppBase):
         buttons.change_button_label(PROMPT_TYPE.NARRATIVE.value, style_str)
         self.style_list.set_label("Style\n({})".format(style_str))
         if style_str == PROMPT_TYPE.NARRATIVE.value:
-            self.generator_frame.prompt_text_field.set_text("Once upon a time there was a")
+            self.generator_frame.prompt_text_field.set_text(CONTEXT_TEMPLATE.STORY.value)
         elif style_str == PROMPT_TYPE.LIST.value:
-            self.generator_frame.prompt_text_field.set_text("Produce a list of items/concepts/phrases that are similar to '{}'|| first concept seed || second concept seed")
+            self.generator_frame.prompt_text_field.set_text(CONTEXT_TEMPLATE.LIST.value)
         elif style_str == PROMPT_TYPE.SEQUENCE.value:
-            self.generator_frame.prompt_text_field.set_text("Produce the sequence of events that starts with '{}' and ends with '{}' || aaa && bbb || ccc && ddd")
+            self.generator_frame.prompt_text_field.set_text(CONTEXT_TEMPLATE.SEQUENCE.value)
             print("Set Sequence regex")
         self.set_narrative_name()
 
