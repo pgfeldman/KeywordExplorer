@@ -70,7 +70,7 @@ class ContextExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "ContextExplorer"
-        self.app_version = "4.20.2023"
+        self.app_version = "4.24.2023"
         self.geom = (910, 790)
         self.oai = OpenAIComms()
         self.oae = OpenAIEmbeddings()
@@ -185,7 +185,7 @@ class ContextExplorer(AppBase):
         row = self.style_list.get_next_row()
         self.style_list.tk_list.select_set(0)
 
-        self.param_buttons = Buttons(lf, row, 'Actions')
+        self.param_buttons = Buttons(lf, row, 'Actions', label_width=label_width)
         b = self.param_buttons.add_button("Set Style", self.set_style_callback)
         ToolTip(b, "Selects the mode from the list above.\nA hack to avoid a list callback bug")
         row = self.param_buttons.get_next_row()
@@ -235,8 +235,9 @@ class ContextExplorer(AppBase):
         elif style_str == PROMPT_TYPE.LIST.value:
             self.generator_frame.prompt_text_field.set_text("Produce a list of items/concepts/phrases that are similar to '{}'|| first concept seed || second concept seed")
         elif style_str == PROMPT_TYPE.SEQUENCE.value:
-            self.generator_frame.prompt_text_field.set_text("Produce the sequence of events that starts with {} and ends with {} || aaa && bbb || ccc &&& ddd")
+            self.generator_frame.prompt_text_field.set_text("Produce the sequence of events that starts with '{}' and ends with '{}' || aaa && bbb || ccc && ddd")
             print("Set Sequence regex")
+        self.set_narrative_name()
 
     def load_project_callback(self, event = None):
         print("load_project_callback")
@@ -257,7 +258,7 @@ class ContextExplorer(AppBase):
             self.experiment_id_list = []
             self.experiment_id = results[0]['id']
             self.experiment_field.set_text(" experiment {}: {}".format(self.experiment_id, s))
-            self.narrative_project_name_field.set_text(s)
+            self.set_narrative_name()
             self.target_group_field.set_text(l[1])
             # load up all the experiment id's
             for r in results:
@@ -396,17 +397,32 @@ class ContextExplorer(AppBase):
         self.narrative_project_name_field.clear()
         self.narrative_project_name_field.set_text(param_dict['narrative-name'])
 
-
+    def set_narrative_name(self):
+        name_str = self.experiment_combo.tk_combo.get()
+        buttons:Buttons = self.so.get_object("context_buttons")
+        style_str = buttons.get_button_label(PROMPT_TYPE.NARRATIVE.value)
+        s ="experiment {}: {}_{}".format(self.experiment_id, name_str, style_str)
+        self.narrative_project_name_field.set_text(s)
+        print("ContextExplorer.set_narrative_name(): [{}]".format(s))
 
     def save_to_narrative_maps_jason_callback(self, event = None):
         print("save_to_narrative_maps_callback")
         if self.experiment_id == -1:
             tk.messagebox.showwarning("Warning!", "Please create or select a database first")
             return
+        buttons:Buttons = self.so.get_object("context_buttons")
+        style_str = buttons.get_button_label(PROMPT_TYPE.NARRATIVE.value)
 
-        probe_str =  "{}".format(self.generator_frame.context_text_field.get_text())
+        probe_str =  "{}".format(self.generator_frame.prompt_text_field.get_text())
+        context_str =  "{}".format(self.generator_frame.context_text_field.get_text())
         name = self.narrative_project_name_field.get_text()
-        dict = {"probe_str": probe_str, "name":name}
+        type = self.style_list.get_selected()
+        regex_str = self.generator_frame.story_response_regex.pattern
+        if style_str == PROMPT_TYPE.LIST.value:
+            regex_str = self.generator_frame.list_response_regex.pattern
+        elif style_str == PROMPT_TYPE.SEQUENCE.value:
+            regex_str = self.generator_frame.sequence_response_regex.pattern
+        dict = {"probe_str": probe_str, "context":context_str, "name":name, "type":type, "regex_str":regex_str}
         self.save_experiment_json(dict)
 
     def load_file_callback(self, event = None):

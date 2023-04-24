@@ -17,16 +17,20 @@ from keyword_explorer.tkUtils.ToolTip import ToolTip
 from keyword_explorer.tkUtils.GPT3GeneratorFrame import GPT3GeneratorFrame, GPT3GeneratorSettings
 from keyword_explorer.OpenAI.OpenAIEmbeddings import OpenAIEmbeddings
 
-from typing import List, Dict, Callable
+from typing import List, Dict, Pattern
 
 class GPTContextSettings:
+    type: str
     prompt: str
     context_prompt:str
     keywords:str
-    def __init__(self, prompt = "unset", context_prompt = "unset", keywords = "unset"):
+    regex_str:str
+
+    def __init__(self, prompt = "unset", context_prompt = "unset", keywords = "unset", type = "unset", regex_str = "unset"):
         self.prompt = prompt
         self.context_prompt = context_prompt
         self.keywords = keywords
+        self.regex_str = regex_str
 
     def from_dict(self, d:Dict):
         if 'prompt' in d:
@@ -35,12 +39,18 @@ class GPTContextSettings:
             self.context_prompt = d['context_prompt']
         if 'keywords' in d:
             self.keywords = d['keywords']
+        if 'type' in d:
+            self.keywords = d['type']
+        if 'regex_str' in d:
+            self.keywords = d['regex_str']
 
 
     def to_dict(self) -> Dict:
         return {'prompt':self.prompt,
                 'context_prompt':self.context_prompt,
-                'keywords':self.keywords}
+                'keywords':self.keywords,
+                'type':self.type,
+                'regex_str':self.regex_str}
 
 class PROMPT_TYPE(Enum):
     def __str__(self):
@@ -67,11 +77,17 @@ class GPTContextFrame(GPT3GeneratorFrame):
     tab_control:ttk.Notebook
     buttons:Buttons
     project_df:pd.DataFrame
+    sequence_response_regex:Pattern
+    story_response_reges:Pattern
+    list_response_regex:Pattern
 
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.project_df = pd.DataFrame()
+        self.sequence_response_regex = re.compile(r"\d+[):,.]+|\n+")
+        self.list_response_regex = re.compile(r"\d+\W+|\n\d+\W+")
+        self.story_response_regex = re.compile(r"\n+")
 
     def build_frame(self, frm: ttk.Frame, text_width:int, label_width:int):
         row = 0
@@ -292,23 +308,22 @@ class GPTContextFrame(GPT3GeneratorFrame):
             full_prompt = query_str
             self.dp.dprint("Submitting List prompt: {}".format(query_str))
             if self.ignore_context_cb.get_val() == False:
-                full_prompt = oae.create_list(prompt=prompt, context=context)
+                full_prompt = oae.create_list(prompt=query_str, context=context)
             response = oae.get_response(full_prompt, max_tokens=256, model=model)
             response_dict[query_str] = response
 
         self.context_text_field.clear()
-        self.context_text_field.set_text(full_prompt)
+        self.context_text_field.set_text(context)
 
         origins = oae.get_origins_text(origins_list)
         self.sources_text_field.clear()
         self.sources_text_field.set_text("\n\n".join(origins))
 
-        response_regex = re.compile(r"\d+\W+|\n\d+\W+")
         s = ""
         val:str
         for key, val in response_dict.items():
             s += "{}:\n".format(key)
-            val_list = response_regex.split(val)
+            val_list = self.list_response_regex.split(val)
             for i in range(len(val_list)):
                 s += "\t[{}] {}\n".format(i, val_list[i])
         self.response_text_field.set_text(s)
@@ -352,13 +367,11 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.sources_text_field.clear()
         self.sources_text_field.set_text("\n\n".join(origins))
 
-        response_regex = re.compile(r"\d+\W+|\n\d+\W+")
-        response_regex = re.compile(r"\d+[):,.]+|\n+")
         s = ""
         val:str
         for key, val in response_dict.items():
             s += "\n{}:\n".format(key)
-            val_list = response_regex.split(val)
+            val_list = self.sequence_response_regex.split(val)
             for i in range(len(val_list)):
                 val_str = val_list[i].strip()
                 if len(val_str) > 2:
@@ -372,15 +385,21 @@ class GPTContextFrame(GPT3GeneratorFrame):
             full_prompt = oae.create_narrative(prompt=prompt, context=context)
 
         self.context_text_field.clear()
-        self.context_text_field.set_text(full_prompt)
+        self.context_text_field.set_text(context)
 
         origins = oae.get_origins_text(origins_list)
         self.sources_text_field.clear()
         self.sources_text_field.set_text("\n\n".join(origins))
 
         self.dp.dprint("Submitting Story prompt: {}".format(prompt))
-        answer = oae.get_response(full_prompt, max_tokens=256, model=model)
-        self.response_text_field.set_text(answer)
+        response = oae.get_response(full_prompt, max_tokens=256, model=model)
+        response_list = self.story_response_regex.split(response)
+        s = "{}".format(prompt)
+        for i in range(len(response_list)):
+            response = response_list[i]
+            s = "{}\n[P {}]: {}\n".format(s, i, response)
+        self.response_text_field.clear()
+        self.response_text_field.set_text(s)
 
     def get_story_callback(self):
         generate_model_combo:TopicComboExt = self.so.get_object("generate_model_combo")
