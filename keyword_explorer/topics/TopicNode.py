@@ -1,7 +1,8 @@
-from keyword_explorer.OpenAI.OpenAIComms import OpenAIComms
+from keyword_explorer.OpenAI.OpenAIComms import OpenAIComms, ChatUnit
 import openai.embeddings_utils as oaiu
 import numpy as np
 import pandas as pd
+import re
 
 from typing import List, Dict
 
@@ -10,6 +11,8 @@ class TopicNode:
     average_embedding:np.array
     known_good_topics_list:List
     known_good_embeddings_list:List
+    provisional_topics_list:List
+    provisional_embeddings_list:List
     reject_threshold:float
 
     oac:OpenAIComms
@@ -25,12 +28,14 @@ class TopicNode:
         # print("\t{}, {}".format(self.name, self.average_embedding))
         self.known_good_topics_list = [self.name]
         self.known_good_embeddings_list = [self.average_embedding]
+        self.provisional_embeddings_list = []
+        self.provisional_topics_list = []
 
     def tolist(self, a:np.array) -> List:
         return a.tolist()
 
     def add_known_good_list(self, topics:List):
-        print("TopicNode.add_know_good_list()")
+        print("TopicNode.add_known_good_list()")
         embd_list = self.oac.get_embedding_list(topics)
         for i in range(len(topics)):
             cur_topic = embd_list[i]['text']
@@ -55,9 +60,12 @@ class TopicNode:
         test_embed = d['embedding']
         dist_list = oaiu.distances_from_embeddings(self.tolist(self.average_embedding), [test_embed], distance_metric='cosine')
         dist:float = dist_list[0]
-        s = 'ACCEPT'
-        if dist > self.reject_threshold:
-            s = 'REJECT'
+        s = 'REJECT'
+        if dist < self.reject_threshold:
+            s = 'ACCEPT'
+            self.provisional_topics_list.append(test)
+            self.provisional_embeddings_list.append(test_embed)
+
         print("'{}' is {:.4f} away from '{}' {}".format(self.name, dist, test, s))
 
     def to_string(self) -> str:
@@ -67,11 +75,25 @@ class TopicNode:
         s += "\n\treject_threshold = {:.5f}".format(self.reject_threshold)
         return s
 
+def parse_to_list(to_parse:str, regex_str = r"\d+\W+|\n+\d+\W+", min_chars = 2) -> List:
+    split_regex = re.compile(regex_str)
+    l = split_regex.split(to_parse)
+    l2 = []
+    for s in l:
+        if len(s) > min_chars:
+            l2.append(s)
+    return l2
+
 
 def main():
     oac = OpenAIComms()
+    query = 'vaccines cause autism'
+    prompt = "Produce a list of the 5 most commonly-heard phrases that mean the same thing as '{}'\nList:\n".format(query)
+    cu = ChatUnit(prompt)
+    response = oac.get_chat_complete([cu], engine="gpt-4-0314")
+    known_good = parse_to_list(response)
 
-    known_good = ["autism is caused by vaccines", "autism is caused by the vax", "the vax cause autism"]
+    # known_good = ["autism is caused by vaccines", "autism is caused by the vax", "the vax cause autism"]
     tn = TopicNode("vaccines cause autism", oac)
     tn.add_known_good_list(known_good)
     tn.test_add_topic("the cause for autism is unknown")

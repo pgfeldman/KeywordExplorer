@@ -14,7 +14,7 @@ class CHAT_ROLES(Enum):
 
 class ChatUnit:
     roles:CHAT_ROLES
-    role:str
+    role:CHAT_ROLES
     content:str
 
     def __init__(self, content:str, role:CHAT_ROLES=CHAT_ROLES.USER):
