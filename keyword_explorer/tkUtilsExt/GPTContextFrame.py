@@ -213,7 +213,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
             return
 
         oae = OpenAIEmbeddings()
-        num_lines = 5
+        num_lines = 10
         first_line = random.randrange(0, len(self.project_df.index)-num_lines)
 
         s = self.project_df.iloc[first_line]['parsed_text']
