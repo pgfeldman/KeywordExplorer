@@ -70,10 +70,10 @@ class TopicNode:
             s = 'ACCEPT'
             self.provisional_topics_list.append(test)
             self.provisional_embeddings_list.append(test_embed)
-            print("'{}' is {:.4f} away from '{}' {}".format(self.name, dist, test, s))
+            # print("'{}' is {:.4f} away from '{}' {}".format(self.name, dist, test, s))
             return True
 
-        print("'{}' is {:.4f} away from '{}' {}".format(self.name, dist, test, s))
+        # print("'{}' is {:.4f} away from '{}' {}".format(self.name, dist, test, s))
         return False
 
     def to_string(self) -> str:
@@ -115,33 +115,45 @@ def parse_to_list(to_parse:str, regex_str = r"\d+\W+|\n+\d+\W+", min_chars = 2) 
 
 
 def main():
+    engine="gpt-4-0314"
     # initiate the stack with
     query_q = deque(['vaccines cause autism'])
     oac = OpenAIComms()
 
-    max_depth = 2
-    depth = 0
+    max_character_length = 40
+    max_topics = 10
+    topic_count = 0
     node_list = []
     while len(query_q) > 0:
+        print("Topic count = {}".format(topic_count))
         query = query_q.pop()
-        same_prompt = "Produce a list of the 5 most commonly-heard phrases that mean the same thing as '{}'\nList:\n".format(query)
-
+        same_prompt = "Produce a list of the 5 most common phrases that mean the same thing as '{}'. Use concise language.\nList:\n".format(query)
+        print("\tPrompt = {}".format(same_prompt))
         cu = ChatUnit(same_prompt)
-        response = oac.get_chat_complete([cu], engine="gpt-4-0314")
+        response = oac.get_chat_complete([cu], engine=engine)
         known_good = parse_to_list(response)
+        print("\tcreating node '{}' with known good = {}".format(query, known_good))
         source_node = TopicNode(query, oac)
         source_node.add_known_good_list(known_good)
         node_list.append(source_node)
 
-        related_prompt = "Produce a list of 5 concepts that are similar to '{}'\nList:\n".format(query)
+        related_prompt = "Produce a list of 5 concepts that are similar to '{}'. Use concise language.\nList:\n".format(query)
+        print("\tPrompt = {}".format(related_prompt))
         cu = ChatUnit(related_prompt)
-        response = oac.get_chat_complete([cu], engine="gpt-4-0314")
+        response = oac.get_chat_complete([cu], engine=engine)
         related_list = parse_to_list(response)
+        print("\trelated list = {}".format(related_list))
+
 
         # look through all the responses
         s:str
         tn:TopicNode
         for s in related_list:
+            if len(s) > max_character_length:
+                print("\tSkipping '{}' (exceeds {} chars) ".format(s, max_character_length))
+                continue
+
+            print("\ttesting '{}'".format(s))
             good_match = False
             for tn in node_list:
                 belongs = tn.test_add_topic(s)
@@ -154,14 +166,15 @@ def main():
                     break
             if not good_match:
                 query_q.append(s)
-                print("Adding {} to queue")
-        depth += 1
-        if depth > max_depth:
+                print("\t\tAdding '{}' to queue".format(s))
+        topic_count += 1
+        if topic_count >= max_topics:
             break
 
     #print out what we have
+    print("pending nodes: {}".format(node_list))
     for tn in node_list:
-        print(tn.to_string())
+        print("\n{}\n".format(tn.to_string()))
 
 
 
