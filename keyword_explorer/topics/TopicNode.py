@@ -81,6 +81,8 @@ class TopicNode:
         for topic in self.known_good_topics_list:
             s += "\n\t'{}'".format(topic)
         s += "\n\treject_threshold = {:.5f}".format(self.reject_threshold)
+        s += "\n\tInbound links = {}".format(len(self.inbound_node_list))
+        s += "\n\tOutbound links = {}".format(len(self.outbound_node_list))
         return s
 
 class NodeLink:
@@ -137,13 +139,12 @@ def main():
         source_node.add_known_good_list(known_good)
         node_list.append(source_node)
 
-        related_prompt = "Produce a list of 5 concepts that are similar to '{}'. Use concise language.\nList:\n".format(query)
+        related_prompt = "Produce a list of 5 concepts that are similar to '{}'. Use concise language (Less than 10 words).\nList:\n".format(query)
         print("\tPrompt = {}".format(related_prompt))
         cu = ChatUnit(related_prompt)
         response = oac.get_chat_complete([cu], engine=engine)
         related_list = parse_to_list(response)
         print("\trelated list = {}".format(related_list))
-
 
         # look through all the responses
         s:str
@@ -172,7 +173,7 @@ def main():
             break
 
     #print out what we have
-    print("pending nodes: {}".format(node_list))
+    print("pending nodes: {}".format(query_q))
     for tn in node_list:
         print("\n{}\n".format(tn.to_string()))
 
