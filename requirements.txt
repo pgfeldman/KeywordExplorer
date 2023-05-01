@@ -6,6 +6,7 @@ scikit-learn
 requests
 wikipedia
 transformers
+openai[embeddings]
 openai
 networkx
 tkinterweb
