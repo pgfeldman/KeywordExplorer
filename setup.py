@@ -24,13 +24,16 @@ Full documentation is available at https://github.com/pgfeldman/KeywordExplorer#
 
 setup(
     name='keyword_explorer',
-    version= "0.43.alpha",
+    version= "0.5.alpha",
     packages=['keyword_explorer',
               'keyword_explorer.utils',
               'keyword_explorer.TwitterV2',
               'keyword_explorer.mastodon',
               'keyword_explorer.tkUtils',
+              'keyword_explorer.tkUtilsExt',
               'keyword_explorer.OpenAI',
+              'keyword_explorer.Panda3D',
+              'keyword_explorer.huggingface',
               'keyword_explorer.Apps'],
     url='https://github.com/pgfeldman/KeywordExplorer',
     license='MIT',
