@@ -46,7 +46,7 @@ class AppBase(tk.Tk):
 
     def setup_app(self):
         self.app_name = "AppBase"
-        self.app_version = "3.10.2022"
+        self.app_version = "1.27.2023"
         self.geom = (600, 150)
 
 
