@@ -12,7 +12,6 @@ networkx
 tkinterweb
 PyMySQL
 python-dateutil
-sklearn~=0.0
 tensorflow
 tensorflow-gpu
 panda3d
