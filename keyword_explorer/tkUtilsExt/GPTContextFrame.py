@@ -203,7 +203,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.sources_text_field.set_text("\n\n".join(origins))
 
         self.dp.dprint("Submitting Question: {}".format(question))
-        answer = oae.get_response(full_question, model=model)
+        answer = oae.get_response(full_question, model=model, max_tokens=512)
         self.response_text_field.set_text(answer)
 
     def auto_question_callback(self, type = PROMPT_TYPE.QUESTION):
