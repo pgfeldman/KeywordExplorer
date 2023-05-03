@@ -257,7 +257,8 @@ class GPTContextFrame(GPT3GeneratorFrame):
         oae = OpenAIEmbeddings()
         question = oae.get_response(context_str, max_tokens=512, model=model)
         if type == PROMPT_TYPE.QUESTION:
-            self.prompt_text_field.set_text(question)
+            self.context_prompt.set_text(question)
+            self.prompt_text_field.set_text("{}. Use a seventh grade vocabulary".format(question))
         else:
             self.response_text_field.set_text(question)
         self.tab_control.select(0)
