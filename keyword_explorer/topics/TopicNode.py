@@ -120,6 +120,7 @@ def main():
     engine="gpt-4-0314"
     # initiate the stack with
     query_q = deque(['vaccines cause autism'])
+    query_domain = 'conspiracy theories'
     oac = OpenAIComms()
 
     max_character_length = 40
@@ -129,7 +130,7 @@ def main():
     while len(query_q) > 0:
         print("Topic count = {}".format(topic_count))
         query = query_q.pop()
-        same_prompt = "Produce a list of the 5 most common phrases that mean the same thing as '{}'. Use concise language.\nList:\n".format(query)
+        same_prompt = "Produce a list of the 5 most common {} that mean the same thing as '{}'. Use concise language.\nList:\n".format(query_domain, query)
         print("\tPrompt = {}".format(same_prompt))
         cu = ChatUnit(same_prompt)
         response = oac.get_chat_complete([cu], engine=engine)
@@ -139,7 +140,7 @@ def main():
         source_node.add_known_good_list(known_good)
         node_list.append(source_node)
 
-        related_prompt = "Produce a list of 5 concepts that are similar to '{}'. Use concise language (Less than 10 words).\nList:\n".format(query)
+        related_prompt = "Produce a list of 5 {} that are similar to '{}'. Use concise language (Less than 10 words).\nList:\n".format(query_domain, query)
         print("\tPrompt = {}".format(related_prompt))
         cu = ChatUnit(related_prompt)
         response = oac.get_chat_complete([cu], engine=engine)

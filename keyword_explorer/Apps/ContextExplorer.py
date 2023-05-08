@@ -225,7 +225,7 @@ class ContextExplorer(AppBase):
 
         self.action_buttons2 = Buttons(tab, row, "Actions")
         b = self.action_buttons2.add_button("Test", self.test_file_callback, width=-1)
-        ToolTip(b, "Performs a small test on 100 lines of text and does not save to DB")
+        ToolTip(b, "Performs a small test on 10 lines of text and does not save to DB")
         b = self.action_buttons2.add_button("Load File", self.load_file_callback, width=-1)
         ToolTip(b, "Loads new text into a project, splits into chunks and finds embeddings")
 
@@ -474,7 +474,7 @@ class ContextExplorer(AppBase):
             return
         result = filedialog.askopenfilename(filetypes=(("Text files", "*.txt"),("All Files", "*.*")), title="Load text file")
         s:str
-        num_rows = 100
+        num_rows = 10
         if result:
             s_list = self.oae.parse_text_file(result, r_str=regex_str)
             # build a proxy db results List

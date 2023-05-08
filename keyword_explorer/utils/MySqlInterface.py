@@ -87,14 +87,11 @@ class MySqlInterface:
 
 
 if __name__ == '__main__':
-    msi = MySqlInterface("root", "twitter_v2")
-    sql = "insert into table_experiment (name, date) values (%s, %s)"
-    values = ("Test1", datetime.now())
-    result = msi.write_sql_values_get_row(sql, values)
-    print(result)
-    # sql = "select * from post_view ORDER BY post_time;"
-    # sql = "select topic_id, forum_id, topic_title from phpbb_topics"
-    # print("{}".format(msi.read_data(sql)))
+    msi = MySqlInterface("root", "gpt_summary")
+    sql = "describe table_parsed_text"
+    result = msi.read_data(sql)
+    for d in result:
+        print(d)
     msi.close()
 
 '''
