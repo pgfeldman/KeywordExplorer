@@ -394,9 +394,12 @@ def war_elephants_example():
     filename = "operators.graphml"
     ng.to_graphml(filename, graph_creator="phil", node_attributes=['type'])
 
+    stats(ng, "War Elephants", 100)
+    plt.show()
+
 print("\n----------------------\n")
 
 if __name__ == '__main__':
-    chess_example()
+    # chess_example()
     # country_example()
-    # war_elephants_example()
+    war_elephants_example()

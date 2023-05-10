@@ -23,7 +23,7 @@ class TopicNode:
     def __init__(self, name:str, oac:OpenAIComms):
         print("TopicNode.__init__()")
         self.reject_threshold = 0.1
-        self.name = name
+        self.name = name.strip()
         self.oac = oac
         embd_list = self.oac.get_embedding_list([self.name])
         d = embd_list[0]
@@ -39,27 +39,53 @@ class TopicNode:
     def tolist(self, a:np.array) -> List:
         return a.tolist()
 
+    def remove_outliers(self, data:np.ndarray):
+        import numpy as np
+
+        q1 = np.percentile(data, 25)
+        q3 = np.percentile(data, 75)
+        iqr = q3 - q1
+
+        lower_bound = q1 - 1.5 * iqr
+        upper_bound = q3 + 1.5 * iqr
+
+        return [x for x in data if lower_bound <= x <= upper_bound]
+
     def add_known_good_list(self, topics:List):
         print("TopicNode.add_known_good_list()")
         embd_list = self.oac.get_embedding_list(topics)
+        x:Dict
+        dist_array = np.array([x['embedding'] for x in embd_list])
+        average_embedding = np.average(dist_array, axis=0)
+        dists = np.array(oaiu.distances_from_embeddings(self.tolist(average_embedding), self.tolist(dist_array), distance_metric='cosine'))
+        a = np.array(dists)
+        no_outlier_list = np.array(self.remove_outliers(a))
+        self.reject_threshold = no_outlier_list.max()*2.0
+        print("\t[{}] reject threshold = {:.4f} dists = {}".format(self.name, self.reject_threshold, dists))
+
         for i in range(len(topics)):
             cur_topic = embd_list[i]['text']
             cur_embed = embd_list[i]['embedding']
+            cur_dist = dists[i]
             # print("cur_topic = {}".format(cur_topic))
             # print("cur_embed = {}".format(cur_embed))
-            self.known_good_topics_list.append(cur_topic)
-            self.known_good_embeddings_list.append(cur_embed)
+            if cur_dist < self.reject_threshold:
+                self.known_good_topics_list.append(cur_topic)
+                self.known_good_embeddings_list.append(cur_embed)
+            else:
+                print("\t[{}] is an outlier. Not adding to [{}] known goodlist ".format(cur_topic, self.name))
 
         a = np.array(self.known_good_embeddings_list)
         self.average_embedding = np.average(a, axis=0)
         # print("average embedding = {}".format(self.average_embedding))
-        dists = np.array(oaiu.distances_from_embeddings(self.tolist(self.average_embedding), self.known_good_embeddings_list, distance_metric='cosine'))
-        a = np.array(dists)
-        self.reject_threshold = a.max()*2.0
-        print("\treject threshold = {:.4f} dists = {}".format(self.reject_threshold, dists))
+        # dists = np.array(oaiu.distances_from_embeddings(self.tolist(self.average_embedding), self.known_good_embeddings_list, distance_metric='cosine'))
+        # a = np.array(dists)
+        # self.reject_threshold = a.max()*2.0
+        # print("\treject threshold = {:.4f} dists = {}".format(self.reject_threshold, dists))
 
 
     def test_add_topic(self, test:str) -> bool:
+        test = test.strip()
         embd_list = self.oac.get_embedding_list([test])
         d = embd_list[0]
         test_embed = d['embedding']
@@ -105,14 +131,13 @@ class NodeLink:
             return True
         return False
 
-def parse_to_list(to_parse:str, regex_str = r"\d+\W+|\n+\d+\W+", min_chars = 2) -> List:
-    split_regex = re.compile(regex_str)
-    l = split_regex.split(to_parse)
-    l2 = []
-    for s in l:
-        if len(s) > min_chars:
-            l2.append(s)
-    return l2
+def parse_to_list(to_parse:str, regex_str = r"(\n\d+[\): .])|(\d[\):.])") -> List:
+    pattern = re.compile(regex_str)
+    result = pattern.split(to_parse)
+    # Filter out the items that match the regex pattern
+    item:str
+    result = [item.strip() for item in result if item and not pattern.match(item)]
+    return result
 
 
 
@@ -120,7 +145,6 @@ def main():
     engine="gpt-4-0314"
     # initiate the stack with
     query_q = deque(['vaccines cause autism'])
-    query_domain = 'conspiracy theories'
     oac = OpenAIComms()
 
     max_character_length = 40
@@ -128,19 +152,20 @@ def main():
     topic_count = 0
     node_list = []
     while len(query_q) > 0:
-        print("Topic count = {}".format(topic_count))
+        print("\nTopic count = {}".format(topic_count))
         query = query_q.pop()
-        same_prompt = "Produce a list of the 5 most common {} that mean the same thing as '{}'. Use concise language.\nList:\n".format(query_domain, query)
+        same_prompt = "Produce a list of the 5 most common phrases that mean the same thing as '{}'. Use concise language (10 words or less).\nList:\n".format(query)
         print("\tPrompt = {}".format(same_prompt))
         cu = ChatUnit(same_prompt)
         response = oac.get_chat_complete([cu], engine=engine)
+        print("\tRaw response = {}\n".format(response))
         known_good = parse_to_list(response)
         print("\tcreating node '{}' with known good = {}".format(query, known_good))
         source_node = TopicNode(query, oac)
         source_node.add_known_good_list(known_good)
         node_list.append(source_node)
 
-        related_prompt = "Produce a list of 5 {} that are similar to '{}'. Use concise language (Less than 10 words).\nList:\n".format(query_domain, query)
+        related_prompt = "Produce a list of 5 conspiracy theories that are likely to be believed by the same people who believe '{}'. Use concise language (10 words or less).\nList:\n".format(query)
         print("\tPrompt = {}".format(related_prompt))
         cu = ChatUnit(related_prompt)
         response = oac.get_chat_complete([cu], engine=engine)
@@ -174,7 +199,7 @@ def main():
             break
 
     #print out what we have
-    print("pending nodes: {}".format(query_q))
+    print("\npending nodes: {}".format(query_q))
     for tn in node_list:
         print("\n{}\n".format(tn.to_string()))
 
