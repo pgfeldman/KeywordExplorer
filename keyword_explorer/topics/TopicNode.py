@@ -1,5 +1,7 @@
 from keyword_explorer.OpenAI.OpenAIComms import OpenAIComms, ChatUnit
+from keyword_explorer.utils.NetworkxGraphing import NetworkxGraphing
 import openai.embeddings_utils as oaiu
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import re
@@ -39,11 +41,11 @@ class TopicNode:
     def tolist(self, a:np.array) -> List:
         return a.tolist()
 
-    def remove_outliers(self, data:np.ndarray):
+    def remove_outliers(self, data:np.ndarray, low_pct:float = 0.33, high_pct = 0.66):
         import numpy as np
 
-        q1 = np.percentile(data, 25)
-        q3 = np.percentile(data, 75)
+        q1 = np.percentile(data, low_pct)
+        q3 = np.percentile(data, high_pct)
         iqr = q3 - q1
 
         lower_bound = q1 - 1.5 * iqr
@@ -108,7 +110,11 @@ class TopicNode:
             s += "\n\t'{}'".format(topic)
         s += "\n\treject_threshold = {:.5f}".format(self.reject_threshold)
         s += "\n\tInbound links = {}".format(len(self.inbound_node_list))
+        for tl in self.inbound_node_list:
+            s += "\n\t\t{}".format(tl.to_string())
         s += "\n\tOutbound links = {}".format(len(self.outbound_node_list))
+        for tl in self.outbound_node_list:
+            s += "\n\t\t{}".format(tl.to_string())
         return s
 
 class NodeLink:
@@ -131,7 +137,10 @@ class NodeLink:
             return True
         return False
 
-def parse_to_list(to_parse:str, regex_str = r"(\n\d+[\): .])|(\d[\):.])") -> List:
+    def to_string(self) -> str:
+        return "[{}] -> [{}]".format(self.source.name, self.target.name)
+
+def parse_to_list(to_parse:str, regex_str = r"(\n\d+[\): \.])|^(\d[\):\.])") -> List:
     pattern = re.compile(regex_str)
     result = pattern.split(to_parse)
     # Filter out the items that match the regex pattern
@@ -141,21 +150,21 @@ def parse_to_list(to_parse:str, regex_str = r"(\n\d+[\): .])|(\d[\):.])") -> Lis
 
 
 
-def main():
+def create_topics() -> List:
     engine="gpt-4-0314"
     # initiate the stack with
     query_q = deque(['vaccines cause autism'])
     oac = OpenAIComms()
 
-    max_character_length = 40
-    max_topics = 10
+    max_character_length = 50
+    max_topics = 15
     topic_count = 0
     node_list = []
     while len(query_q) > 0:
         print("\nTopic count = {}".format(topic_count))
         query = query_q.pop()
         same_prompt = "Produce a list of the 5 most common phrases that mean the same thing as '{}'. Use concise language (10 words or less).\nList:\n".format(query)
-        print("\tPrompt = {}".format(same_prompt))
+        print("\nPrompt = {}".format(same_prompt))
         cu = ChatUnit(same_prompt)
         response = oac.get_chat_complete([cu], engine=engine)
         print("\tRaw response = {}\n".format(response))
@@ -174,7 +183,6 @@ def main():
 
         # look through all the responses
         s:str
-        tn:TopicNode
         for s in related_list:
             if len(s) > max_character_length:
                 print("\tSkipping '{}' (exceeds {} chars) ".format(s, max_character_length))
@@ -182,13 +190,15 @@ def main():
 
             print("\ttesting '{}'".format(s))
             good_match = False
-            for tn in node_list:
-                belongs = tn.test_add_topic(s)
+            target_node:TopicNode
+            for target_node in node_list:
+                belongs = target_node.test_add_topic(s)
                 if belongs:
-                    if tn != source_node:
-                        nl = NodeLink(source_node, tn)
+                    if target_node != source_node:
+                        nl = NodeLink(source_node, target_node)
                         source_node.outbound_node_list.append(nl)
-                        tn.inbound_node_list.append(nl)
+                        target_node.inbound_node_list.append(nl)
+                        print("\t\tConnecting {}".format(nl.to_string()))
                     good_match = True
                     break
             if not good_match:
@@ -199,11 +209,31 @@ def main():
             break
 
     #print out what we have
-    print("\npending nodes: {}".format(query_q))
+    print("\nUnhandled topics: {}".format(query_q))
+
+
+    print("\nNode details ({} TopicNodes)".format(len(node_list)))
+    for topic_node in node_list:
+        print("\n{}\n".format(topic_node.to_string()))
+
+    return node_list
+
+def main():
+    node_list = create_topics()
+    ng = NetworkxGraphing(name="Conspiracy", creator="Phil")
+    tn:TopicNode
+    nl:NodeLink
     for tn in node_list:
-        print("\n{}\n".format(tn.to_string()))
+        for nl in tn.inbound_node_list:
+            ng.add_connected_nodes(nl.source.name, nl.target.name)
+        for nl in tn.outbound_node_list:
+            ng.add_connected_nodes(nl.source.name, nl.target.name)
 
+    ng.draw("Conspiracy", draw_legend=False, do_show=False, scalar=10)
+    plt.show()
 
+    filename = "topicnode_conspiracy.graphml"
+    ng.to_gml(filename, graph_creator="phil", node_attributes=['weight'])
 
 if __name__ == "__main__":
     main()
