@@ -154,6 +154,8 @@ class AppBase(tk.Tk):
             s=s+j
         return s
 
+
+
     def log_action(self, task:str, row_info:Dict, mode:str = "a"):
         with open(self.logfile, mode, encoding="utf-8") as fio:
             dt = datetime.now()

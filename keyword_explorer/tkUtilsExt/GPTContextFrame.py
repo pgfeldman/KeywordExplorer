@@ -204,6 +204,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
 
         self.dp.dprint("Submitting Question: {}".format(question))
         answer = oae.get_response(full_question, model=model, max_tokens=512)
+        answer = oae.tk_filter_string(answer)
         self.response_text_field.set_text(answer)
 
     def auto_question_callback(self, type = PROMPT_TYPE.QUESTION):
@@ -256,6 +257,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
 
         oae = OpenAIEmbeddings()
         question = oae.get_response(context_str, max_tokens=512, model=model)
+        question = oae.tk_filter_string(question)
         if type == PROMPT_TYPE.QUESTION:
             self.context_prompt.set_text(question)
             self.prompt_text_field.set_text("{}. Use a seventh grade vocabulary".format(question))

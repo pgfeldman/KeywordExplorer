@@ -441,6 +441,20 @@ class OpenAIEmbeddings:
     def close_db(self):
         self.msi.close()
 
+    def tk_filter_string(self, input_string:str) -> str:
+        """
+        Filters the input string to remove characters outside the allowed range for Tkinter (U+0000 to U+FFFF).
+
+        Args:
+        input_string (str): The input string containing the characters to be filtered.
+
+        Returns:
+        str: A new string with disallowed characters removed.
+        """
+        allowed_range = range(0x0000, 0xFFFF + 1)
+        filtered_string = ''.join([c for c in input_string if ord(c) in allowed_range])
+        return filtered_string
+
 
 def store_embeddings_main(text_name:str, group_name:str, file_str:str):
     oae = OpenAIEmbeddings()
