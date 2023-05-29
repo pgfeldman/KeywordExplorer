@@ -308,7 +308,7 @@ def chat_main():
 
 
     print("\navailable text models:")
-    lm = oai.list_models(exclude_list = ["whisper", "embed", "similarity", "code", "edit", "search", "audio", "instruct", "2020", "if", "insert"])
+    lm = oai.list_models(exclude_list = ["whisper", "embed", "similarity", "code", "edit", "search", "audio", "2020", "if", "insert"])
     for m in sorted(lm):
         print(m)
 

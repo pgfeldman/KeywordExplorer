@@ -58,7 +58,7 @@ def add_markers(raw:str) -> str:
 
 def find_patterns(input_string) -> [str, List]:
     # pattern = r"\(source \d+\)\."
-    pattern = r"\(source\s+\d+(,\s+\d+)*\)\."
+    pattern = r"\(source\s+\d+(,\s+\d+)*\)\.*"
     modified_string = re.sub(pattern, ".", input_string)
     numbers_list = re.findall(r"\d+", input_string)
     numbers_list = [int(num) for num in numbers_list]
@@ -76,8 +76,14 @@ def evaluate_response(test_list:List) -> float:
 
 
 def main():
-    engine = "gpt-4-0314"
-    engine = "gpt-3.5-turbo-0301"
+    # engine = "gpt-4-0314"
+    # engine = "gpt-3.5-turbo-0301"
+    # engine = "gpt-4"
+    # engine = "gpt-3.5-turbo"
+    # engine = "text-davinci-003"
+    # engine = "davinci-instruct-beta"
+    engine = "curie-instruct-beta"
+
     oac = OpenAIComms()
     print("converting context")
     cooked_context = add_markers(raw_context)
