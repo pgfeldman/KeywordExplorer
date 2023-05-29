@@ -85,7 +85,8 @@ def main():
     engine = "curie-instruct-beta"
 
     oac = OpenAIComms()
-    print("converting context")
+    print("converting context {} periods".format(len(raw_context.split("."))))
+    return
     cooked_context = add_markers(raw_context)
     print("index_list = {}".format(index_list))
 
