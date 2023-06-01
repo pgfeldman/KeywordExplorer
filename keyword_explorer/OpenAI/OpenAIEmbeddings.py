@@ -276,15 +276,22 @@ class OpenAIEmbeddings:
         count = 0
         level = 1
         summary_count = 0
+        old_summary = "unset"
         while count < num_lines:
             d = self.build_text_to_summarize(results, count, words_to_summarize)
             # run the query and store the result. Update the parsed text table with the summary id
             summary = self.oac.get_prompt_result_params(d['query'], engine=engine, temperature=0, presence_penalty=0.8, frequency_penalty=0, max_tokens=max_tokens)
+            if summary == old_summary:
+                print("OpenAIEmbeddings.summarize_raw_text() Same summary error, returning early!")
+                print("\t{}".format(d))
+                return summary_count
+
             sql = "insert into table_summary_text (source, level, summary_text, origins) values (%s, %s, %s, %s)"
             vals = (project_id, level, summary, str(d['origins']))
             row_id = self.msi.write_sql_values_get_row(sql, vals)
             summary_count += 1
-            print("[{}] {}".format(row_id, summary))
+            if num_lines > 0:
+                print("[{}] ({} of {} = {:.2f}%) {}".format(row_id, count, num_lines, float(count/num_lines)*100, summary))
 
             for r in d['row_list']:
                 sql = "update table_parsed_text set summary_id = %s where id = %s"

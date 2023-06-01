@@ -94,12 +94,15 @@ def evaluate(node_name:str, debug:bool = True) -> [str, int]:
     weight = get_wiki_pageviews(node_name)
     return node_name, weight
 
-def get_page(node_name:str, debug:bool = True):
+def get_page(node_name:str, debug:bool = True) ->str:
     node_name = get_closest_wiki_page(node_name, threshold=0.5, debug=debug)
-    node_name = node_name.replace(" ", "_")
+    print("\tget_page({})".format(node_name))
+    # node_name = node_name.replace(" ", "_")
     page:wikipedia.WikipediaPage
-    page = wikipedia.page(node_name)
-    print(page.content)
+    page = wikipedia.page(node_name, auto_suggest=False)
+    if debug:
+        print(page.content)
+    return page.content
 
 def eval_main():
     print("wikimedia_scratch")
@@ -109,7 +112,7 @@ def eval_main():
         print("{} = {}\n".format(node_name, weight))
 
 def main():
-    get_page("dating")
+    get_page("Solar System")
 
 if __name__ == "__main__":
     main()

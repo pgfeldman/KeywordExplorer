@@ -108,6 +108,9 @@ class WikiPageviewExplorer(AppBase):
         b = self.views_action_buttons.add_button("Show Pages", self.show_pages_callback, width=-1)
         ToolTip(b, "Launch each Wikipedia page as a separate tab in the default browser")
         row = self.views_action_buttons.get_next_row()
+        b = self.views_action_buttons.add_button("Save Text", self.save_page_text_callback, width=-1)
+        ToolTip(b, "Save each Wikipedia page as a separate text file in the specified directory")
+        row = self.views_action_buttons.get_next_row()
 
     def build_page_view_params(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
@@ -217,6 +220,19 @@ class WikiPageviewExplorer(AppBase):
                 df.to_excel(writer, sheet_name='Page Views')
                 writer.save()
             self.log_action("save", {"filename":filename})
+
+    def save_page_text_callback(self):
+        folder_selected = filedialog.askdirectory()
+        topic_list = self.wiki_pages_text_field.get_list("\n")
+        for topic in topic_list:
+            if len(topic) > 2:
+                print("Getting text for page [{}]:".format(topic))
+                s = ws.get_page(topic, debug=False)
+                filename = "{}/{}.txt".format(folder_selected, topic)
+                print("\tSaving to {}".format(filename))
+                with open(filename, 'w', encoding="utf-8") as f:
+                    f.write(s)
+                # print("{}\n\t{}".format(filename, s))
 
     def show_pages_callback(self):
         topic_list = self.wiki_pages_text_field.get_list("\n")
