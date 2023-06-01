@@ -94,12 +94,22 @@ def evaluate(node_name:str, debug:bool = True) -> [str, int]:
     weight = get_wiki_pageviews(node_name)
     return node_name, weight
 
-def main():
+def get_page(node_name:str, debug:bool = True):
+    node_name = get_closest_wiki_page(node_name, threshold=0.5, debug=debug)
+    node_name = node_name.replace(" ", "_")
+    page:wikipedia.WikipediaPage
+    page = wikipedia.page(node_name)
+    print(page.content)
+
+def eval_main():
     print("wikimedia_scratch")
     l = ["Virtue_ethics", "simpson characters"]
     for key in l:
         node_name, weight = evaluate(key)
         print("{} = {}\n".format(node_name, weight))
+
+def main():
+    get_page("dating")
 
 if __name__ == "__main__":
     main()
