@@ -52,37 +52,63 @@ def main():
     "curie-instruct-beta"
     ]
 
+    with open("contexts.json", "r") as f:
+        context_dict = json.load(f)
+
+    with open("questions.json", "r") as f:
+        question_dict = json.load(f)
+
     oac = OpenAIComms()
-    
 
-    print("converting context {} periods".format(len(raw_context.split("."))))
-    return
-    cooked_context = add_markers(raw_context)
-    print("index_list = {}".format(index_list))
+    for ctx_key in context_dict:
+        print("\n{}: ".format(ctx_key))
+        raw_context = context_dict[ctx_key]
+        print("converting context '{}' ({} periods)".format(ctx_key, len(raw_context.split("."))))
+        cooked_context = add_markers(raw_context)
+        print("index_list = {}".format(index_list))
 
-    experiment_dict = {}
-    experiment_dict['context'] = cooked_context
-    experiment_list = []
-    experiment_dict['experiments'] = experiment_list
-    for q in question_list:
-        print("\n-------------------\nQuestion: {}".format(q))
-        prompt = no_context.format(q)
-        r = oac.get_prompt_result_params(prompt, max_tokens=512, temperature=0.75, top_p=1, frequency_penalty=0, presence_penalty=0, engine=engine)
-        print("no context response: {}".format(r))
+        all_question_list = []
+        # These are the questions that the context is supposed to work with
+        question_list = question_dict[ctx_key]
 
-        prompt = cooked_context.format(q)
-        ctx_r = oac.get_prompt_result_params(prompt, max_tokens=512, temperature=0.75, top_p=1, frequency_penalty=0, presence_penalty=0, engine="gpt-3.5-turbo-0301")
-        print("Context raw response: {}".format(ctx_r))
+        all_question_list.extend(question_list)
 
-        cleaned_r, i_list = find_patterns(ctx_r)
-        match_percent = evaluate_response(i_list) * 100
-        print("Cleaned raw response: {}".format(cleaned_r))
 
-        d = {"question":q, "no_context_response": r, "context_response": ctx_r, "cleaned_response": cleaned_r, "index_list": i_list, "match_percent": match_percent}
-        experiment_list.append(d)
+        # These are the questions that should not work with the context
+        for ctx_key2 in question_dict:
+            if ctx_key2 != ctx_key:
+                question_list = question_dict[ctx_key2]
+                all_question_list.extend(question_list)
 
-    with open("meta_wrapping_{}.json".format(engine), mode="w", encoding="utf-8") as f:
-        json.dump(experiment_dict, f, indent=4)
+        for engine in engine_list:
+            print("\tEngine: ".format(engine))
+            experiment_dict = {}
+            experiment_dict['name'] = ctx_key
+            experiment_dict['context'] = cooked_context
+            experiment_dict['engine'] = engine
+            experiment_list = []
+            experiment_dict['experiments'] = experiment_list
+            for q in all_question_list:
+                print("\t\tQuestion: {}".format(q))
+                prompt = no_context.format(q)
+                # print(prompt)
+                r = oac.get_prompt_result_params(prompt, max_tokens=512, temperature=0.75, top_p=1, frequency_penalty=0, presence_penalty=0, engine=engine)
+                print("no context response: {}".format(r))
+
+                prompt = cooked_context.format(q)
+                ctx_r = oac.get_prompt_result_params(prompt, max_tokens=512, temperature=0.75, top_p=1, frequency_penalty=0, presence_penalty=0, engine="gpt-3.5-turbo-0301")
+                print("Context raw response: {}".format(ctx_r))
+
+                cleaned_r, i_list = find_patterns(ctx_r)
+                match_percent = evaluate_response(i_list) * 100
+                print("Cleaned raw response: {}".format(cleaned_r))
+
+                d = {"question":q, "no_context_response": r, "context_response": ctx_r, "cleaned_response": cleaned_r, "index_list": i_list, "match_percent": match_percent}
+                experiment_list.append(d)
+
+            with open("meta_wrapping_{}_{}.json".format(ctx_key, engine), mode="w", encoding="utf-8") as f:
+                json.dump(experiment_dict, f, indent=4)
+
 
 if __name__ == "__main__":
     main()
