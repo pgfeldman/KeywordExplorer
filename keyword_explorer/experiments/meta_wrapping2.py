@@ -61,7 +61,7 @@ def main():
     oac = OpenAIComms()
 
     for ctx_key in context_dict:
-        print("\n{}: ".format(ctx_key))
+        print("------------------\n{}: ".format(ctx_key))
         raw_context = context_dict[ctx_key]
         print("converting context '{}' ({} periods)".format(ctx_key, len(raw_context.split("."))))
         cooked_context = add_markers(raw_context)
@@ -81,7 +81,7 @@ def main():
                 all_question_list.extend(question_list)
 
         for engine in engine_list:
-            print("\tEngine: ".format(engine))
+            print("\tEngine: {}".format(engine))
             experiment_dict = {}
             experiment_dict['name'] = ctx_key
             experiment_dict['context'] = cooked_context
@@ -91,19 +91,20 @@ def main():
             for q in all_question_list:
                 print("\t\tQuestion: {}".format(q))
                 prompt = no_context.format(q)
-                # print(prompt)
-                r = oac.get_prompt_result_params(prompt, max_tokens=512, temperature=0.75, top_p=1, frequency_penalty=0, presence_penalty=0, engine=engine)
-                print("no context response: {}".format(r))
+                print("\t\t\tNo context prompt: {}".format(prompt))
+                no_ctx_r = oac.get_prompt_result_params(prompt, max_tokens=512, temperature=0.75, top_p=1, frequency_penalty=0, presence_penalty=0, engine=engine)
+                print("no context response: {}".format(no_ctx_r))
 
                 prompt = cooked_context.format(q)
+                print("\t\t\tContext prompt tail: {}".format(prompt[-200:]))
                 ctx_r = oac.get_prompt_result_params(prompt, max_tokens=512, temperature=0.75, top_p=1, frequency_penalty=0, presence_penalty=0, engine="gpt-3.5-turbo-0301")
                 print("Context raw response: {}".format(ctx_r))
 
                 cleaned_r, i_list = find_patterns(ctx_r)
                 match_percent = evaluate_response(i_list) * 100
-                print("Cleaned raw response: {}".format(cleaned_r))
+                # print("Cleaned raw response: {}".format(cleaned_r))
 
-                d = {"question":q, "no_context_response": r, "context_response": ctx_r, "cleaned_response": cleaned_r, "index_list": i_list, "match_percent": match_percent}
+                d = {"question":q, "no_context_response": no_ctx_r, "context_response": ctx_r, "cleaned_response": cleaned_r, "index_list": i_list, "match_percent": match_percent}
                 experiment_list.append(d)
 
             with open("meta_wrapping_{}_{}.json".format(ctx_key, engine), mode="w", encoding="utf-8") as f:

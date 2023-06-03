@@ -1,6 +1,8 @@
 import pandas as pd
 import json
 import os
+import tkinter as tk
+import tkinter.filedialog
 from typing import Dict, List
 
 def read_json_files_to_dataframe(directory_path:str) -> Dict[str, pd.DataFrame]:
@@ -14,6 +16,19 @@ def read_json_files_to_dataframe(directory_path:str) -> Dict[str, pd.DataFrame]:
         if filename.endswith('.json'):
             with open(os.path.join(directory_path, filename), 'r') as file:
                 json_data = json.load(file)
+
+                # Make a summary DF
+                # Create lists for rows and columns of the dataframe
+                row_list = []
+
+                # Iterate over the items in the dictionary
+                for key, value in json_data.items():
+                    if key != "experiments":
+                        row_list.append((key, value))
+
+                # Create pandas dataframe
+                df = pd.DataFrame(row_list, columns=["Label", "Value"]).set_index("Label")
+                dataframes['Summary'] = df
                 experiments = json_data['experiments']
                 df = pd.DataFrame(experiments)
                 dataframes[filename] = df
@@ -27,13 +42,20 @@ def save_dataframes_to_excel(dataframes, output_file):
     for sheet_name, dataframe in dataframes.items():
         sheet_name = sheet_name.replace("meta_wrapping_", "")
         sheet_name = sheet_name.replace(".json", "")
-        dataframe.to_excel(writer, sheet_name=sheet_name, index=False)
+        dataframe.to_excel(writer, sheet_name=sheet_name[:31], index=False)
 
     # Save the Excel file
     writer.save()
 
 def main():
     path = "../../data/meta_wrapping"
+    # create a window
+    root = tk.Tk()
+    root.withdraw()
+
+    # open the file dialog and get the selected directory
+    path = tkinter.filedialog.askdirectory()
+
     df_dict = read_json_files_to_dataframe(path)
 
     name:str
