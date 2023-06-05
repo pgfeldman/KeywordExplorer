@@ -4,6 +4,8 @@ import json
 import os
 import tkinter as tk
 import tkinter.filedialog
+from keyword_explorer.OpenAI.OpenAIEmbeddings import OpenAIComms
+
 from typing import Dict, List
 
 
@@ -58,6 +60,7 @@ def find_patterns(input_string) -> List:
 
 def evaluate_data(all_dicts:Dict):
     print("evaluate_data")
+    oac = OpenAIComms()
     # go through all the dicts and:
     for name, d in all_dicts.items():
         print("key = {}".format(name))
@@ -82,6 +85,11 @@ def evaluate_data(all_dicts:Dict):
             ed['no_ctx_good_urls'] = good_urls
             ed['no_ctx_bad_urls'] = bad_urls
             print("\ted['no_ctx_good_urls'] = {}, ed['no_ctx_bad_urls'] = {}".format(ed['no_ctx_good_urls'], ed['no_ctx_bad_urls']))
+
+
+            prompt = "In the following context, find all the sources and list them:\n\nCONTEXT:\n\n{}\n\nSource list:\n".format(no_context_response)
+            no_ctx_r = oac.get_prompt_result_params(prompt, max_tokens=512, temperature=0.75, top_p=1, frequency_penalty=0, presence_penalty=0, engine="gpt-3.5-turbo-0301")
+            ed['no_ctx_sources'] = no_ctx_r
             ed['no_ctx_good_sources'] = 0
             ed['no_ctx_bad_sources'] = 0
 

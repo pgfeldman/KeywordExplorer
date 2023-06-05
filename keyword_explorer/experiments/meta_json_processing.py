@@ -40,7 +40,7 @@ def save_dataframes_to_excel(dataframes, output_file):
 
     # Loop through each dataframe and add it as a tab in the Excel file
     for sheet_name, dataframe in dataframes.items():
-        sheet_name = sheet_name.replace("meta_wrapping_", "")
+        sheet_name = sheet_name.replace("url_meta_wrapping_", "")
         sheet_name = sheet_name.replace(".json", "")
         dataframe.to_excel(writer, sheet_name=sheet_name[:31], index=False)
 
