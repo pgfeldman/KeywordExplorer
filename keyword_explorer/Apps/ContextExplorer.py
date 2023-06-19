@@ -7,7 +7,7 @@ import tkinter.messagebox as message
 from datetime import datetime
 from tkinter import filedialog
 from enum import Enum
-import matplotlib.colors as mcolors
+from pypdf import PdfReader
 
 import pandas as pd
 
@@ -78,7 +78,7 @@ class ContextExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "ContextExplorer"
-        self.app_version = "6.01.2023"
+        self.app_version = "6.19.2023"
         self.geom = (910, 790)
         self.oai = OpenAIComms()
         self.oae = OpenAIEmbeddings()
@@ -441,11 +441,27 @@ class ContextExplorer(AppBase):
         if len(group_name) < 3 or len(text_name) < 3:
             tk.messagebox.showwarning("Warning!", "Please set text and model fields")
             return
-        result = filedialog.askopenfilename(filetypes=(("Text files", "*.txt"),("All Files", "*.*")), title="Load text file")
+        result = filedialog.askopenfilename(filetypes=(("Text and pdf files", "*.txt *.pdf"),("All Files", "*.*")), title="Load text file")
         textfile = result.split("/")[-1]
         s:str
         if result:
-            s_list = self.oae.parse_text_file(result, r_str=regex_str)
+            s_list = []
+            if result.endswith(".pdf"):
+                s_list = self.oae.parse_pdf_file(result, r_str=regex_str)
+            elif result.endswith(".txt"):
+                s_list = self.oae.parse_text_file(result, r_str=regex_str)
+            else:
+                print("ContextExplorer.load_file_callback: unable to open file {}".format(result))
+                return
+
+            # look to see if we can find 'references' on a single row
+            for i in range(len(s_list)):
+                s = s_list[i]
+                if s.lower() == 'references':
+                    print("ContextExplorer.load_file_callback(): truncating references (rows {} - {})".format(i-1, len(s_list)))
+                    s_list = s_list[:i-1]
+                    break
+
             answer = tk.messagebox.askyesno("Warning!", "This will read, process, and store large amounts of data\ntarget = [{}]\ngroup = [{}]\nfile = [{}]\nlines = [{:,}]\nProceed?".format(
                 text_name, group_name, textfile, len(s_list)))
             if answer == True:
@@ -472,15 +488,28 @@ class ContextExplorer(AppBase):
         if len(group_name) < 3 or len(text_name) < 3:
             tk.messagebox.showwarning("Warning!", "Please set text and model fields")
             return
-        result = filedialog.askopenfilename(filetypes=(("Text files", "*.txt"),("All Files", "*.*")), title="Load text file")
+        result = filedialog.askopenfilename(filetypes=(("Text and pdf files", "*.txt *.pdf"),("All Files", "*.*")), title="Load text file")
+        print("test file = {}".format(result))
+
         s:str
         num_rows = 10
         if result:
-            s_list = self.oae.parse_text_file(result, r_str=regex_str)
+            s_list = []
+            if result.endswith(".pdf"):
+                s_list = self.oae.parse_pdf_file(result, r_str=regex_str)
+            elif result.endswith(".txt"):
+                s_list = self.oae.parse_text_file(result, r_str=regex_str)
+            else:
+                print("ContextExplorer.test_file_callback: unable to open file {}".format(result))
+                return
+
             # build a proxy db results List
             results = []
             for i in range(num_rows):
-                d = {"text_id":i, "parsed_text":s_list[i]}
+                s = s_list[i]
+                if s.lower() == 'references':
+                    break
+                d = {"text_id":i, "parsed_text":s}
                 results.append(d)
             row_dict:Dict
             count = 0

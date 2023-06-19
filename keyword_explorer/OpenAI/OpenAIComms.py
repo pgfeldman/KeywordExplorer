@@ -77,7 +77,7 @@ class OpenAIComms:
                 s = d['message']['content']
                 return s.strip()
 
-            except (openai.error.RateLimitError, openai.error.APIConnectionError, openai.error.APIError) as e:
+            except (openai.error.RateLimitError, openai.error.APIConnectionError, openai.error.APIError, openai.error.ServiceUnavailableError) as e:
                 print("\nOpenAIComms.get_chat_complete(): {}".format(e.user_message))
                 sleeptime = (waitcount+1) * time_to_wait
                 print("\twaiting {} seconds {} of {}".format(sleeptime, waitcount, waitmax))
@@ -90,7 +90,7 @@ class OpenAIComms:
                                  num_responses:int = 1, presence_penalty:float = 0.3, frequency_penalty:float = 0.3) -> str:
 
         if any([x in engine for x in self.chat_models]):
-            print("OpenAICommsget_prompt_result_params(): Using Chat interface")
+            print("OpenAIComms.get_prompt_result_params(): Using Chat interface")
             l = [ChatUnit(prompt, CHAT_ROLES.USER)]
             return self.get_chat_complete(l, engine=engine, max_tokens=max_tokens, temperature=temperature, top_p=top_p,
                                           presence_penalty=presence_penalty, frequency_penalty=frequency_penalty)

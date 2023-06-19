@@ -260,7 +260,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
         question = oae.tk_filter_string(question)
         if type == PROMPT_TYPE.QUESTION:
             self.context_prompt.set_text(question)
-            self.prompt_text_field.set_text("{}. Use a seventh grade vocabulary".format(question))
+            self.prompt_text_field.set_text("{}. Use the style of a white paper.".format(question))
         else:
             self.response_text_field.set_text(question)
         self.tab_control.select(0)

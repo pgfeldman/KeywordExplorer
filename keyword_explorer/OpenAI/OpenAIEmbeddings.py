@@ -8,6 +8,7 @@ import pandas as pd
 import re
 import ast
 import pickle
+from pypdf import PdfReader
 
 from keyword_explorer.OpenAI.OpenAIComms import OpenAIComms
 from keyword_explorer.utils.MySqlInterface import MySqlInterface
@@ -77,24 +78,18 @@ class OpenAIEmbeddings:
             to_return.append("{}: {}".format(d['id'], d['parsed_text']))
         return to_return
 
-    def parse_text_file(self, filename:str, r_str:str = r"([\.!?()]+)", default_print:int = 0, min_chars = 10) -> List:
+    def parse_content(self, raw_text:str, r_str:str = r"([\.!?()]+)", default_print:int = 0, min_chars:int = 10) -> List:
+        # print("OpenAIEmbeddings:parse_content r_str = {}".format(r_str))
         cr_regex = re.compile("\n+")
-        print("OpenAIEmbeddings:parse_text_file r_str = {}".format(r_str))
         reg = re.compile(r_str)
-        #f = open(filename, mode="r", encoding="G-8", errors='ignore')
-        f = open(filename, mode="r", encoding="utf-8", errors='replace')
-
-        s = f.read()
-        f.close()
-
-        s = cr_regex.sub(" ", s)
-        l = reg.split(s)
+        l = cr_regex.split(raw_text)
         s1:str
         s2:str
         s_list = []
         i = 0
         while i < len(l):
-            s1 = l[i].strip()
+            s = reg.sub(" ", l[i])
+            s1 = s.strip()
             while i < len(l)-1:
                 s2 = l[i+1]
                 if len(s2) < min_chars:
@@ -106,9 +101,31 @@ class OpenAIEmbeddings:
             i += 1
 
         for i in range(default_print):
-            print("OpenAIEmbeddings:parse_text_file{}".format(s_list[i]))
+            print("OpenAIEmbeddings:parse_file_str{}".format(s_list[i]))
 
         return s_list
+
+    def parse_text_file(self, filename:str, r_str:str = r"([\.!?()]+)", default_print:int = 0, min_chars = 10) -> List:
+        f = open(filename, mode="r", encoding="utf-8", errors='replace')
+
+        s = f.read()
+        f.close()
+        s_list = self.parse_content(s, r_str, default_print, min_chars)
+
+        return s_list
+
+    def parse_pdf_file(self, filename:str, r_str:str = r"([\.!?()]+)", default_print:int = 0, min_chars = 10) -> List:
+        reader = PdfReader(filename)
+        number_of_pages = len(reader.pages)
+        full_list = []
+        print("\tnumber of pages = {}".format(number_of_pages))
+        for i in range(number_of_pages):
+            print("\tParsing page {} of {}".format(i, number_of_pages))
+            page = reader.pages[i]
+            text = page.extract_text()
+            s_list = self.parse_content(text, r_str=r_str)
+            full_list.extend(s_list)
+        return full_list
 
     def get_embeddings(self, text_list:List, submit_size:int = 10, max:int = -1) -> pd.DataFrame:
         d_list = []
@@ -285,6 +302,7 @@ class OpenAIEmbeddings:
                 print("OpenAIEmbeddings.summarize_raw_text() Same summary error, returning early!")
                 print("\t{}".format(d))
                 return summary_count
+            old_summary = summary
 
             sql = "insert into table_summary_text (source, level, summary_text, origins) values (%s, %s, %s, %s)"
             vals = (project_id, level, summary, str(d['origins']))
@@ -297,7 +315,12 @@ class OpenAIEmbeddings:
                 sql = "update table_parsed_text set summary_id = %s where id = %s"
                 vals = (row_id, r)
                 self.msi.write_sql_values_get_row(sql, vals)
-            count = d['count']
+
+            if d['count'] > count:
+                count = d['count']
+            else:
+                print("OpenAIEmbeddings.summarize_raw_text() manually incrementing count from {} to {}".format(count, count + 1))
+                count += 1
 
         return summary_count
 
