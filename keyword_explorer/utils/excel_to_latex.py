@@ -7,6 +7,6 @@ if filename:
 
     df = pd.read_excel(filename)
     print("\\begin{table}[]\n\centering")
-    print(df.to_latex())
+    print(df.to_latex(index=False))
     print("\caption{Caption}\n\label{tab:my_label}\n\end{table}")
 

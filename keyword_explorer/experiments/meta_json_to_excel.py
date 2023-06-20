@@ -1,6 +1,7 @@
 import pandas as pd
 import json
 import os
+import re
 import tkinter as tk
 import tkinter.filedialog
 from typing import Dict, List
@@ -36,10 +37,53 @@ def read_json_files_to_dataframe(directory_path:str) -> Dict[str, pd.DataFrame]:
                 dataframes[filename] = df
     return dataframes
 
-def save_dataframes_to_excel(dataframes:Dict, output_file:str):
+def save_sources_to_excel(dataframes:Dict, output_file:str):
     # Create a Pandas Excel writer using XlsxWriter as the engine
+    engine_list = ["curie-instruct-beta",
+                   "davinci-instruct-beta",
+                   "gpt-3.5-turbo-0301",
+                   "gpt-3.5-turbo",
+                   "gpt-4-0314",
+                   "gpt-4",
+                   "text-davinci-003"]
 
     writer = pd.ExcelWriter(output_file, engine='xlsxwriter')
+
+    for sheet_name, df in dataframes.items():
+        dict_list = []
+        if sheet_name != 'Summary':
+            labels = sheet_name.split("_")
+            sheet_name = labels[-1]
+            sheet_name = sheet_name.replace(".json", "")
+            row_index = 2
+            for index, row in df.iterrows():
+                no_ctx_sources_value = row['no_ctx_sources']
+                source_list = no_ctx_sources_value.split('\n')
+                question_value = row['question']
+                for s in source_list:
+                    s = re.match(r'[^\w]*(.*)', s).group(1)
+                    dict_list.append({"question": question_value, "source": s})
+                    row_index += 1
+            df = pd.DataFrame(dict_list)
+            df.sort_values(by='source', key=lambda x: x.str.len(), ascending=False, inplace=True)
+            # df_sorted = df.iloc[df['source'].str.len().argsort(reversed=True)]
+            df.to_excel(writer, sheet_name=sheet_name, index=False)
+    # Save the Excel file
+    writer.save()
+
+
+def save_dataframes_to_excel(dataframes:Dict, output_file:str):
+    # Create a Pandas Excel writer using XlsxWriter as the engine
+    engine_list = ["curie-instruct-beta",
+                   "davinci-instruct-beta",
+                   "gpt-3.5-turbo-0301",
+                   "gpt-3.5-turbo",
+                   "gpt-4-0314",
+                   "gpt-4",
+                   "text-davinci-003"]
+
+    writer = pd.ExcelWriter(output_file, engine='xlsxwriter')
+
 
     # Loop through each dataframe and add it as a tab in the Excel file
     dataframe:pd.DataFrame
@@ -48,76 +92,47 @@ def save_dataframes_to_excel(dataframes:Dict, output_file:str):
             # print("Summary = {}".format(dataframe))
             dataframe.to_excel(writer, sheet_name=sheet_name, index=False)
             summary_sheet = writer.sheets[sheet_name]
-            summary_sheet.write_string('A8','URL')
-            summary_sheet.write_string('A9','engine')
-            summary_sheet.write_string('A10','curie-instruct-beta')
-            summary_sheet.write_string('A11','davinci-instruct-beta')
-            summary_sheet.write_string('A12','gpt-3.5-turbo-0301')
-            summary_sheet.write_string('A13','gpt-3.5-turbo')
-            summary_sheet.write_string('A14','gpt-4-0314')
-            summary_sheet.write_string('A15','gpt-4')
-            summary_sheet.write_string('A16','text-davinci-003')
-            summary_sheet.write_string('A17','TOTAL')
-
+            summary_sheet.write_string('A9','URL no context')
             summary_sheet.write_string('B9','no ctx good')
-            summary_sheet.write_formula('B10', "=SUM('curie-instruct-beta'!I$2:I$36)")
-            summary_sheet.write_formula('B11', "=SUM('davinci-instruct-beta'!I$2:I$36)")
-            summary_sheet.write_formula('B12', "=SUM('gpt-3.5-turbo-0301'!I$2:I$36)")
-            summary_sheet.write_formula('B13', "=SUM('gpt-3.5-turbo'!I$2:I$36)")
-            summary_sheet.write_formula('B14', "=SUM('gpt-4-0314'!I$2:I$36)")
-            summary_sheet.write_formula('B15', "=SUM('gpt-4'!I$2:I$36)")
-            summary_sheet.write_formula('B16', "=SUM('text-davinci-003'!I$2:I$36)")
-            summary_sheet.write_formula('B17', "=SUM(B10:B16)")
-
             summary_sheet.write_string('C9','no ctx bad')
-            summary_sheet.write_formula('C10', "=SUM('curie-instruct-beta'!J$2:J$36)")
-            summary_sheet.write_formula('C11', "=SUM('davinci-instruct-beta'!J$2:J$36)")
-            summary_sheet.write_formula('C12', "=SUM('gpt-3.5-turbo-0301'!J$2:J$36)")
-            summary_sheet.write_formula('C13', "=SUM('gpt-3.5-turbo'!J$2:J$36)")
-            summary_sheet.write_formula('C14', "=SUM('gpt-4-0314'!J$2:J$36)")
-            summary_sheet.write_formula('C15', "=SUM('gpt-4'!J$2:J$36)")
-            summary_sheet.write_formula('C16', "=SUM('text-davinci-003'!J$2:J$36)")
-            summary_sheet.write_formula('C17', "=SUM(C10:C16)")
-
             summary_sheet.write_string('D9','good/bad')
-            summary_sheet.write_formula('D10', "=B10/C10")
-            summary_sheet.write_formula('D11', "=B11/C11")
-            summary_sheet.write_formula('D12', "=B12/C12")
-            summary_sheet.write_formula('D13', "=B13/C13")
-            summary_sheet.write_formula('D14', "=B14/C14")
-            summary_sheet.write_formula('D15', "=B15/C15")
-            summary_sheet.write_formula('D16', "=B16/C16")
+            row = 10
+            for e in engine_list:
+                summary_sheet.write_string('A{}'.format(row),e)
+                summary_sheet.write_formula('B{}'.format(row), "=SUM('{}'!I$2:I$36)".format(e))
+                summary_sheet.write_formula('C{}'.format(row), "=SUM('{}'!J$2:J$36)".format(e))
+                summary_sheet.write_formula('D{}'.format(row), "=B{}/C{}".format(row, row))
+                row += 1
+            summary_sheet.write_string('A17','TOTAL')
+            summary_sheet.write_formula('B17', "=SUM(B10:B16)")
+            summary_sheet.write_formula('C17', "=SUM(C10:C16)")
             summary_sheet.write_formula('D17', "=B17/C17")
 
-            summary_sheet.write_string('A10','engine')
-            summary_sheet.write_string('A20','curie-instruct-beta')
-            summary_sheet.write_string('A21','davinci-instruct-beta')
-            summary_sheet.write_string('A22','gpt-3.5-turbo-0301')
-            summary_sheet.write_string('A23','gpt-3.5-turbo')
-            summary_sheet.write_string('A24','gpt-4-0314')
-            summary_sheet.write_string('A25','gpt-4')
-            summary_sheet.write_string('A26','text-davinci-003')
-            summary_sheet.write_string('A27','TOTAL')
-
+            summary_sheet.write_string('A19','URL context')
             summary_sheet.write_string('B19','ctx good')
-            summary_sheet.write_formula('B20', "=SUM('curie-instruct-beta'!G$2:G$36)")
-            summary_sheet.write_formula('B21', "=SUM('davinci-instruct-beta'!G$2:G$36)")
-            summary_sheet.write_formula('B22', "=SUM('gpt-3.5-turbo-0301'!G$2:G$36)")
-            summary_sheet.write_formula('B23', "=SUM('gpt-3.5-turbo'!G$2:G$36)")
-            summary_sheet.write_formula('B24', "=SUM('gpt-4-0314'!G$2:G$36)")
-            summary_sheet.write_formula('B25', "=SUM('gpt-4'!G$2:G$36)")
-            summary_sheet.write_formula('B26', "=SUM('text-davinci-003'!G$2:G$36)")
-            summary_sheet.write_formula('B27', "=SUM(B20:B26)")
-
             summary_sheet.write_string('C19','ctx bad')
-            summary_sheet.write_formula('C20', "=SUM('curie-instruct-beta'!H$2:H$36)")
-            summary_sheet.write_formula('C21', "=SUM('davinci-instruct-beta'!H$2:H$36)")
-            summary_sheet.write_formula('C22', "=SUM('gpt-3.5-turbo-0301'!H$2:H$36)")
-            summary_sheet.write_formula('C23', "=SUM('gpt-3.5-turbo'!H$2:H$36)")
-            summary_sheet.write_formula('C24', "=SUM('gpt-4-0314'!H$2:H$36)")
-            summary_sheet.write_formula('C25', "=SUM('gpt-4'!H$2:H$36)")
-            summary_sheet.write_formula('C26', "=SUM('text-davinci-003'!H$2:H$36)")
+            row = 20
+            for e in engine_list:
+                summary_sheet.write_string('A{}'.format(row),e)
+                summary_sheet.write_formula('B{}'.format(row), "=SUM('{}'!G$2:G$36)".format(e))
+                summary_sheet.write_formula('C{}'.format(row), "=SUM('{}'!H$2:H$36)".format(e))
+                row += 1
+
+            summary_sheet.write_string('A27','TOTAL')
+            summary_sheet.write_formula('B27', "=SUM(B20:B26)")
             summary_sheet.write_formula('C27', "=SUM(C20:C26)")
+
+            summary_sheet.write_string('A29','index tags')
+            summary_sheet.write_string('B29','present')
+            summary_sheet.write_string('C29','missing')
+            summary_sheet.write_string('D29','mismatch')
+            row = 30
+            for e in engine_list:
+                summary_sheet.write_string('A{}'.format(row),e)
+                summary_sheet.write_formula('B{}'.format(row), "=COUNTIF('{}'!F2:F6, \"<>0\")".format(e))
+                summary_sheet.write_formula('C{}'.format(row), "=COUNTIF('{}'!F2:F6, 0)".format(e))
+                summary_sheet.write_formula('D{}'.format(row), "=COUNTIF('{}'!E7:E36, \"<>[]\")".format(e))
+                row += 1
 
         else:
             labels = sheet_name.split("_")
@@ -150,7 +165,9 @@ def main():
 
 
 
-    save_dataframes_to_excel(df_dict, path+"/{}_results.xlsx".format(label))
+    # save_dataframes_to_excel(df_dict, path+"/{}_results.xlsx".format(label))
+    save_sources_to_excel(df_dict, path+"/{}_sources.xlsx".format(label))
+
 
 if __name__ == "__main__":
     main()

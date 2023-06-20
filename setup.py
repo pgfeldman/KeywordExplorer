@@ -24,7 +24,7 @@ Full documentation is available at https://github.com/pgfeldman/KeywordExplorer#
 
 setup(
     name='keyword_explorer',
-    version= "0.5.alpha",
+    version= "0.6.alpha",
     packages=['keyword_explorer',
               'keyword_explorer.utils',
               'keyword_explorer.TwitterV2',
@@ -39,7 +39,7 @@ setup(
     license='MIT',
     author='Philip Feldman',
     author_email='phil@philfeldman.com',
-    description='A set of tools for producing and exploring keywords on Twitter and the Wikipedia',
+    description='A set of tools for computational sociology using LLMs',
     long_description=long_s,
     install_requires=[
         'pandas',
