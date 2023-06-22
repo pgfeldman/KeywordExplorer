@@ -38,7 +38,7 @@ class WikiPageviewExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "WikiPageviewExplorer.md"
-        self.app_version = "10.13.22"
+        self.app_version = "6.01.23"
         self.geom = (850, 700)
 
         self.multi_count_list = []
