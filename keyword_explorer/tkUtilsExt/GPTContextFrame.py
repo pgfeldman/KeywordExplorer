@@ -214,20 +214,25 @@ class GPTContextFrame(GPT3GeneratorFrame):
             return
 
         oae = OpenAIEmbeddings()
-        num_lines = 10
+        num_lines = 2
         first_line = random.randrange(0, len(self.project_df.index)-num_lines)
 
         s = self.project_df.iloc[first_line]['parsed_text']
+        print("GPTContextFrame.auto_question_callback()\n\tfirst_line id = {} [0 - {}]\n\ttext = {}".format(
+            first_line, len(self.project_df.index)-num_lines, s))
         prompt_type = "short question"
         if type == PROMPT_TYPE.TWEET:
             prompt_type = "short tweet"
         elif type == PROMPT_TYPE.SCIENCE_TWEET:
             prompt_type = "short tweet in the style of Science Twitter"
         elif type == PROMPT_TYPE.FACTOID:
+            num_lines = 5
             prompt_type = "factoid"
         elif type == PROMPT_TYPE.TWEET_THREAD:
+            num_lines = 10
             prompt_type = "science Twitter thread"
         elif type == PROMPT_TYPE.PRESS_RELEASE:
+            num_lines = 10
             topic = self.prompt_text_field.get_text()
             if len(topic) < 3:
                 topic = "the book Stampede Theory, by Philip Feldman"
@@ -316,7 +321,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
             response_dict[query_str] = response
 
         self.context_text_field.clear()
-        self.context_text_field.set_text(context)
+        self.context_text_field.set_text(full_prompt)
 
         origins = oae.get_origins_text(origins_list)
         self.sources_text_field.clear()
@@ -364,7 +369,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
 
 
         self.context_text_field.clear()
-        self.context_text_field.set_text(context)
+        self.context_text_field.set_text(full_prompt)
 
         origins = oae.get_origins_text(origins_list)
         self.sources_text_field.clear()
@@ -388,7 +393,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
             full_prompt = oae.create_narrative(prompt=prompt, context=context)
 
         self.context_text_field.clear()
-        self.context_text_field.set_text(context)
+        self.context_text_field.set_text(full_prompt)
 
         origins = oae.get_origins_text(origins_list)
         self.sources_text_field.clear()

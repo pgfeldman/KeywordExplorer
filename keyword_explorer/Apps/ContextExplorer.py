@@ -78,7 +78,7 @@ class ContextExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "ContextExplorer"
-        self.app_version = "6.19.2023"
+        self.app_version = "6.20.2023"
         self.geom = (910, 790)
         self.oai = OpenAIComms()
         self.oae = OpenAIEmbeddings()
@@ -132,10 +132,10 @@ class ContextExplorer(AppBase):
 
     def build_gpt(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
-        self.experiment_combo = TopicComboExt(lf, row, "Saved Projects:", self.dp, entry_width=20, combo_width=20)
+        self.experiment_combo = TopicComboExt(lf, row, "Saved Projects:", self.dp, entry_width=20, combo_width=30)
         self.experiment_combo.set_callback(self.load_project_callback)
         row = self.experiment_combo.get_next_row()
-        self.level_combo = TopicComboExt(lf, row, "Summary Levels:", self.dp, entry_width=20, combo_width=20)
+        self.level_combo = TopicComboExt(lf, row, "Summary Levels:", self.dp, entry_width=20, combo_width=30)
         self.level_combo.set_callback(self.count_levels_callback)
         row = self.level_combo.get_next_row()
         self.narrative_project_name_field = DataField(lf, row, "NarrativeMap",text_width, label_width=label_width)
