@@ -53,7 +53,7 @@ def write_json_files(directory_path, all_dicts:Dict):
 
 def find_patterns(input_string) -> List:
     # pattern = r"\(source \d+\)\."
-    pattern = r'\(source (\d+)\)'
+    pattern = r'\(source (\d{5})\)'
     matches = re.findall(pattern, input_string)
     return [int(match) for match in matches]
 

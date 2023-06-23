@@ -74,13 +74,10 @@ def save_sources_to_excel(dataframes:Dict, output_file:str):
 
 def save_dataframes_to_excel(dataframes:Dict, output_file:str):
     # Create a Pandas Excel writer using XlsxWriter as the engine
-    engine_list = ["curie-instruct-beta",
-                   "davinci-instruct-beta",
-                   "gpt-3.5-turbo-0301",
+    engine_list = ["gpt-3.5-turbo-0301",
                    "gpt-3.5-turbo",
                    "gpt-4-0314",
-                   "gpt-4",
-                   "text-davinci-003"]
+                   "gpt-4"]
 
     writer = pd.ExcelWriter(output_file, engine='xlsxwriter')
 

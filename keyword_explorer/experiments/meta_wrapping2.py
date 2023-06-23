@@ -14,19 +14,19 @@ Answer:'''
 index_list = []
 
 def repl_fun(match) -> str:
-    index = random.randint(1000,9999)
+    index = random.randint(10000,99999)
     index_list.append(index)
     return "(source {}).".format(index)
 
 def add_markers(raw:str) -> str:
-    cooked = re.sub(r'\.', repl_fun, raw)
+    cooked = re.sub(r'\. ', repl_fun, raw)
     return cooked
 
 def find_patterns(input_string) -> [str, List]:
     # pattern = r"\(source \d+\)\."
     pattern = r"\(source\s+\d+(,\s+\d+)*\)\.*"
     modified_string = re.sub(pattern, ".", input_string)
-    numbers_list = re.findall(r"\d+", input_string)
+    numbers_list = re.findall(r"\b\d{5}\b", input_string)
     numbers_list = [int(num) for num in numbers_list]
     return modified_string, numbers_list
 
@@ -40,22 +40,27 @@ def evaluate_response(test_list:List) -> float:
             match_len += 1
     return match_len/test_len
 
+def truncate_string(input_string:str, max_length = 10000) -> str:
+    if len(input_string) <= max_length:
+        return input_string
+
+    truncated_string = input_string[:max_length]
+    complete_words = re.findall(r'\b[\w\']+\b', truncated_string)
+    return ' '.join(complete_words)
+
 
 def main():
     engine_list = [
     "gpt-4-0314",
     "gpt-3.5-turbo-0301",
     "gpt-4",
-    "gpt-3.5-turbo",
-    "text-davinci-003",
-    "davinci-instruct-beta",
-    "curie-instruct-beta"
+    "gpt-3.5-turbo"
     ]
 
-    with open("contexts.json", "r") as f:
+    with open("contexts.json", "r", encoding='utf-8') as f:
         context_dict = json.load(f)
 
-    with open("questions.json", "r") as f:
+    with open("questions.json", "r", encoding='utf-8') as f:
         question_dict = json.load(f)
 
     oac = OpenAIComms()
@@ -65,6 +70,7 @@ def main():
         raw_context = context_dict[ctx_key]
         print("converting context '{}' ({} periods)".format(ctx_key, len(raw_context.split("."))))
         cooked_context = add_markers(raw_context)
+        cooked_context = truncate_string(cooked_context)
         print("index_list = {}".format(index_list))
 
         all_question_list = []

@@ -1,0 +1,50 @@
+{"chess": [
+  "In the game of chess, which piece can only move diagonally",
+  "What is the difference between how the rook and bishop move in chess",
+  "What is the queen's range of movement on the chessboard",
+  "How do pieces capture each other in chess and what happens to a captured piece",
+  "What is special about the knight's movement in chess and can it be blocked by other pieces"
+],
+  "solar": [
+    "Which planet in our solar system is closest to the sun",
+    "What is the distance between the farthest planet Neptune and the Sun in kilometers and miles",
+    "How does the distance between each planet's orbit and the next nearest object to the Sun generally increase",
+    "What are the dominant geological features of the planet Mercury and what is its atmosphere made up of",
+    "Which free-floating planetary-mass object is the closest known rogue to the Sun"
+  ],
+  "france": [
+    "What is the capital of France",
+    "What are the top ten largest metropolitan areas in France by population",
+    "What is the history and influence of French fashion",
+    "What are some of France's popular tourist attractions and museums",
+    "What is France's global economic and political significance"
+  ],
+  "dating": [
+    "How do I find a girfriend",
+    "What are some ways to make a good impression when meeting someone",
+    "According to a 2005 Pew study, where do many people in long-term relationships meet",
+    "What precautions does Sara McCorquodale advise women to take when meeting strangers on dates",
+    "How has the dating world evolved with technology over the years"
+  ],
+  "continent": [
+    "What is the smallest continent",
+    "What are the four attributes geologists use to define a continent",
+    "Why is Greenland considered the world's largest island instead of a continent",
+    "What is the Wilson Cycle and how does it relate to the formation and breakup of continents",
+    "How are microcontinents different from regular continents and what are some examples"
+  ],
+  "mockingbird": [
+    "Who wrote the novel 'To Kill a Mockingbird'",
+    "Who helped Harper Lee develop 'To Kill a Mockingbird' into its finished form",
+    "What is the significance of the title 'To Kill a Mockingbird'",
+    "Why is 'To Kill a Mockingbird' considered a classic of American literature",
+    "How has the reception of 'To Kill a Mockingbird' changed over time"
+  ],
+  "stampede": [
+    "How can diversity injection disrupt belief stampedes and nudge individuals off the trajectory of a stampede",
+    "How does the diversity injection method differ from a direct confrontation of conspiracy theories and misinformation",
+    "In what ways do latent interests play a role in preventing individuals from fully engaging with cults or conspiracy theories",
+    "How can technology be utilized to effectively introduce diversity injection techniques into various social networks",
+    "What are the potential benefits of breaking off small segments from a belief stampede rather than attempting to change everyone's behavior?"
+  ]
+}
