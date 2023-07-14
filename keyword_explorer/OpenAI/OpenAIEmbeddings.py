@@ -69,13 +69,14 @@ class OpenAIEmbeddings:
 
     def get_origins_text(self, origins_list:List) -> List:
         origins_text = ", ".join(map(str, origins_list))
-        sql = "select id, parsed_text from gpt_summary.table_parsed_text where id in ({})".format(origins_text)
+        # sql = "select id, parsed_text from gpt_summary.table_parsed_text where id in ({})".format(origins_text)
+        sql = "select id, text_name, parsed_text from gpt_summary.parsed_text_view where id in ({})".format(origins_text)
         # print("sql = {}".format(sql))
         response = self.msi.read_data(sql)
         d:Dict
         to_return = []
         for d in response:
-            to_return.append("{}: {}".format(d['id'], d['parsed_text']))
+            to_return.append("{} {}: {}".format(d['text_name'], d['id'], d['parsed_text']))
         return to_return
 
     def parse_content(self, raw_text:str, r_str:str = r"([\.!?()]+)", default_print:int = 0, min_chars:int = 10) -> List:
