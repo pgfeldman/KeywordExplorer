@@ -46,6 +46,7 @@ class ContextExplorer(AppBase):
     so:SharedObjects
     gpt_frame: GPTContextFrame
     experiment_combo:TopicComboExt
+    group_combo:TopicComboExt
     level_combo:TopicComboExt
     target_level_combo:TopicComboExt
     target_text_name:DataField
@@ -70,6 +71,7 @@ class ContextExplorer(AppBase):
         dt = datetime.now()
         experiment_str = "{}_{}_{}".format(self.app_name, getpass.getuser(), dt.strftime("%H:%M:%S"))
         self.experiment_field.set_text(experiment_str)
+        self.load_group_list()
         self.load_experiment_list()
         self.experiment_id_list = []
         self.so.add_object("generate_model_combo", self.generate_model_combo, TopicComboExt)
@@ -78,8 +80,8 @@ class ContextExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "ContextExplorer"
-        self.app_version = "7.14.2023"
-        self.geom = (910, 790)
+        self.app_version = "8.23.2023"
+        self.geom = (910, 820)
         self.oai = OpenAIComms()
         self.oae = OpenAIEmbeddings()
         self.so = SharedObjects()
@@ -102,11 +104,26 @@ class ContextExplorer(AppBase):
         self.build_params(lf, int(text_width/3), int(label_width*.75))
         return row + 1
 
-    def load_experiment_list(self):
-        experiments = []
-        results = self.msi.read_data("select * from table_source order by group_name, text_name")
+    def load_group_list(self):
+        experiments = ['All Groups']
+        groups = self.msi.read_data("select distinct group_name from table_source order by group_name")
+        for g in groups:
+            group_name = g['group_name']
+            experiments.append(group_name)
+        self.group_combo.set_combo_list(experiments)
+        self.group_combo.set_text("All Groups")
+
+    def load_experiment_list(self, group_name = "All Groups"):
+
+        if group_name != "All Groups":
+            sql = "select * from table_source where group_name = %s order by text_name"
+            results = self.msi.read_data(sql, (group_name,))
+        else: # All Groups
+            results = self.msi.read_data("select * from table_source order by group_name, text_name")
+
         entries = self.msi.read_data("select group_name, count(group_name) as entries from table_source group by group_name")
         prev_name = "NO-PREV-NAME"
+        experiments = []
         for r in results:
             group_name = r['group_name']
             for e in entries:
@@ -132,6 +149,9 @@ class ContextExplorer(AppBase):
 
     def build_gpt(self, lf:tk.LabelFrame, text_width:int, label_width:int):
         row = 0
+        self.group_combo = TopicComboExt(lf, row, "Project Groups:", self.dp, entry_width=20, combo_width=30)
+        self.group_combo.set_callback(self.set_group_callback)
+        row = self.group_combo.get_next_row()
         self.experiment_combo = TopicComboExt(lf, row, "Saved Projects:", self.dp, entry_width=20, combo_width=30)
         self.experiment_combo.set_callback(self.load_project_callback)
         row = self.experiment_combo.get_next_row()
@@ -246,6 +266,13 @@ class ContextExplorer(AppBase):
             self.generator_frame.prompt_text_field.set_text(CONTEXT_TEMPLATE.SEQUENCE.value)
             print("Set Sequence regex")
         self.set_narrative_name()
+
+    def set_group_callback(self, event = None):
+        print("set_group_callback")
+        s = self.group_combo.tk_combo.get()
+        self.group_combo.clear()
+        self.group_combo.set_text(s)
+        self.load_experiment_list(s)
 
     def load_project_callback(self, event = None):
         print("load_project_callback")

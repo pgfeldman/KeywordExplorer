@@ -201,6 +201,12 @@ class OpenAIComms:
                 print("OpenAIComms.get_embedding_list waiting {} seconds".format(time_to_wait))
                 time.sleep(time_to_wait)
 
+            except (openai.error.InvalidRequestError) as e:
+                print("OpenAIComms.get_embedding_list error. Message = {}".format(e.user_message))
+                return [{"text":"unset", "embedding":np.array([0, 0, 0])}]
+
+
+
     def get_moderation_vals(self, test_list:List) -> List:
 
         good_read = False

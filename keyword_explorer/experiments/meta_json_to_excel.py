@@ -39,13 +39,10 @@ def read_json_files_to_dataframe(directory_path:str) -> Dict[str, pd.DataFrame]:
 
 def save_sources_to_excel(dataframes:Dict, output_file:str):
     # Create a Pandas Excel writer using XlsxWriter as the engine
-    engine_list = ["curie-instruct-beta",
-                   "davinci-instruct-beta",
-                   "gpt-3.5-turbo-0301",
+    engine_list = ["gpt-3.5-turbo-0301",
                    "gpt-3.5-turbo",
                    "gpt-4-0314",
-                   "gpt-4",
-                   "text-davinci-003"]
+                   "gpt-4"]
 
     writer = pd.ExcelWriter(output_file, engine='xlsxwriter')
 
@@ -70,6 +67,34 @@ def save_sources_to_excel(dataframes:Dict, output_file:str):
             df.to_excel(writer, sheet_name=sheet_name, index=False)
     # Save the Excel file
     writer.save()
+
+def save_dataframes_to_txt(dataframes:Dict, output_file:str):
+    # Create a Pandas Excel writer using XlsxWriter as the engine
+    engine_list = ["gpt-3.5-turbo-0301",
+                   "gpt-3.5-turbo",
+                   "gpt-4-0314",
+                   "gpt-4"]
+
+
+    df:pd.DataFrame
+    row_dict:Dict
+    with open(output_file, "w", encoding="utf-8") as f:
+        for sheet_name, df in dataframes.items():
+            labels = sheet_name.split("_")
+            sheet_name = labels[-1]
+            sheet_name = sheet_name.replace(".json", "")
+
+            if sheet_name != 'Summary':
+                f.write("\n=========================\nEngine: {}\n=========================\n".format(sheet_name))
+                count = 0
+                for row_dict in df.to_dict(orient='records'):
+                    f.write("\n-------------------\n")
+                    f.write("Question: \n{}\n".format(row_dict['question']))
+                    f.write("\n-----------------\nContext response (No hallucinations?):\n{}\n".format(row_dict['context_response']))
+                    f.write("\n-----------------\nNo context response (possible hallucinations) :\n{}\n".format(row_dict['no_context_response']))
+                    count += 1
+                    if count >= 2:
+                        break
 
 
 def save_dataframes_to_excel(dataframes:Dict, output_file:str):
@@ -162,8 +187,9 @@ def main():
 
 
 
-    # save_dataframes_to_excel(df_dict, path+"/{}_results.xlsx".format(label))
-    save_sources_to_excel(df_dict, path+"/{}_sources.xlsx".format(label))
+    #save_dataframes_to_excel(df_dict, path+"/{}_results.xlsx".format(label))
+    #save_sources_to_excel(df_dict, path+"/{}_sources.xlsx".format(label))
+    save_dataframes_to_txt(df_dict, path+"/{}_readable.txt".format(label))
 
 
 if __name__ == "__main__":
