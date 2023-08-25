@@ -59,6 +59,7 @@ class ContextExplorer(AppBase):
     action_buttons:Buttons
     action_buttons2:Buttons
     param_buttons:Buttons
+    corpus_validation_text:TextField
     experiment_id_list:List
 
 
@@ -80,7 +81,7 @@ class ContextExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "ContextExplorer"
-        self.app_version = "8.23.2023"
+        self.app_version = "8.25.2023"
         self.geom = (910, 820)
         self.oai = OpenAIComms()
         self.oae = OpenAIEmbeddings()
@@ -248,6 +249,11 @@ class ContextExplorer(AppBase):
         ToolTip(b, "Performs a small test on 10 lines of text and does not save to DB")
         b = self.action_buttons2.add_button("Load File", self.load_file_callback, width=-1)
         ToolTip(b, "Loads new text into a project, splits into chunks and finds embeddings")
+        b = self.action_buttons2.add_button("Validate File", self.validate_file_callback, width=-1)
+        ToolTip(b, "Opens and reads the file and shows the result below")
+
+        row = self.action_buttons2.get_next_row()
+        self.corpus_validation_text = TextField(tab, row, "Valid Text?", text_width, height=11, label_width=label_width)
 
     def set_style_callback(self, event:tk.Event = None):
         print("ContextExplorer.set_style_callback(): event = {}".format(event))
@@ -460,14 +466,7 @@ class ContextExplorer(AppBase):
         dict = {"probe_str": probe_str, "context":context_str, "name":name, "type":type, "regex_str":regex_str}
         self.save_experiment_json(dict)
 
-    def load_file_callback(self, event = None):
-        print("ContextExplorer.load_file_callback()")
-        group_name = self.target_group_field.get_text().strip()
-        text_name = self.target_text_name.get_text().strip()
-        regex_str = self.regex_field.get_text()
-        if len(group_name) < 3 or len(text_name) < 3:
-            tk.messagebox.showwarning("Warning!", "Please set text and model fields")
-            return
+    def read_input_file(self, regex_str:str) -> [str, List[str]]:
         result = filedialog.askopenfilename(filetypes=(("Text and pdf files", "*.txt *.pdf"),("All Files", "*.*")), title="Load text file")
         textfile = result.split("/")[-1]
         s:str
@@ -479,15 +478,36 @@ class ContextExplorer(AppBase):
                 s_list = self.oae.parse_text_file(result, r_str=regex_str)
             else:
                 print("ContextExplorer.load_file_callback: unable to open file {}".format(result))
-                return
+                return ("NONE", [])
 
-            # look to see if we can find 'references' on a single row
+            # clean out things we don't want to pay for
+            regexp = re.compile(r'bibliography:?\n|references:?\n')
             for i in range(len(s_list)):
                 s = s_list[i]
-                if s.lower() == 'references':
+                if regexp.search(s):
                     print("ContextExplorer.load_file_callback(): truncating references (rows {} - {})".format(i-1, len(s_list)))
                     s_list = s_list[:i-1]
                     break
+
+            self.corpus_validation_text.set_text("\n".join(s_list))
+            return(textfile, s_list)
+        return ("NONE", [])
+
+    def validate_file_callback(self, event = None):
+        regex_str = self.regex_field.get_text()
+        textfile, s_list = self.read_input_file(regex_str)
+
+    def load_file_callback(self, event = None):
+        print("ContextExplorer.load_file_callback()")
+        group_name = self.target_group_field.get_text().strip()
+        text_name = self.target_text_name.get_text().strip()
+        regex_str = self.regex_field.get_text()
+        if len(group_name) < 3 or len(text_name) < 3:
+            tk.messagebox.showwarning("Warning!", "Please set text and model fields")
+            return
+        textfile, s_list = self.read_input_file(regex_str)
+        s:str
+        if textfile != "NONE":
 
             answer = tk.messagebox.askyesno("Warning!", "This will read, process, and store large amounts of data\ntarget = [{}]\ngroup = [{}]\nfile = [{}]\nlines = [{:,}]\nProceed?".format(
                 text_name, group_name, textfile, len(s_list)))
@@ -515,27 +535,15 @@ class ContextExplorer(AppBase):
         if len(group_name) < 3 or len(text_name) < 3:
             tk.messagebox.showwarning("Warning!", "Please set text and model fields")
             return
-        result = filedialog.askopenfilename(filetypes=(("Text and pdf files", "*.txt *.pdf"),("All Files", "*.*")), title="Load text file")
-        print("test file = {}".format(result))
-
-        s:str
-        num_rows = 10
-        if result:
-            s_list = []
-            if result.endswith(".pdf"):
-                s_list = self.oae.parse_pdf_file(result, r_str=regex_str)
-            elif result.endswith(".txt"):
-                s_list = self.oae.parse_text_file(result, r_str=regex_str)
-            else:
-                print("ContextExplorer.test_file_callback: unable to open file {}".format(result))
-                return
+        textfile, s_list = self.read_input_file(regex_str)
+        if textfile != "NONE":
+            s:str
+            num_rows = 10
 
             # build a proxy db results List
             results = []
             for i in range(num_rows):
                 s = s_list[i]
-                if s.lower() == 'references':
-                    break
                 d = {"text_id":i, "parsed_text":s}
                 results.append(d)
             row_dict:Dict
