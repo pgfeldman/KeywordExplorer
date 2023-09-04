@@ -1,6 +1,6 @@
 Explorer Apps
 ====================================
-There are six(!) applications in this project, _KeywordExplorer_, _TweetsCountExplorer_, _TweetDownloader_,  _WikiPageviewExplorer_, _TweetEmbedExplorer_, and _ModelExplorer_. The latest stable version can be installed with pip:
+There are six(!) applications in this project, ~~_KeywordExplorer_~~, ~~_TweetsCountExplorer_~~, ~~_TweetDownloader_~~,  _WikiPageviewExplorer_, _TweetEmbedExplorer_, and _ModelExplorer_. The latest stable version can be installed with pip:
 
     pip install keyword-explorer
 
@@ -8,9 +8,9 @@ A brief overview of each can be reached using the links below.
 
 ~~[**KeywordExplorer**]~~(./markup/KeywordExplorer.md) Deprecated due to X/Twitter AOI changes. Is a Python desktop app that lets you use the GPT-3 to search for keywords and Twitter to see if those keywords are any good.
 
-~~[**TweetCountsExplorer**]~~(./markup/TweetsCountExplorer.md) is a Python desktop app that lets you explore the quantity of tweets containing keywords over days, weeks or months.
+~~[**TweetCountsExplorer**]~~(./markup/TweetsCountExplorer.md) Deprecated due to X/Twitter AOI changes. Is a Python desktop app that lets you explore the quantity of tweets containing keywords over days, weeks or months.
 
-~~[**TweetDownloader**]~~(./markup/TweetDownloader.md) is a Python desktop app that lets you select and download tweets containing keywords into a database. The number of Tweets can be adjusted so that they are the same for each day or proportional. Users can apply daily and overall limits for each keyword corpora.
+~~[**TweetDownloader**]~~(./markup/TweetDownloader.md) Deprecated due to X/Twitter AOI changes. Is a Python desktop app that lets you select and download tweets containing keywords into a database. The number of Tweets can be adjusted so that they are the same for each day or proportional. Users can apply daily and overall limits for each keyword corpora.
 
 [**WikiPageviewExplorer**](./markup/WikiPageviewExplorer.md) is a Python desktop app that lets you explore keywords that appear as articles in the Wikipedia, and chart their relative page views.
 
