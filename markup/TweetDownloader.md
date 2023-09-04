@@ -1,4 +1,4 @@
-# TweetDownloader
+## ~~TweetDownloader~~ (Deprecated due to Twitter/X API access)
 
 _TweetDownloader_ is a standalone Python application that manages balanced and proportional downloading of tweets based on keywords over a specified time range.
 
