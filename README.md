@@ -1,6 +1,6 @@
 Explorer Apps
 ====================================
-There are six(!) applications in this project, ~~_KeywordExplorer_~~, ~~_TweetsCountExplorer_~~, ~~_TweetDownloader_~~,  _WikiPageviewExplorer_, _TweetEmbedExplorer_, and _ModelExplorer_. The latest stable version can be installed with pip:
+There are six working applications and three deprecated applications in this project, ~~_KeywordExplorer_~~, ~~_TweetsCountExplorer_~~, ~~_TweetDownloader_~~,  _ContextExplorer_, _NarrativeExplorer2_, _TerrainFromGML_, _WikiPageviewExplorer_, _TweetEmbedExplorer_, and _ModelExplorer_. The latest stable version can be installed with pip:
 
     pip install keyword-explorer
 
@@ -20,6 +20,9 @@ A brief overview of each can be reached using the links below.
 
 ## Before Using! <span id = "before-using"/>
 Most of these apps **require** that you have an OpenAI account and/or a Twitter developer account:
+* _ContextExplorer_ requires an OpenAI account
+* _NarrativeExplorer2_ requires an OpenAI account
+* _TerrainFromGML_ uses the [Panda3D](https://www.panda3d.org/) API
 * ~~_KeywordExplorer_ requires a Twitter and OpenAI account~~
 * ~~_TweetCountExplorer_ requires a Twitter developer account~~
 * _WikiPageviewExplorer_ uses the wikipedia API (pip install wikipedia), and requires a user agent
