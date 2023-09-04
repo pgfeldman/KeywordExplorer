@@ -1,4 +1,4 @@
-## ~~KeywordExplorer~~ (Depricated due to Twitter/X API access)
+## ~~KeywordExplorer~~ (Deprecated due to Twitter/X API access)
 
 KewordExplorer is a Python desktop app that lets you use the GPT-3 to search for keywords and Twitter to see if those keywords are any good. Below is an example of the running app:
 
