@@ -1,4 +1,7 @@
-#TweetCountExplorer
+## ~~TweetCountExplorer~~ (Deprecated due to Twitter/X API access)
+
+This is such a damn shame. I loved this app.
+
 _TweetCountExplorer_ is a standalone app that is just the Twitter trends functionality from [_KeywordExplorer_](../markup/KeywordExplorer.md). Below is an example of the running app:
 
 ![KeywordExporer](../images/TweetCountsExplorer.png)
