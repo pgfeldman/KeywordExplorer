@@ -161,8 +161,8 @@ class TerrainFromGML (Pandas_main):
         return NodePath(node).node()
 
     def create_terrain_strip(self, segments, xstart:float, ystart:float, xstep:float = 1.0, ystep:float = 1.0,
-        tmin:float = 0, tmax:float = 1, dither:float = 0.20, c1:LVecBase4f = LVecBase4f(0.8, 0.8, 0.8, 1),
-        c2:LVecBase4f = LVecBase4f(0.8, 0.8, 0.8, 1), z_scalar:float = 1.0) -> GeomNode:
+                             tmin:float = 0, tmax:float = 1, dither:float = 0.20, c1:LVecBase4f = LVecBase4f(0.8, 0.8, 0.8, 1),
+                             c2:LVecBase4f = LVecBase4f(0.8, 0.8, 0.8, 1), z_scalar:float = 1.0) -> GeomNode:
 
 
         vertex_list = []
@@ -225,7 +225,9 @@ class TerrainFromGML (Pandas_main):
             attrs = self.nxg.get_node_attributes(name)
             self.node_attr_dict[name] = attrs
             # print("{} = {}".format(name, attrs))
-            gd = attrs['graphics']
+            gd = attrs
+            if 'graphics' in attrs:
+                gd = attrs['graphics']
             x = gd['x']
             y = gd['y']
             z = 1
@@ -237,7 +239,9 @@ class TerrainFromGML (Pandas_main):
 
         # apply the Xform
         for name, attrs in self.node_attr_dict.items():
-            gd = attrs['graphics']
+            gd = attrs
+            if 'graphics' in attrs:
+                gd = attrs['graphics']
             x = gd['x']
             y = gd['y']
             z = 1
@@ -333,11 +337,11 @@ class TerrainFromGML (Pandas_main):
         copyright_str = "© Philip Feldman ({})".format(datetime.now().year)
         # copyright_str = "© ASRC Federal ({})".format(datetime.now().year)
         OnscreenText(text="TerrainFromGML",
-                             style=1, fg=(1, 1, 1, 1), pos=(-0.65, 0.1), scale=.07,
-                             parent=self.a2dBottomRight, align=TextNode.ALeft)
+                     style=1, fg=(1, 1, 1, 1), pos=(-0.65, 0.1), scale=.07,
+                     parent=self.a2dBottomRight, align=TextNode.ALeft)
         OnscreenText(text=copyright_str,
-                             style=1, fg=(1, 1, 1, 1), pos=(-0.65, 0.05), scale=.05,
-                             parent=self.a2dBottomRight, align=TextNode.ALeft)
+                     style=1, fg=(1, 1, 1, 1), pos=(-0.65, 0.05), scale=.05,
+                     parent=self.a2dBottomRight, align=TextNode.ALeft)
         names = ['toggle [a]xis', 'toggle [g]rid', 'toggle [t]ext', '[l]oad GML', '[h]eading', '[p]itch']
         ypos = -.1
         for n in names:
