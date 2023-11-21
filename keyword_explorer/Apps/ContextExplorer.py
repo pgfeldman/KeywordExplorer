@@ -44,7 +44,7 @@ class ContextExplorer(AppBase):
     msi: MySqlInterface
     mr: ManifoldReduction
     so:SharedObjects
-    gpt_frame: GPTContextFrame
+    generator_frame: GPTContextFrame
     experiment_combo:TopicComboExt
     group_combo:TopicComboExt
     level_combo:TopicComboExt
@@ -52,6 +52,7 @@ class ContextExplorer(AppBase):
     target_text_name:DataField
     target_group_field:DataField
     rows_field:DataField
+    tokens_field:DataField
     keyword_filtered_field:DataField
     narrative_project_name_field:DataField
     generate_model_combo:TopicComboExt
@@ -81,7 +82,7 @@ class ContextExplorer(AppBase):
 
     def setup_app(self):
         self.app_name = "ContextExplorer"
-        self.app_version = "8.25.2023"
+        self.app_version = "11.21.2023"
         self.geom = (910, 820)
         self.oai = OpenAIComms()
         self.oae = OpenAIEmbeddings()
@@ -170,7 +171,7 @@ class ContextExplorer(AppBase):
         ToolTip(b, "Export Project to JSON")
         row = self.action_buttons.get_next_row()
 
-        engine_list = self.oai.list_models(exclude_list = [":", "ada", "embed", "similarity", "code", "edit", "search", "audio", "instruct", "2020", "if", "insert", "whisper"])
+        engine_list = self.oai.list_models(exclude_list = [":", "tts", "vision", "ada", "embed", "similarity", "code", "edit", "search", "audio", "instruct", "2020", "if", "insert", "whisper"])
         engine_list = sorted(engine_list, reverse=True)
         self.generate_model_combo = TopicComboExt(lf, row, "Model:", self.dp, entry_width=25, combo_width=25)
         self.generate_model_combo.set_combo_list(engine_list)
@@ -202,6 +203,9 @@ class ContextExplorer(AppBase):
         row = self.rows_field.get_next_row()
         self.keyword_filtered_field = DataField(lf, row, 'Filtered:', text_width, label_width=label_width)
         row = self.keyword_filtered_field.get_next_row()
+        self.tokens_field = DataField(lf, row, 'Tokens:', text_width, label_width=label_width)
+        self.tokens_field.set_text("1024")
+        row = self.tokens_field.get_next_row()
 
         self.style_list = ListField(lf, row, "Style\n({})".format(PROMPT_TYPE.NARRATIVE.value), width=text_width, label_width=label_width, static_list=True)
         # self.style_list.set_text(text='Story, List, Sequence')
@@ -358,6 +362,9 @@ class ContextExplorer(AppBase):
             pass
 
     def load_data_callback(self, event = None):
+        max_tokens = self.tokens_field.get_as_int()
+        self.generator_frame.set_max_tokens(max_tokens)
+
         kw_list = []
         kw_str = self.generator_frame.keyword_filter.get_text()
         if len(kw_str) > 3:
@@ -413,6 +420,7 @@ class ContextExplorer(AppBase):
         self.keyword_filtered_field.set_text("{:,}".format(len(df.index)))
 
         self.generator_frame.clear_callback(clear_keywords=False)
+        max_tokens = self.tokens_field.get_as_int()
         self.generator_frame.auto_question_callback()
 
     def get_current_params(self) -> Dict:
@@ -519,7 +527,8 @@ class ContextExplorer(AppBase):
                 print("ContextExplorer.load_file_callback(): Storing data Dataframe = \n{}".format(df))
                 self.oae.store_project_data(text_name, group_name, df)
                 print("ContextExplorer.load_file_callback(): Summarizing Level 1")
-                self.oae.summarize_raw_text(text_name, group_name, engine=engine, max_tokens=256)
+                max_tokens = self.tokens_field.get_as_int()
+                self.oae.summarize_raw_text(text_name, group_name, engine=engine, max_tokens=max_tokens)
                 for i in range(1, level):
                     print("ContextExplorer.load_file_callback(): Summarizing Level {}".format(i+1))
                     self.oae.summarize_summary_text(text_name, group_name, source_level=i)
@@ -552,10 +561,11 @@ class ContextExplorer(AppBase):
             #engine = self.oae.DEFAULT_SUMMARY_MODEL
             engine = self.generate_model_combo.get_text()
             print("\tUsing {}".format(engine))
+            max_tokens = self.tokens_field.get_as_int()
             while count < num_rows:
                 d = self.oae.build_text_to_summarize(results, count, words_to_summarize, overlap=2)
                 # run the query and store the result. Update the parsed text table with the summary id
-                summary = self.oai.get_prompt_result_params(d['query'], engine=engine, temperature=0, presence_penalty=0.8, frequency_penalty=0, max_tokens=256)
+                summary = self.oai.get_prompt_result_params(d['query'], engine=engine, temperature=0, presence_penalty=0.8, frequency_penalty=0, max_tokens=max_tokens)
                 if summary == self.oai.ERROR_MSG:
                     print("\ttest_file_callback() got {} from self.oai.get_prompt_result_params({})".format(summary, d['query']))
                     continue
@@ -564,7 +574,11 @@ class ContextExplorer(AppBase):
                 mod = self.oai.get_moderation_vals([summary])
                 print("\tSummary[{}]: {}\n\tEmbedding: {}\n\tSpeech: {}\n".format(count, summary, embd[0]['embedding'], mod[0]['category_scores']))
 
-                count = d['count']
+                if count == d['count']:
+                    print("\t forcing count increment")
+                    count += 1
+                else:
+                    count = d['count']
 
         print("\ttest_file_callback(): Complete")
 

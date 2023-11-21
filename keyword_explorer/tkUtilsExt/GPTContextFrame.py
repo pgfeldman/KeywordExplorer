@@ -80,6 +80,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
     sequence_response_regex:Pattern
     story_response_reges:Pattern
     list_response_regex:Pattern
+    max_tokens:int
 
 
     def __init__(self, *args, **kwargs):
@@ -88,6 +89,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.sequence_response_regex = re.compile(r"\d+[):,.]+|\n+")
         self.list_response_regex = re.compile(r"\d+\W+|\n\d+\W+")
         self.story_response_regex = re.compile(r"\n+")
+        self.max_tokens = 512
 
     def build_frame(self, frm: ttk.Frame, text_width:int, label_width:int):
         row = 0
@@ -171,6 +173,9 @@ class GPTContextFrame(GPT3GeneratorFrame):
     def set_project_dataframe(self, df:pd.DataFrame):
         self.project_df = df
 
+    def set_max_tokens(self, max_tokens):
+        self.max_tokens = max_tokens
+
     def handle_checkboxes(self, event = None):
         print("prompt_query_cb = {}".format(self.prompt_query_cb.get_val()))
         print("ignore_context_cb = {}".format(self.ignore_context_cb.get_val()))
@@ -203,7 +208,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.sources_text_field.set_text("\n\n".join(origins))
 
         self.dp.dprint("Submitting Question: {}".format(question))
-        answer = oae.get_response(full_question, model=model, max_tokens=512)
+        answer = oae.get_response(full_question, model=model, max_tokens=self.max_tokens)
         answer = oae.tk_filter_string(answer)
         self.response_text_field.set_text(answer)
 
@@ -261,7 +266,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
         print("\tusing model {}".format(model))
 
         oae = OpenAIEmbeddings()
-        question = oae.get_response(context_str, max_tokens=512, model=model)
+        question = oae.get_response(context_str, max_tokens=self.max_tokens, model=model)
         question = oae.tk_filter_string(question)
         if type == PROMPT_TYPE.QUESTION:
             self.context_prompt.set_text(question)
@@ -299,7 +304,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.sources_text_field.set_text("\n\n".join(origins))
 
         self.dp.dprint("Submitting summary prompt: {}".format(context))
-        answer = oae.get_response(full_prompt, max_tokens=256, model=model)
+        answer = oae.get_response(full_prompt, max_tokens=self.max_tokens, model=model)
         self.response_text_field.set_text(answer)
 
     def get_gpt_list(self, oae:OpenAIEmbeddings, ctx_prompt:str, prompt:str, model:str):
@@ -317,7 +322,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
             self.dp.dprint("Submitting List prompt: {}".format(query_str))
             if self.ignore_context_cb.get_val() == False:
                 full_prompt = oae.create_list(prompt=query_str, context=context)
-            response = oae.get_response(full_prompt, max_tokens=256, model=model)
+            response = oae.get_response(full_prompt, max_tokens=self.max_tokens, model=model)
             response_dict[query_str] = response
 
         self.context_text_field.clear()
@@ -361,7 +366,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
                 if self.ignore_context_cb.get_val() == False:
                     full_prompt = oae.create_sequence(prompt=query_str, context=context)
                 print("\tSubmitting Sequence prompt: {}".format(full_prompt))
-                response = oae.get_response(full_prompt, max_tokens=256, model=model)
+                response = oae.get_response(full_prompt, max_tokens=self.max_tokens, model=model)
 
                 if len(response) > 3:
                     print("\tStoring response")
@@ -400,7 +405,7 @@ class GPTContextFrame(GPT3GeneratorFrame):
         self.sources_text_field.set_text("\n\n".join(origins))
 
         self.dp.dprint("Submitting Story prompt: {}".format(prompt))
-        response = oae.get_response(full_prompt, max_tokens=256, model=model)
+        response = oae.get_response(full_prompt, max_tokens=self.max_tokens, model=model)
         response_list = self.story_response_regex.split(response)
         s = "{}".format(prompt)
         for i in range(len(response_list)):

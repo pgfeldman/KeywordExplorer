@@ -42,7 +42,7 @@ class OpenAIComms:
         self.engine = self.engines[engine_id]
 
     #default to the cheap model to spend less money!
-    def set_parameters(self, max_tokens:int = 30, temperature:float = 0.4, top_p:float = 1, logprobs:int = 1,
+    def set_parameters(self, max_tokens:int = 128, temperature:float = 0.4, top_p:float = 1, logprobs:int = 1,
                        num_responses:int = 1, presence_penalty:float = 0.3, frequency_penalty:float = 0.3, engine_id:int=2):
         self.engine = self.engines[engine_id]
         self.max_tokens = max_tokens
@@ -86,11 +86,11 @@ class OpenAIComms:
                 if waitcount > waitmax:
                     return self.ERROR_MSG
 
-    def get_prompt_result_params(self, prompt:str, engine:str = "text-davinci-003", max_tokens:int = 30, temperature:float = 0.4, top_p:float = 1, logprobs:int = 1,
+    def get_prompt_result_params(self, prompt:str, engine:str = "text-davinci-003", max_tokens:int = 128, temperature:float = 0.4, top_p:float = 1, logprobs:int = 1,
                                  num_responses:int = 1, presence_penalty:float = 0.3, frequency_penalty:float = 0.3) -> str:
-
+        self.max_tokens = max_tokens
         if any([x in engine for x in self.chat_models]):
-            print("OpenAIComms.get_prompt_result_params(): Using Chat interface")
+            print("OpenAIComms.get_prompt_result_params(): Using Chat interface ({} tokens)".format(max_tokens))
             l = [ChatUnit(prompt, CHAT_ROLES.USER)]
             return self.get_chat_complete(l, engine=engine, max_tokens=max_tokens, temperature=temperature, top_p=top_p,
                                           presence_penalty=presence_penalty, frequency_penalty=frequency_penalty)
@@ -109,7 +109,7 @@ class OpenAIComms:
                 s = choices[0]['text']
                 goodread = True
                 return s.strip()
-            except (openai.error.RateLimitError, openai.error.APIConnectionError, openai.error.APIError) as e:
+            except (openai.error.RateLimitError, openai.error.APIConnectionError, openai.error.APIError, openai.error.ServiceUnavailableError) as e:
                 print("\nOpenAIComms.get_prompt_result_params(): {}".format(e.user_message))
                 sleeptime = (waitcount+1) * time_to_wait
                 print("\twaiting {} seconds {} of {}".format(sleeptime, waitcount, waitmax))
@@ -191,7 +191,7 @@ class OpenAIComms:
                     i += 1
                 return d_list
 
-            except (openai.error.APIError, openai.error.RateLimitError, openai.error.APIConnectionError) as e:
+            except (openai.error.APIError, openai.error.RateLimitError, openai.error.APIConnectionError, openai.error.ServiceUnavailableError) as e:
                 waitcount += 1
                 time_to_wait = 5 * waitcount
                 print("OpenAIComms.get_embedding_list error. Message = {}".format(e.user_message))
@@ -222,7 +222,7 @@ class OpenAIComms:
                     jsn = output[i]["category_scores"]
                     to_return.append({"text":test_list[i], "category_scores":jsn})
                 return to_return
-            except (openai.error.APIError, openai.error.RateLimitError, openai.error.APIConnectionError) as e:
+            except (openai.error.APIError, openai.error.RateLimitError, openai.error.APIConnectionError, openai.error.ServiceUnavailableError) as e:
                 waitcount += 1
                 time_to_wait = 5 * waitcount
                 print("OpenAIComms.get_moderation_vals error. Message = {}".format(e.user_message))
